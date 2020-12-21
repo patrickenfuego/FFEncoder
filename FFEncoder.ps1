@@ -140,7 +140,13 @@ function Get-OperatingSystem {
     return $osInfo
 }
 
-#generates a crop file which is used to calculate autocropping values for the video source
+
+<#
+    generates a crop file which is used to calculate autocropping values for the video source
+
+    .PARAMETER osType
+            The current operating system.
+#>
 function New-CropFile ($osType) {
     if ($InputPath -match "(?<root>.*(?:\\|\/)+).*\.m[a-z 4]+") {
         $cropFileRoot = $Matches.root
