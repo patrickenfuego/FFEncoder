@@ -34,35 +34,36 @@ param (
     #switch test run on. only encode the first 1500 frames
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Alias("T")]
     [switch]$Test,
 
     #switch flag to run a 1080p encode instead of 2160p
-    # [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
-    # [switch]$1080p,
+    [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
+    [switch]$1080p,
 
     #input path for file to be encoded
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
-    #[Parameter(Mandatory = $true, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
 
     #preset used by the x265 encoder
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    #[Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
 
     #constant rate factor setting
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    #[Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateRange(0.0, 51.0)]
     [double]$CRF = 16.0,
 
     #deblock filter setting
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    #[Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [Alias("DBF")]
     [int[]]$Deblock = @(-1, -1),
 
@@ -90,7 +91,7 @@ param (
 
     #output path of encoded file
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
-    #[Parameter(Mandatory = $true, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
     [ValidateNotNullOrEmpty()]
     [Alias("O")]
     [string]$OutputPath
