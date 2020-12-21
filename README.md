@@ -21,7 +21,7 @@ FFEncoder can accept the following arguments from the command line:
 |InputPath   	|None   	|True   	|I   	|The path to the video file to be encoded   	|
 |Preset   	|slow   	|False   	|P   	|The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)    	|
 |CRF   	|16.0   	|False   	|None   	|Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate   	|
-|Deblock   	|-1,-1   	|False   	|DBF   	|Deblock filter   	|
+|Deblock   	|-1,-1   	|False   	|DBF   	|Deblock filter. The first value controls the strength, and the second value controls the frequency of use   	|
 |MaxLuminance   	|None   	|True for 4K only   	|MaxL   	|Max master display luminance value for HDR. Mandatory only for the 2160p parameter set  	|
 |MinLumincance   	|None   	|True for 4K only   	|MinL   	|Min master display luminance value for HDR. Mandatory only for the 2160p parameter set    	|
 |MaxCLL   	|None   	|True for 4K only   	|None   	|Max content light level value for HDR. Mandatory only for the 2160p parameter set   	|
