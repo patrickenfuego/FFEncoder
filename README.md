@@ -17,7 +17,7 @@ FFEncoder can accept the following arguments from the command line:
 |Name  	|Default    	|Mandatory   	|Alias   	|Description   	|
 |---	|---	|---	|---	|---	|
 |Test   	|False   	|False   	|T   	|Switches test run on. Only encodes the first 1000 frames   	|
-|1080p   	|False   	|True for 1080p only    	|None   	|Switch to turn on 1080p and remove HDR arguments. Mandatory only for the 1080p parameter set    	|
+|1080p   	|False   	|True for 1080p only    	|None   	|Switch to turn on 1080p and remove HDR arguments. Mandatory only for the 1080p parameter set (still testing)   	|
 |InputPath   	|None   	|True   	|I   	|The path to the video file to be encoded   	|
 |Preset   	|slow   	|False   	|P   	|The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)    	|
 |CRF   	|16.0   	|False   	|None   	|Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate   	|
