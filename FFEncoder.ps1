@@ -1,101 +1,133 @@
 <#
     .SYNOPSIS
-        Script for encoding 4K HDR and 1080p content using ffmpeg
+        Script for encoding 4K HDR video content using ffmpeg and x265
     
     .DESCRIPTION
         This script is meant to make video encoding easier with ffmpeg. Instead of manually changing
-        the script parameters each time it is run, you can pass parameters to this script and it will 
-        use the arguments as needed. Supports 2160p HDR and 1080p resolutions. 
+        the script parameters for each encode, you can pass dynamic parameters to this script and it  
+        will use the arguments as needed. Supports 2160p HDR encoding, and I plan to add 1080p soon.   
 
-    .EXAMPLE 
-        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance .0050 -MaxCLL 1347 -MinCLL 129 -OutputPath "Path\To\New\File"
+    .EXAMPLE
+        ## Windows ##
+        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MinCLL 129 -OutputPath "Path\To\Encoded\File"
+    .EXAMPLE
+        ## MacOS or Linux ##
+        ./FFEncoder.ps1 -InputPath "Path/To/file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MinCLL 129 -OutputPath "Path/To/Encoded/File"
+
+    .INPUTS
+        4K HDR video file 
 
     .OUTPUTS
-        crop.txt - This file is saved in the same directory as your video file, and is used for auto-cropping
+        crop.txt - File used for auto-cropping
         4K HDR encoded video file
-        1080p encoded video file
 
     .NOTES
-        For this script to work, ffmpeg must be in your PATH (consult your OS documentation for info on how to do this)
+        For FFEncoder to work, ffmpeg must be in your PATH (consult your OS documentation for info on how to verify this).
 
         Be sure to include ".mkv" or ".mp4" at the end of your output file, or you will be left with a file that will not play. 
-        These are the only containers supported.
 
-        This script is designed to encode video ONLY. ffmpeg does not have great passthrough options for Atmos or DTS-X (yet), 
+        FFEncoder is designed to encode video ONLY. ffmpeg does not have great passthrough options for Atmos or DTS-X (yet), 
         so it is easier to mux the audio yourself using MKVToolNix. By default, ffmpeg will convert audio streams to Vorbis.
-        When your video is done encoding, simply mux the Vorbis out and replace it with your audio stream of choice.
+        When your video is done encoding, simply mux the Vorbis out and replace it with your audio stream of choice. I have a
+        separate script for AAC audio encoding that I plan to merge into FFEncoder at some point. 
 
-        I currently have this script working on Windows, and plan to add support for UNIX shortly.
+        FFEncoder will automatically convert HDR Content Light Level values for you. Input CLL values as you see them in
+        MediaInfo (or similar software).
+
+        .PARAMETER Help
+            Displays help information for the script. Only required for the "Help" parameter set
+        .PARAMETER Test
+            Switch to enable a test run. Only encodes the first 1000 frames
+        .PARAMETER 1080p
+            Switch to enable 1080p encode. Removes HDR arguments (still testing). Only required for the "1080p" parameter set
+        .PARAMETER InputPath
+            Location of the file to be encoded
+        .PARAMETER Preset
+            The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
+        .PARAMETER CRF
+            Constant rate factor setting. Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate
+        .PARAMETER Deblock
+            Deblock filter settings. The first value represents strength, and the second value represents frequency
+        .PARAMETER MaxLuminance
+            Maximum master display luminance for HDR. Only required for the "2160p" parameter set
+        .PARAMETER MinLuminance
+            Minimum master display luminance for HDR. Only required for the "2160p" parameter set
+        .PARAMETER MaxCLL
+            Maximum content light level for HDR. Only required for the "2160p" parameter set
+        .PARAMETER MinCLL
+            Minimum content light level for HDR. Only required for the "2160p" parameter set
+        .PARAMETER OutputPath
+            Location of the encoded video file
+        
+        .lINK
+            GitHub Page - https://github.com/patrickenfuego/FFEncoder
+        .LINK
+            FFMpeg documentation - https://ffmpeg.org
+        .LINK
+            x265 HEVC Documentation - https://x265.readthedocs.io/en/master/introduction.html
 
 #>
 
 [CmdletBinding(DefaultParameterSetName = "2160p")]
 param (
-    #switch test run on. only encode the first 1500 frames
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
-    [Alias("T")]
-    [switch]$Test,
+    [Parameter(Mandatory = $true, ParameterSetName = "Help")]
+    [Alias("H", "/?", "?")]
+    [switch]$Help,
 
-    #switch flag to run a 1080p encode instead of 2160p
     [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
     [switch]$1080p,
 
-    #input path for file to be encoded
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
 
-    #preset used by the x265 encoder
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
 
-    #constant rate factor setting
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateRange(0.0, 51.0)]
     [double]$CRF = 16.0,
 
-    #deblock filter setting
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
     [int[]]$Deblock = @(-1, -1),
 
-    #master display luminance max for HDR
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
     [Alias("MaxL")]
     [int]$MaxLuminance,
 
-    #master display luminance min for HDR
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
     [Alias("MinL")]
     [double]$MinLuminance,
 
-    #max content light level for HDR
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
     [int]$MaxCLL,
 
-    #min content light level for HDR
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
     [int]$MinCLL,
 
-    #output path of encoded file
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
     [ValidateNotNullOrEmpty()]
     [Alias("O")]
-    [string]$OutputPath
+    [string]$OutputPath,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Alias("T")]
+    [switch]$Test
 
 )
 
@@ -143,7 +175,7 @@ function Get-OperatingSystem {
 
 
 <#
-    generates a crop file which is used to calculate autocropping values for the video source
+    Generates a crop file which is used to calculate autocropping values for the video source
 
     .PARAMETER osType
             The current operating system.
@@ -182,7 +214,7 @@ function New-CropFile ($osType) {
 }
 
 <#
-    Enumerates the crop file to find the max crop width and height. This simulates autocropping from programs like Handbrake
+    Enumerates the crop file to find the max crop width and height. This simulates auto-cropping from software like Handbrake
 
     .PARAMETER cropPath
         The path to the crop file
@@ -249,6 +281,8 @@ function Invoke-FFMpeg ($osType) {
 ## End Functions ##
 
 ######################################## Main Script Logic ########################################
+
+if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
 Write-Host "`nStarting Script...`n`n"
 $startTime = (Get-Date).ToLocalTime()
