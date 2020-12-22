@@ -1,2 +1,7 @@
 v 1.0.0
     Initial release. Supports Windows and 4K HDR resolution. 
+v 1.1.0
+    Added support for MacOS and Linux
+        -Tested on MacOS 11.0.1 "Big Sur"
+        -Tested on Ubuntu 20.04 LTS
+    Updated help based comments for script functions
