@@ -201,6 +201,7 @@ function Measure-CropDimensions ($cropPath) {
     Write-Host "Crop Dimensions: " $cropWidth "x" $cropHeight
     return @($cropWidth, $cropHeight)
 }
+
 <#
     Runs ffmpeg with operating system specific parameters 
 
@@ -223,9 +224,24 @@ function Invoke-FFMpeg ($osType) {
                     $OutputPath 2>&1
             }
         }
-        Default { Write-Host "`nAn OS could not be matched while invoking ffmpeg. Exiting script..."; exit }
+        { $_ -match "MacOS" -xor $_ -match "Linux" } {
+            if ($Test) {
+                ffmpeg -probesize 100MB -i $InputPath \
+                -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le \
+                -x265-params "level-idc=5.1:min-keyint=23:keyint=250:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MinCLL`:hdr-opt=1" \
+                $OutputPath 2>&1
+            }
+            else {
+                ffmpeg -probesize 100MB -i $InputPath \
+                -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le \
+                -x265-params "level-idc=5.1:min-keyint=23:keyint=250:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MinCLL`:hdr-opt=1" \
+                $OutputPath 2>&1
+            }
+        }
+        default { Write-Host "`nAn OS could not be matched while invoking ffmpeg. Exiting script..."; exit }
     }
 }
+
 
 ## End Functions ##
 
@@ -233,7 +249,7 @@ function Invoke-FFMpeg ($osType) {
 
 Write-Host "`nStarting Script...`n`n"
 $startTime = (Get-Date).ToLocalTime()
-
+#if the output path already exists, delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
     do {
         $response = Read-Host "The output path already exists. Would you like to delete it? (y/n)"
@@ -261,30 +277,3 @@ Write-Host "`nTotal Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minut
 
 Read-Host -Prompt "Press enter to exit"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#:max-cll=1347,546
-#frames:v 1000
-#cropdetect -f null
-# ffmpeg.exe -probesize 100MB -i "M:\Blu Ray Rips\Jurassic Park II The Lost World 1997 UHD Blu-ray 2160p HDR Remux Multi DTS-X 7.1-DTOne\Jurassic Park II The Lost World 1997 UHD Blu-ray 2160p HDR Remux Multi DTS-X 7.1-DTOne.mkv" `
-#         -frames:v 1000 -vf "crop=w=3840:h=2076" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset slow -crf 16.0 -pix_fmt yuv420p10le `
-#         -x265-params "level-idc=5.1:min-keyint=23:keyint=250:deblock=-1,-1:sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(10000000,50):max-cll=929,129:hdr-opt=1" `
-#         "M:\Blu Ray Rips\Jurassic Park II The Lost World 1997 UHD Blu-ray 2160p HDR Remux Multi DTS-X 7.1-DTOne\Jurassic Park II The Lost World.mkv"
