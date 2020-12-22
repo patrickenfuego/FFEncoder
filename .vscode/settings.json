@@ -1,0 +1,37 @@
+{   //editor settings
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+
+    //code spell checker extension dictionary
+    "cSpell.words": [
+        "Deblock",
+        "HEVC",
+        "Vorbis",
+        "chromaloc",
+        "colorspace",
+        "cropdetect",
+        "ffmpeg",
+        "keyint",
+        "libx",
+        "loglevel",
+        "nokey",
+        "probesize",
+        "subme",
+        "superfast",
+        "ultrafast",
+        "veryfast",
+        "veryslow"
+    ],
+
+    //powershell settings
+    "powershell.codeFormatting.autoCorrectAliases": true,
+    "powershell.codeFormatting.addWhitespaceAroundPipe": true,
+    "powershell.codeFormatting.alignPropertyValuePairs": true,
+    "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationForFirstPipeline",
+    "powershell.codeFormatting.useCorrectCasing": true,
+
+    //git settings
+    "git.autofetch": true,
+    "git.autofetchPeriod": 240
+    
+}
