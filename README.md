@@ -29,7 +29,7 @@ FFEncoder can accept the following arguments from the command line:
 
 ## Compatibility
 
-FFEncoder is currently supported on Windows, MacOS, and Linux. Functionality for MacOS and Linux require [PowerShell Core]https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.1. PowerShell core can be installed using Homebrew (MacOS), apt/pacman/yum (Linux), or manually (see documentation).
+FFEncoder is currently supported on Windows, MacOS, and Linux. Functionality for MacOS and Linux require [PowerShell Core](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell?view=powershell-7.1). PowerShell core can be installed using Homebrew (MacOS), apt/pacman/yum (Linux), or manually (see documentation).
 
 the builds I have been able to confirm so far are:
 
@@ -54,4 +54,4 @@ My future plans for this script, in the order that they are likely to occur:
   - `dhdr10` - Whenever I get a source that has Dynamic HDR, this parameter will get added.
 - 2160p SDR support. This requires a mapping process that I have never done before, but I do hope to add it at some point.
 - 1080p SDR support. Handbrake is still king for 1080p SDR content in my opinion, but I still may add this eventually.
-- AAC Audio Conversion - I usually stick with the lossless codecs, but for some sources I prefer AAC to save space. I already have a script that does this, so it is a matter of merging it in with this code.
+- AAC Audio Conversion - I usually stick with the lossless codecs, but for some sources I prefer AAC to save space. I already have a script that does this, so it's a matter of merging it in with this code.
