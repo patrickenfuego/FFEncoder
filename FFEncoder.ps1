@@ -175,7 +175,7 @@ function Get-OperatingSystem {
 
 
 <#
-    Generates a crop file which is used to calculate autocropping values for the video source
+    Generates a crop file which is used to calculate auto-cropping values for the video source
 
     .PARAMETER osType
             The current operating system.

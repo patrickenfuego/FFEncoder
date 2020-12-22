@@ -5,3 +5,6 @@ v 1.1.0
         -Tested on MacOS 11.0.1 "Big Sur"
         -Tested on Ubuntu 20.04 LTS
     Updated help based comments for script functions
+v 1.2.0
+    Completely overhauled help based comments to be more organized and...helpful
+    Added -Help parameter to easily view new help comments and examples
