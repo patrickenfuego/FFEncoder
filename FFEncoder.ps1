@@ -172,6 +172,9 @@ function New-CropFile ($osType) {
             "Windows" { 
                 ffmpeg.exe -skip_frame nokey -y -hide_banner -loglevel 32 -stats -i $InputPath -vf cropdetect -an -f null - 2>$cropFilePath
             }
+            { $_ -match "MacOS" -xor $_ -match "Linux" } {
+                ffmpeg -skip_frame nokey -y -hide_banner -loglevel 32 -stats -i $InputPath -vf cropdetect -an -f null - 2>$cropFilePath
+            }
             Default { Write-Host "OS could not be detected while generating the crop file. Exiting script..."; exit }
         }
         return $cropFilePath
