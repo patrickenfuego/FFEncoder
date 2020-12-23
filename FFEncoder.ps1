@@ -173,7 +173,6 @@ function Get-OperatingSystem {
     return $osInfo
 }
 
-
 <#
     Generates a crop file which is used to calculate auto-cropping values for the video source
 
@@ -187,7 +186,7 @@ function New-CropFile ($osType) {
         Write-Host "Crop file path is " $cropFilePath "`n"
     }
     else {
-        Write-Host "Could not match root folder. Using OS default path instead..."
+        Write-Host "Could not match root folder pattern. Using OS default path instead..."
         $os = Get-OperatingSystem
         Write-Host $os.OperatingSystem " detected. Using path: $($os.DefaultPath)`n"
         $cropFileRoot = $os.DefaultPath
