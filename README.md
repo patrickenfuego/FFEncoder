@@ -23,8 +23,8 @@ FFEncoder can accept the following arguments from the command line:
 | Deblock      | -1,-1   | False               | DBF      | Deblock filter. The first value controls the strength, and the second value controls the frequency of use |
 | MaxLuminance | None    | True for 4K only    | MaxL     | Max master display luminance value for HDR. Mandatory only for the 2160p parameter set                    |
 | MinLuminance | None    | True for 4K only    | MinL     | Min master display luminance value for HDR. Mandatory only for the 2160p parameter set                    |
-| MaxCLL       | None    | True for 4K only    | None     | Max content light level value for HDR. Mandatory only for the 2160p parameter set                         |
-| MinCLL       | None    | True for 4K only    | None     | Min content light level value for HDR. Mandatory only for the 2160p parameter set                         |
+| MaxCLL       | None    | True for 4K only    | CLL      | Maximum content light level value for HDR. Mandatory only for the 2160p parameter set                     |
+| MaxFAL       | None    | True for 4K only    | FAL      | Maximum frame average light level value for HDR. Mandatory only for the 2160p parameter set               |
 | OutputPath   | None    | True                | O        | The path of the encoded output file                                                                       |
 
 ## Compatibility
