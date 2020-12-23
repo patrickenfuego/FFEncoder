@@ -9,10 +9,10 @@
 
     .EXAMPLE
         ## Windows ##
-        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MinCLL 129 -OutputPath "Path\To\Encoded\File"
+        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MaxFAL 129 -OutputPath "Path\To\Encoded\File"
     .EXAMPLE
         ## MacOS or Linux ##
-        ./FFEncoder.ps1 -InputPath "Path/To/file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MinCLL 129 -OutputPath "Path/To/Encoded/File"
+        ./FFEncoder.ps1 -InputPath "Path/To/file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MaxFAL 129 -OutputPath "Path/To/Encoded/File"
 
     .INPUTS
         4K HDR video file 
@@ -54,8 +54,8 @@
             Minimum master display luminance for HDR. Only required for the "2160p" parameter set
         .PARAMETER MaxCLL
             Maximum content light level for HDR. Only required for the "2160p" parameter set
-        .PARAMETER MinCLL
-            Minimum content light level for HDR. Only required for the "2160p" parameter set
+        .PARAMETER MaxFAL
+            Maximum frame average light level for HDR. Only required for the "2160p" parameter set
         .PARAMETER OutputPath
             Location of the encoded video file
         
@@ -112,11 +112,13 @@ param (
 
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
+    [Alias("CLL")]
     [int]$MaxCLL,
 
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
-    [int]$MinCLL,
+    [Alias("FAL")]
+    [int]$MaxFAL,
 
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
@@ -248,13 +250,13 @@ function Invoke-FFMpeg ($osType) {
             if ($Test) {
                 ffmpeg.exe -probesize 100MB -i $InputPath `
                     -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MinCLL`:hdr-opt=1" `
+                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
                     $OutputPath 2>&1
             }
             else {
                 ffmpeg.exe -probesize 100MB -i $InputPath `
                     -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MinCLL`:hdr-opt=1" `
+                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
                     $OutputPath 2>&1
             }
         }
@@ -262,13 +264,13 @@ function Invoke-FFMpeg ($osType) {
             if ($Test) {
                 ffmpeg -probesize 100MB -i $InputPath `
                     -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MinCLL`:hdr-opt=1" `
+                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
                     $OutputPath 2>&1
             }
             else {
                 ffmpeg -probesize 100MB -i $InputPath `
                     -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MinCLL`:hdr-opt=1" `
+                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
                     $OutputPath 2>&1
             }
         }
