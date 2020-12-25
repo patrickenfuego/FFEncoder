@@ -201,6 +201,7 @@ function New-CropFile ($osType) {
         return $cropFilePath 
     }
     else {
+        Write-Host "Generating crop file..."
         switch ($osType) {
             "Windows" { 
                 ffmpeg.exe -skip_frame nokey -y -hide_banner -loglevel 32 -stats -i $InputPath -vf cropdetect -an -f null - 2>$cropFilePath
