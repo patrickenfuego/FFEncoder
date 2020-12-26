@@ -8,3 +8,13 @@ v 1.1.0
 v 1.2.0
     Completely overhauled help based comments to be more organized and...helpful
     Added -Help parameter to easily view new help comments and examples
+v 1.2.1
+    Changed min-keyint value to preset default
+    Lowered keyint value from 250 to 120 (seeks every 4 frames). This was an error on my part and was not meant to be that high
+v1.3.1
+    Changed output to a log file instead of the console. On Windows, ffmpeg creates a new line for each frame and the buffer cannot store the entire history
+    Created new function Set-RootPath, which sets the path for the crop file and log file. Logic partially removed from New-CropFile function
+v1.3.2
+    Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
+        which was causing it to be empty. Set-RootPath now returns an object containing the crop and log paths. 
+    
