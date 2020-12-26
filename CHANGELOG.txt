@@ -14,6 +14,7 @@ v 1.2.1
 v1.3.1
     Changed output to a log file instead of the console. On Windows, ffmpeg creates a new line for each frame and the buffer cannot store the entire history
     Created new function Set-RootPath, which sets the path for the crop file and log file. Logic partially removed from New-CropFile function
+    Changed test encodes to start at the 10 minute mark. It still only encodes 1000 frames, but it will be better test material than the intro screens/logos
 v1.3.2
     Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
         which was causing it to be empty. Set-RootPath now returns an object containing the crop and log paths. 
