@@ -204,7 +204,7 @@ function New-CropFile ($osType) {
     #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
     if (Test-Path -Path $cropFilePath) { 
         Write-Host "Crop file already exists`n"
-        return $cropFilePath 
+        return
     }
     else {
         Write-Host "Generating crop file..."
@@ -217,7 +217,6 @@ function New-CropFile ($osType) {
             }
             Default { Write-Host "OS could not be detected while generating the crop file. Exiting script..."; exit }
         }
-        return $cropFilePath
     }
 }
 
@@ -312,7 +311,7 @@ if (Test-Path -Path $OutputPath) {
 
 Set-RootPath
 $checkOS = Get-OperatingSystem
-$cropFilePath = New-CropFile $checkOS.OperatingSystem
+New-CropFile $checkOS.OperatingSystem
 Start-Sleep -Seconds 5
 $cropDim = Measure-CropDimensions $cropFilePath
 Invoke-FFMpeg $checkOS.OperatingSystem
