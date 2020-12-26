@@ -17,5 +17,6 @@ v1.3.1
     Changed test encodes to start at the 10 minute mark. It still only encodes 1000 frames, but it will be better test material than the intro screens/logos
 v1.3.2
     Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
-        which was causing it to be empty. Set-RootPath now returns an object containing the crop and log paths. 
+        which was causing it to become empty. Set-RootPath now returns an object containing the crop and log paths.
+    Changed test runs to begin at approximately 1 minute into the video. This gives a more accurate representation of what to expect when a full encode is performed
     
