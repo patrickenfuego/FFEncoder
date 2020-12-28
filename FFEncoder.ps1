@@ -211,16 +211,26 @@ function New-CropFile ($osType) {
         return
     }
     else {
-        Write-Host "Generating crop file...please wait"
-        switch ($osType) {
-            "Windows" { 
-                ffmpeg.exe -skip_frame nokey -y -hide_banner -loglevel 32 -stats -i $InputPath -vf cropdetect -an -f null - 2>$cropFilePath
-            }
-            { $_ -match "MacOS" -xor $_ -match "Linux" } {
-                ffmpeg -skip_frame nokey -y -hide_banner -loglevel 32 -stats -i $InputPath -vf cropdetect -an -f null - 2>$cropFilePath
-            }
-            Default { Write-Host "OS could not be detected while generating the crop file. Exiting script..."; exit }
-        }
+        #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspacepool for each item
+        Start-RSJob -Name "Crop Start" -ArgumentList $InputPath -ScriptBlock {
+            param($inFile)
+            $c1 = ffmpeg -ss 90 -skip_frame nokey -y -hide_banner -i $inFile -t 00:10:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            Write-Output -InputObject $c1
+        } 
+        
+        Start-RSJob -Name "Crop Mid" -ArgumentList $InputPath -ScriptBlock {
+            param($inFile)
+            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:10:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            Write-Output -InputObject $c2
+        } 
+
+        Start-RSJob -Name "Crop End" -ArgumentList $InputPath -ScriptBlock {
+            param($inFile)
+            $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:10:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            Write-Output -InputObject $c3
+        } 
+
+        Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $cropFilePath -Append
     }
 }
 
@@ -244,8 +254,12 @@ function Measure-CropDimensions ($cropPath) {
             if ($height -gt $cropHeight) { $cropHeight = $height }
         }
     }
-    Write-Host "Crop Dimensions: " $cropWidth "x" $cropHeight
-    return @($cropWidth, $cropHeight)
+    Write-Host "Crop Dimensions: "`n$cropWidth "x" $cropHeight`n
+    if ($cropWidth -eq 0 -or $cropHeight -eq 0) {
+        throw "One or both of the crop values are equal to 0. Check the input path and try again."
+    }
+    else { return @($cropWidth, $cropHeight) }
+    
 }
 
 <#
