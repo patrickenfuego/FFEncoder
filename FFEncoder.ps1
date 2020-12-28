@@ -77,8 +77,8 @@ param (
     [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
     [switch]$1080p,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "2160p")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "1080p")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
@@ -173,7 +173,7 @@ function Get-OperatingSystem {
     return $osInfo
 }
 
-#Returns an object containing the paths to the crop file and log file
+#Returns an object containing the paths to the crop file and log file relative to the input
 function Set-RootPath {
     if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.m[a-z 4]+") {
         $root = $Matches.root
@@ -188,7 +188,7 @@ function Set-RootPath {
         Write-Host $os.OperatingSystem " detected. Using path: $($os.DefaultPath)"
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_encode.log"
-        Write-Host "Crop file path is " $cropPath "`n"
+        Write-Host "Crop file path is <$cropPath>"
     }
 
     $pathObject = [pscustomobject]@{
@@ -269,7 +269,7 @@ function Measure-CropDimensions ($cropPath) {
         The current operating system.
 #>
 function Invoke-FFMpeg ($osType) {
-    Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10'"
+    Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
     switch ($osType) {
         { $_ -match "Windows" } { 
             if ($Test) {
@@ -312,7 +312,7 @@ if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
 Write-Host "`nStarting Script...`n`n"
 $startTime = (Get-Date).ToLocalTime()
-#if the output path already exists, delete the existing file or exit script
+#if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
     do {
         $response = Read-Host "The output path already exists. Would you like to delete it? (y/n)"
