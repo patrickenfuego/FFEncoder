@@ -101,6 +101,11 @@ param (
     [int[]]$Deblock = @(-1, -1),
 
     [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
+    [ValidateSet("BT.2020", "2020", "Display P3", "P3")]
+    [Alias("MasterDisplay", "MDColor", "MDCP")]
+    [string]$MDColorPrimaries,
+
+    [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
     [ValidateNotNullOrEmpty()]
     [Alias("MaxL")]
     [int]$MaxLuminance,
@@ -198,12 +203,7 @@ function Set-RootPath {
     return $pathObject
 }
 
-<#
-    Generates a crop file which is used to calculate auto-cropping values for the video source
-
-    .PARAMETER osType
-            The current operating system.
-#>
+#Generates a crop file which is used to calculate auto-cropping values for the video source
 function New-CropFile {
     #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
     if (Test-Path -Path $cropFilePath) { 
@@ -235,7 +235,7 @@ function New-CropFile {
 }
 
 <#
-    Enumerates the crop file to find the max crop width and height. This simulates auto-cropping from software like Handbrake
+    Enumerates the crop file to find the max crop width and height
 
     .PARAMETER cropPath
         The path to the crop file
@@ -263,23 +263,29 @@ function Measure-CropDimensions ($cropPath) {
 }
 
 <#
-    Runs ffmpeg with operating system specific parameters 
-
-    .PARAMETER osType
-        The current operating system.
+    Runs ffmpeg using libx265 and user specified parameters
+    .PARAMETER colorPrim
+        The mastering display color primary used by the source
 #>
-function Invoke-FFMpeg {
+function Invoke-FFMpeg ($colorPrim) {
+    #Use the color primaries based on the mastering display of the source. 
+    switch -Regex ($colorPrim) {
+        {$_ -match "P3"} {$masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)"}
+        {$_ -match "2020"} {$masterDisplay = "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)"}
+        default {$masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)"}
+    }
+
     Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
     if ($Test) {
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath `
-            -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+            -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
+            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
     }
     else {
-        ffmpeg -probesize 100MB -i $InputPath `
-            -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
+        ffmpeg -probesize 100MB -i $InputPath -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+            -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
+            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
     }
 }
@@ -316,7 +322,7 @@ $logPath = $paths.LogPath
 New-CropFile
 Start-Sleep -Seconds 2
 $cropDim = Measure-CropDimensions $cropFilePath
-Invoke-FFMpeg
+Invoke-FFMpeg $MDColorPrimaries
 
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
