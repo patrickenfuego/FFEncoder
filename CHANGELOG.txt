@@ -1,22 +1,35 @@
 v 1.0.0
-    Initial release. Supports Windows and 4K HDR resolution. 
+    - Initial release. Supports Windows and 4K HDR resolution. 
 v 1.1.0
-    Added support for MacOS and Linux
+    - Added support for MacOS and Linux
         -Tested on MacOS 11.0.1 "Big Sur"
         -Tested on Ubuntu 20.04 LTS
-    Updated help based comments for script functions
-v 1.2.0
-    Completely overhauled help based comments to be more organized and...helpful
-    Added -Help parameter to easily view new help comments and examples
-v 1.2.1
-    Changed min-keyint value to preset default
-    Lowered keyint value from 250 to 120 (seeks every 4 frames). This was an error on my part and was not meant to be that high
-v1.3.1
-    Changed output to a log file instead of the console. On Windows, ffmpeg creates a new line for each frame and the buffer cannot store the entire history
-    Created new function Set-RootPath, which sets the path for the crop file and log file. Logic partially removed from New-CropFile function
-    Changed test encodes to start at the 10 minute mark. It still only encodes 1000 frames, but it will be better test material than the intro screens/logos
-v1.3.2
-    Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
-        which was causing it to become empty. Set-RootPath now returns an object containing the crop and log paths.
-    Changed test runs to begin at approximately 1 minute into the video. This gives a more accurate representation of what to expect when a full encode is performed
+    - Updated help based comments for script functions
+v 1.1.1
+    - Completely overhauled help based comments to be more organized and...helpful
+    - Added -Help parameter to easily view new help comments and examples
+v 1.1.2
+    - Changed min-keyint value to preset default
+    - Lowered keyint value from 250 to 120 (seeks every 4 frames). This was an error on my part and was not meant to be that high
+v1.2.2
+    - Changed output to a log file instead of the console. On Windows, ffmpeg creates a new line for each frame and the buffer cannot store the entire history
+    - Created new function Set-RootPath, which sets the path for the crop file and log file. Logic partially removed from New-CropFile function
+    - Changed test encodes to start at the 10 minute mark. It still only encodes 1000 frames, but it will be better test material than the intro screens/logos
+v1.2.3
+    - Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
+      which was causing it to become empty. Set-RootPath now returns an object containing the crop and log paths.
+    - Changed test runs to begin at approximately 1 minute into the video. This gives a more accurate representation of what to expect when a full encode is performed
+v1.3.3
+    - Added multi-threading support while generating a crop file. 3 independent segments will be analyzed simultaneously, giving a nice performance boost
+    - Added PoshRS-Jobs module to further improve multi-threading performance
+    - Changed cropdetect to use modulus 2 instead of 16. This will perform similarly to Handbrake, but with a bit more precision
+    - Made Invoke-FFMpeg operating system agnostic
+    - Added an exception when crop height or width is 0. Before, the exception would be thrown by ffmpeg, which wasted additional time
+    - Made InputPath positional (position 0) instead of named. The -InputPath parameter can now be excluded if the input path is the first parameter used
+    - Updated console messages for clarity and fixed some formatting issues
+
+v1.3.4
+    - Added new parameter -MDColorPrimaries for sources that use BT.2020 instead of Display P3. This is a temporary solution until I can automate this with ffprobe
+    
+
     
