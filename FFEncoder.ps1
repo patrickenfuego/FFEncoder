@@ -185,7 +185,7 @@ function Set-RootPath {
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
         $os = Get-OperatingSystem
-        Write-Host $os.OperatingSystem " detected. Using path: $($os.DefaultPath)"
+        Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_encode.log"
         Write-Host "Crop file path is <$cropPath>"
@@ -204,7 +204,7 @@ function Set-RootPath {
     .PARAMETER osType
             The current operating system.
 #>
-function New-CropFile ($osType) {
+function New-CropFile {
     #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
     if (Test-Path -Path $cropFilePath) { 
         Write-Host "Crop file already exists. Skipping crop file generation..."
@@ -268,38 +268,19 @@ function Measure-CropDimensions ($cropPath) {
     .PARAMETER osType
         The current operating system.
 #>
-function Invoke-FFMpeg ($osType) {
+function Invoke-FFMpeg {
     Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
-    switch ($osType) {
-        { $_ -match "Windows" } { 
-            if ($Test) {
-                ffmpeg.exe -probesize 100MB -ss 00:01:00 -i $InputPath `
-                    -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
-                    $OutputPath 2>$logPath
-            }
-            else {
-                ffmpeg.exe -probesize 100MB -i $InputPath `
-                    -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
-                    $OutputPath 2>$logPath
-            }
-        }
-        { $_ -match "MacOS" -xor $_ -match "Linux" } {
-            if ($Test) {
-                ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath `
-                    -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
-                    $OutputPath 2>$logPath
-            }
-            else {
-                ffmpeg -probesize 100MB -i $InputPath `
-                    -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-                    -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
-                    $OutputPath 2>$logPath
-            }
-        }
-        default { Write-Host "`nAn OS could not be matched while invoking ffmpeg. Exiting script..."; exit }
+    if ($Test) {
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath `
+            -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
+            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
+            $OutputPath 2>$logPath
+    }
+    else {
+        ffmpeg -probesize 100MB -i $InputPath `
+            -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
+            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
+            $OutputPath 2>$logPath
     }
 }
 
@@ -309,6 +290,7 @@ function Invoke-FFMpeg ($osType) {
 ######################################## Main Script Logic ########################################
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
+Import-Module -Name ".\modules\PoshRSJob"
 
 Write-Host "`nStarting Script...`n`n"
 $startTime = (Get-Date).ToLocalTime()
@@ -331,15 +313,14 @@ if (Test-Path -Path $OutputPath) {
 $paths = Set-RootPath
 $cropFilePath = $paths.CropPath
 $logPath = $paths.LogPath
-$checkOS = Get-OperatingSystem
-New-CropFile $checkOS.OperatingSystem
-Start-Sleep -Seconds 5
+New-CropFile
+Start-Sleep -Seconds 2
 $cropDim = Measure-CropDimensions $cropFilePath
-Invoke-FFMpeg $checkOS.OperatingSystem
+Invoke-FFMpeg
 
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
-Write-Host "`nTotal Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes" 
+Write-Host "`nTotal Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds" 
 
 Read-Host -Prompt "Press enter to exit"
 
