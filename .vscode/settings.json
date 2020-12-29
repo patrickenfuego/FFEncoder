@@ -1,5 +1,8 @@
-{   //editor settings
-    "editor.formatOnSave": true,
+{   //terminal settings
+    "terminal.integrated.scrollback": 10000,
+    
+    //editor settings
+    "editor.formatOnSave": false,
     "editor.tabSize": 4,
     "[markdown]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -17,6 +20,7 @@
         "downsampling",
         "ffmpeg",
         "ffmpeg's",
+        "ffprobe",
         "keyint",
         "libx",
         "loglevel",

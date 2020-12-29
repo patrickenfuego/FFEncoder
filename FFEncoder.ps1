@@ -270,14 +270,14 @@ function Measure-CropDimensions ($cropPath) {
 function Invoke-FFMpeg ($colorPrim) {
     #Use the color primaries based on the mastering display of the source. 
     switch -Regex ($colorPrim) {
-        {$_ -match "P3"} {$masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)"}
-        {$_ -match "2020"} {$masterDisplay = "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)"}
-        default {$masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)"}
+        { $_ -match "P3" } { $masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" }
+        { $_ -match "2020" } { $masterDisplay = "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" }
+        default { $masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" }
     }
 
     Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
     if ($Test) {
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -frames:v 300 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
             -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
             -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
