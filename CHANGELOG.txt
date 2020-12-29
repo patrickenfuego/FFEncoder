@@ -31,5 +31,6 @@ v1.3.3
 v1.3.4
     - Added new parameter -MDColorPrimaries for sources that use BT.2020 instead of Display P3. This is a temporary solution until I can automate this with ffprobe
     
+    
 
     
