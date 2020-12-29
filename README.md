@@ -6,7 +6,7 @@ FFEncoder is a PowerShell script that is meant to make high definition video enc
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run.
 
-FFEncoder will also auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze every frame in the video, then saves the output to a file called crop.txt, and finally scans crop.txt for the maximum width and height values. These values are then used for cropping.
+FFEncoder will also auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate segments of the input source running in parallel. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height. FFEncoder uses modulus 2 
 
 ## Script Arguments
 
