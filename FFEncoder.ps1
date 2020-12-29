@@ -214,19 +214,19 @@ function New-CropFile {
         #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspacepool for each item
         Start-RSJob -Name "Crop Start" -ArgumentList $InputPath -ScriptBlock {
             param($inFile)
-            $c1 = ffmpeg -ss 90 -skip_frame nokey -y -hide_banner -i $inFile -t 00:10:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c1 = ffmpeg -ss 90 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=4 -an -sn -f null - 2>&1
             Write-Output -InputObject $c1
         } 
         
         Start-RSJob -Name "Crop Mid" -ArgumentList $InputPath -ScriptBlock {
             param($inFile)
-            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:10:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=4 -an -sn -f null - 2>&1
             Write-Output -InputObject $c2
         } 
 
         Start-RSJob -Name "Crop End" -ArgumentList $InputPath -ScriptBlock {
             param($inFile)
-            $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:10:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=4 -an -sn -f null - 2>&1
             Write-Output -InputObject $c3
         } 
 
@@ -277,13 +277,13 @@ function Invoke-FFMpeg ($colorPrim) {
 
     Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
     if ($Test) {
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -frames:v 300 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -c:a copy -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
             -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
             -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
     }
     else {
-        ffmpeg -probesize 100MB -i $InputPath -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+        ffmpeg -probesize 100MB -i $InputPath -c:a copy -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
             -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
             -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
@@ -308,8 +308,8 @@ if (Test-Path -Path $OutputPath) {
     switch ($response) {
         "y" { 
             Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4" -Confirm 
-            if ($?) { Write-Host "`nFile $OutputPath was successfully deleted" }
-            else { Write-Host "$OutputPath could not be deleted. Make sure it is not in use by another program.`nExiting script..."; exit }
+            if ($?) { Write-Host "`nFile <$OutputPath> was successfully deleted" }
+            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another program.`nExiting script..."; exit }
         }
         "n" { "Please choose a different file name, or delete the existing file. Exiting script..."; exit }
         default { Write-Host "You have somehow reached an unreachable block. Exiting script..."; exit }
