@@ -1,8 +1,11 @@
 function New-CropFile {
     [CmdletBinding()]
     param (
-        [Parameter()]
-        [string]$InputPath
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$InputPath,
+
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$CropFilePath
     )
 
 
@@ -31,6 +34,6 @@ function New-CropFile {
             Write-Output -InputObject $c3
         } 
 
-        Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $cropFilePath -Append
+        Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $CropFilePath -Append
     }
 }
