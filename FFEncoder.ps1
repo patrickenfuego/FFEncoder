@@ -85,6 +85,12 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [ValidateSet("copy", "aac", "none", "c", "n")]
+    [Alias("A")]
+    [string]$Audio = "none",
+
+    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
@@ -267,19 +273,27 @@ function Measure-CropDimensions ($cropPath) {
     .PARAMETER colorPrim
         The mastering display color primary used by the source
 #>
-function Invoke-FFMpeg ($colorPrim) {
+function Invoke-FFMpeg ($colorPrim, $audioType) {
     #Use the color primaries based on the mastering display of the source. 
     switch -Regex ($colorPrim) {
         { $_ -match "P3" } { $masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" }
         { $_ -match "2020" } { $masterDisplay = "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" }
         default { $masterDisplay = "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" }
     }
-
+    #Use the audio preference declared by the user
+    $tmpCmd = 'copy'
+    switch -Regex ($audioType) {
+         { $_ -match "^c.*" } {$aArgs = @('-c:a', $tmpCmd)}
+         {$_ -match "aac"} {$aArgs = @('-c:a', 'aac', '-vbr', 5)}
+        Default {$aArgs = '-an'}
+    }
+    Write-Host "Audio preference: " $aArgs
     Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
     if ($Test) {
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -c:a copy -frames:v 1000 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
-            -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
-            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath $aArgs -frames:v 100 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+            -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
+            -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=bt2020:`
+            transfer=smpte2084:colormatrix=bt2020nc:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
     }
     else {
@@ -322,10 +336,13 @@ $logPath = $paths.LogPath
 New-CropFile
 Start-Sleep -Seconds 2
 $cropDim = Measure-CropDimensions $cropFilePath
-Invoke-FFMpeg $MDColorPrimaries
+Invoke-FFMpeg $MDColorPrimaries $Audio
 
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
+
+#Get contents of log file and display ~ last 20 lines before exit
+
 Write-Host "`nTotal Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds" 
 
 Read-Host -Prompt "Press enter to exit"
