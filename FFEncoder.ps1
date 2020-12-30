@@ -291,8 +291,8 @@ function Invoke-FFMpeg ($colorPrim, $audioType) {
     Write-Host "Audio preference: " $aString
     Write-Host "Starting ffmpeg...`nTo view your progress, run the command 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
     if ($Test) {
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath $aArgs[0] $aArgs[1] -frames:v 100 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
-            -color_range tv -color_primaries 9 -color_trc 16 -colorspace 9 -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputPath -c:a copy -frames:v 100 -vf "crop=w=$($cropDim[0]):h=$($cropDim[1])" `
+            -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt yuv420p10le `
             -x265-params "level-idc=5.1:keyint=120:deblock=$($deblock[0]),$($deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=bt2020:`
             transfer=smpte2084:colormatrix=bt2020nc:chromaloc=2:$masterDisplay`L($MaxLuminance,$MinLuminance):max-cll=$MaxCLL,$MaxFAL`:hdr-opt=1" `
             $OutputPath 2>$logPath
