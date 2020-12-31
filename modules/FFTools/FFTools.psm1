@@ -7,7 +7,7 @@ $PSModuleRoot = $PSModule.ModuleBase
 #region Load Public Functions
 try {
     Get-ChildItem "$ScriptPath\Public" -Filter *.ps1 | Select-Object -ExpandProperty FullName | ForEach-Object {
-        $Function = Split-Path $_ -Leaf
+        $function = Split-Path $_ -Leaf
         . $_
     }
 } catch {
