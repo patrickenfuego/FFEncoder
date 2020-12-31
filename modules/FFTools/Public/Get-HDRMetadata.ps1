@@ -1,7 +1,7 @@
 function Get-HDRMetadata {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [string]$InputFile
     )
     #Constants for mastering display color primaries
@@ -22,7 +22,11 @@ function Get-HDRMetadata {
         $metadata.frames.side_data_list[0].red_y -match "14600/\d+") {
         $masterDisplayStr = $BT_2020
     }
-    else { $masterDisplayStr = $Display_P3 }
+    elseif ($metadata.frames.side_data_list[0].red_x -match "34000/\d+" -and
+            $metadata.frames.side_data_list[0].red_y -match "16000/\d+") {
+        $masterDisplayStr = $Display_P3
+    }
+    else { throw "Unknown mastering display colors found. Only BT.2020 and Display P3 are supported." }
     #HDR min and max luminance values
     [int]$minLuma = $metadata.frames.side_data_list[0].min_luminance -replace "/.*", ""
     [int]$maxLuma = $metadata.frames.side_data_list[0].max_luminance -replace "/.*", ""
@@ -32,7 +36,7 @@ function Get-HDRMetadata {
 
     Write-Host "Master display is: " $masterDisplayStr
 
-    $metadataObj = [PSCustomObject] @{
+    $metadataObj = @{
         ColorSpace     = $colorSpace
         ColorPrimaries = $colorPrimaries
         Transfer       = $colorTransfer
