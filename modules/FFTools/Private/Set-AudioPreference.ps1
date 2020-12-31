@@ -27,12 +27,13 @@ function Set-AudioPreference {
             do {
                 [int]$qLevel = Read-Host -Prompt $prompt.ToString()
             } until ($qLevel -le 5 -and $qLevel -ge 1)
+
             #Call function to calculate the bitrate based on choice
             $bitrate = Measure-AacBitrate $InputFile $qLevel
             return @('-c:a', 'aac', '-b:a', $bitrate)
         }
         #If 'n' or 'none' is selected. This is also the default behavior
         { $_ -match "^n[one]?" } { return '-an' }
-        default { return "-an" }
+        default { return '-an' }
     }
 }

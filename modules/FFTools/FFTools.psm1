@@ -5,22 +5,33 @@ $PSModuleRoot = $PSModule.ModuleBase
 
 
 #region Load Public Functions
-Try {
+try {
     Get-ChildItem "$ScriptPath\Public" -Filter *.ps1 | Select-Object -ExpandProperty FullName | ForEach-Object {
         $Function = Split-Path $_ -Leaf
         . $_
     }
-} Catch {
-    Write-Warning ("{0}: {1}" -f $Function,$_.Exception.Message)
-    Continue
+} catch {
+    Write-Warning ("{0}: {1}" -f $function,$_.Exception.Message)
+    continue
 }
 #region Load Private Functions
-Try {
+try {
     Get-ChildItem "$ScriptPath\Private" -Filter *.ps1 | Select-Object -ExpandProperty FullName | ForEach-Object {
-        $Function = Split-Path $_ -Leaf
+        $function = Split-Path $_ -Leaf
         . $_
     }
-} Catch {
-    Write-Warning ("{0}: {1}" -f $Function,$_.Exception.Message)
-    Continue
+} catch {
+    Write-Warning ("{0}: {1}" -f $function,$_.Exception.Message)
+    continue
 }
+
+New-Alias -Name iff -Value Invoke-FFMpeg -Force
+New-Alias -Name ncf -Value New-CropFile1
+New-Alias -Name ghdr -Value Get-HDRMetadata
+
+
+$ExportModule = @{
+    Alias = @("iff", "ncf", "ghdr")
+    Function = @("Invoke-FFmpeg", "New-CropFile1", "Get-HDRMetadata")
+}
+Export-ModuleMember @ExportModule
