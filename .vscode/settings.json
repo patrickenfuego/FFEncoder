@@ -13,6 +13,7 @@
         "Deblock",
         "HEVC",
         "MDCP",
+        "Subsampling",
         "Vorbis",
         "chromaloc",
         "colorspace",

@@ -6,9 +6,20 @@ FFEncoder is a PowerShell script that is meant to make high definition video enc
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run.
 
-FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate segments of the input source running in parallel. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height.
+FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate 8 minute segments of the source simultaneously. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height.
 
-FFEncoder will also automatically fetch HDR metadata before encoding begins.
+FFEncoder will also automatically fetch and fill HDR metadata before encoding begins. This includes:
+
+- Mastering Display Color Primaries (Display P3 and BT.2020 supported)
+- Pixel format
+- Color Space (Matrix Coefficients)
+- Color Primaries
+- Color Transfer Characteristics
+- Maximum/Minimum Luminance
+- Maximum Content Light Level 
+- Maximum Frame Average Light Level
+
+Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for nearly every source.
 
 ## Script Arguments
 
