@@ -5,14 +5,15 @@
     .DESCRIPTION
         This script is meant to make video encoding easier with ffmpeg. Instead of manually changing
         the script parameters for each encode, you can pass dynamic parameters to this script and it  
-        will use the arguments as needed. Supports 2160p HDR encoding, and I plan to add 1080p soon.   
+        will use the arguments as needed. Supports 2160p HDR encoding with automatic fetching ofHDR 
+        metadata. I plan to add 1080p soon.   
 
     .EXAMPLE
         ## Windows ##
-        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MaxFAL 129 -OutputPath "Path\To\Encoded\File"
+        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Preset medium -Deblock -3,-3 -Audio aac -OutputPath "Path\To\Encoded\File"
     .EXAMPLE
         ## MacOS or Linux ##
-        ./FFEncoder.ps1 -InputPath "Path/To/file" -CRF 16.5 -Preset medium -Deblock -2,-2 -MaxLuminance 1000 -MinLuminance 0.0050 -MaxCLL 1347 -MaxFAL 129 -OutputPath "Path/To/Encoded/File"
+        ./FFEncoder.ps1 -InputPath "Path/To/file" -CRF 16.5 -Preset medium -Deblock -2,-2 -Audio none -OutputPath "Path/To/Encoded/File"
 
     .INPUTS
         4K HDR video file 
@@ -26,45 +27,36 @@
 
         Be sure to include ".mkv" or ".mp4" at the end of your output file, or you will be left with a file that will not play. 
 
-        FFEncoder is designed to encode video ONLY. ffmpeg does not have great passthrough options for Atmos or DTS-X (yet), 
-        so it is easier to mux the audio yourself using MKVToolNix. By default, ffmpeg will convert audio streams to Vorbis.
-        When your video is done encoding, simply mux the Vorbis out and replace it with your audio stream of choice. I have a
-        separate script for AAC audio encoding that I plan to merge into FFEncoder at some point. 
+        FFEncoder will automatically retrieve HDR metadata for you using the Get-HDRMetadata function from FFTools module. 
 
-        FFEncoder will automatically convert HDR Content Light Level values for you. Input CLL values as you see them in
-        MediaInfo (or similar software).
-
-        .PARAMETER Help
-            Displays help information for the script. Only required for the "Help" parameter set
-        .PARAMETER Test
-            Switch to enable a test run. Only encodes the first 1000 frames
-        .PARAMETER 1080p
-            Switch to enable 1080p encode. Removes HDR arguments (still testing). Only required for the "1080p" parameter set
-        .PARAMETER InputPath
-            Location of the file to be encoded
-        .PARAMETER Preset
-            The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
-        .PARAMETER CRF
-            Constant rate factor setting. Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate
-        .PARAMETER Deblock
-            Deblock filter settings. The first value represents strength, and the second value represents frequency
-        .PARAMETER MaxLuminance
-            Maximum master display luminance for HDR. Only required for the "2160p" parameter set
-        .PARAMETER MinLuminance
-            Minimum master display luminance for HDR. Only required for the "2160p" parameter set
-        .PARAMETER MaxCLL
-            Maximum content light level for HDR. Only required for the "2160p" parameter set
-        .PARAMETER MaxFAL
-            Maximum frame average light level for HDR. Only required for the "2160p" parameter set
-        .PARAMETER OutputPath
-            Location of the encoded video file
-        
-        .lINK
-            GitHub Page - https://github.com/patrickenfuego/FFEncoder
-        .LINK
-            FFMpeg documentation - https://ffmpeg.org
-        .LINK
-            x265 HEVC Documentation - https://x265.readthedocs.io/en/master/introduction.html
+    .PARAMETER Help
+        Displays help information for the script. Only required for the "Help" parameter set
+    .PARAMETER Test
+        Switch to enable a test run. Only encodes the first 1000 frames
+    .PARAMETER 1080p
+        Switch to enable 1080p encode. Removes HDR arguments (still testing, don't use)
+    .PARAMETER InputPath
+        Location of the file to be encoded
+    .PARAMETER Audio
+        Audio encoding option. FFEncoder has 3 audio options:
+            1. copy/c - Pass through the primary audio stream without encoding
+            2. none/n - Excludes the audio stream entirely
+            3. aac    - Convert primary audio stream to AAC. Choosing this option will display a console prompt asking you to select the quality level (1-5)
+    .PARAMETER Preset
+        The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
+    .PARAMETER CRF
+        Constant rate factor setting. Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate
+    .PARAMETER Deblock
+        Deblock filter settings. The first value represents strength, and the second value represents frequency
+    .PARAMETER OutputPath
+        Location of the encoded output video file
+    
+    .lINK
+        GitHub Page - https://github.com/patrickenfuego/FFEncoder
+    .LINK
+        FFMpeg documentation - https://ffmpeg.org
+    .LINK
+        x265 HEVC Documentation - https://x265.readthedocs.io/en/master/introduction.html
 
 #>
 
@@ -173,42 +165,11 @@ function Set-RootPath {
         Write-Host "Crop file path is <$cropPath>"
     }
 
-    $pathObject = [pscustomobject]@{
+    $pathObject = @{
         CropPath = $cropPath
         LogPath  = $logPath
     }
     return $pathObject
-}
-
-#Generates a crop file which is used to calculate auto-cropping values for the video source
-function New-CropFile {
-    #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
-    if (Test-Path -Path $cropFilePath) { 
-        Write-Host "Crop file already exists. Skipping crop file generation..."
-        return
-    }
-    else {
-        #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspacepool for each item
-        Start-RSJob -Name "Crop Start" -ArgumentList $InputPath -ScriptBlock {
-            param($inFile)
-            $c1 = ffmpeg -ss 90 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2, cropdetect=round=4 -an -sn -f null - 2>&1
-            Write-Output -InputObject $c1
-        } 
-        
-        Start-RSJob -Name "Crop Mid" -ArgumentList $InputPath -ScriptBlock {
-            param($inFile)
-            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2, cropdetect=round=4 -an -sn -f null - 2>&1
-            Write-Output -InputObject $c2
-        } 
-
-        Start-RSJob -Name "Crop End" -ArgumentList $InputPath -ScriptBlock {
-            param($inFile)
-            $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2, cropdetect=round=4 -an -sn -f null - 2>&1
-            Write-Output -InputObject $c3
-        } 
-
-        Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $cropFilePath -Append
-    }
 }
 
 <#
@@ -218,7 +179,7 @@ function New-CropFile {
         The path to the crop file
 #>
 function Measure-CropDimensions ($cropPath) {
-    if (!$cropPath) { throw "There was an issue reading the crop file. Check that the file was properly created and try again." }
+    if (!$cropPath) { throw "There was an issue reading the crop file. This usually happens when an empty file was generated on a previous run." }
     $cropFile = Get-Content $cropPath
     $cropHeight = 0
     $cropWidth = 0
@@ -248,13 +209,14 @@ if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 Import-Module -Name ".\modules\PoshRSJob"
 Import-Module -Name ".\modules\FFTools"
 
-Write-Host "`nStarting Script...`n`n"
+Write-Host "`nFiring up FFEncoder...`n`n"
 $startTime = (Get-Date).ToLocalTime()
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
     do {
         $response = Read-Host "The output path already exists. Would you like to delete it? (y/n)"
     } until ($response -eq "y" -or $response -eq "n")
+
     switch ($response) {
         "y" { 
             Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4" -Confirm 
@@ -265,13 +227,16 @@ if (Test-Path -Path $OutputPath) {
         default { Write-Host "You have somehow reached an unreachable block. Exiting script..."; exit }
     }
 }
-
+#Generating paths to the crop and log files
 $paths = Set-RootPath
 $cropFilePath = $paths.CropPath
 $logPath = $paths.LogPath
-New-CropFile
-Start-Sleep -Seconds 2
+#Creating the crop file
+New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath
 $hdrData = Get-HDRMetadata $InputPath
+if ($null -eq $hdrData) {
+    throw "HDR data is null. ffprobe may have failed to retrieve the data. Reload the module and try again, or run ffprobe manually to investigate."
+}
 $cropDim = Measure-CropDimensions $cropFilePath
 
 $ffmpegParams = @{
@@ -281,19 +246,18 @@ $ffmpegParams = @{
     Preset         = $Preset
     CRF            = $CRF
     Deblock        = $Deblock
-    HDR            = $hdrData[1]
+    HDR            = $hdrData
     OutputPath     = $OutputPath
     LogPath        = $logPath
     Test           = $Test
 }
 Invoke-FFMpeg @ffmpegParams
 
-
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
-
+#Display a quick view of the finished log file
+Get-Content -Path $logPath -Tail 8
 Write-Host "`nTotal Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds" 
-Get-Content -Path $cropFilePath -Tail 20
 
 Read-Host -Prompt "Press enter to exit"
 
