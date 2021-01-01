@@ -11,8 +11,6 @@
         Path to source file. This is the file to be encoded
     .Outputs
         PowerShell object containing relevant HDR metadata
-    .NOTES
-        Due to the way PowerShell returns the object (an Object array), you must access the data at index 1
 #>
 function Get-HDRMetadata {
     [CmdletBinding()]
