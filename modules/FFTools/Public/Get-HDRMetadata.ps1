@@ -33,6 +33,7 @@ function Get-HDRMetadata {
     [string]$colorSpace = $metadata.frames.color_space
     [string]$colorPrimaries = $metadata.frames.color_primaries
     [string]$colorTransfer = $metadata.frames.color_transfer
+    #Compares the red coordinates to determine the mastering display color primaries
     if ($metadata.frames.side_data_list[0].red_x -match "35400/\d+" -and 
         $metadata.frames.side_data_list[0].red_y -match "14600/\d+") {
         $masterDisplayStr = $BT_2020
@@ -60,6 +61,7 @@ function Get-HDRMetadata {
         MaxCLL         = $maxCLL
         MaxFAL         = $maxFAL
     }
-
     return $metadataObj
 }
+
+

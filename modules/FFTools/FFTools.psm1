@@ -25,13 +25,13 @@ try {
     continue
 }
 
-New-Alias -Name iff -Value Invoke-FFMpeg -Force
-New-Alias -Name ncf -Value New-CropFile1
-New-Alias -Name ghdr -Value Get-HDRMetadata
+New-Alias -Name iffmpeg -Value Invoke-FFMpeg -Force
+New-Alias -Name ncf -Value New-CropFile1 -Force
+New-Alias -Name ghdr -Value Get-HDRMetadata -Force
 
 
 $ExportModule = @{
-    Alias = @("iff", "ncf", "ghdr")
-    Function = @("Invoke-FFmpeg", "New-CropFile1", "Get-HDRMetadata")
+    Alias = @("iffmpeg", "ncf", "ghdr")
+    Function = @("Invoke-FFmpeg", "New-CropFile", "Get-HDRMetadata")
 }
 Export-ModuleMember @ExportModule
