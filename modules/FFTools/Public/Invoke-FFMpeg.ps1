@@ -1,3 +1,9 @@
+###################################################################
+#
+#   Written by: Patrick Kelly
+#   Last Modified: 12/31/2020
+#
+###################################################################
 <#
     .SYNOPSIS
         Function that calls ffmpeg to encode the input file using passed parameters
@@ -42,7 +48,7 @@ function Invoke-FFMpeg  {
 
         # x265 CRF setting
         [Parameter(Mandatory = $false)]
-        [int]$CRF = 17.0,
+        [double]$CRF = 16.0,
 
         # Deblock filter setting
         [Parameter(Mandatory = $false)]
@@ -71,7 +77,7 @@ function Invoke-FFMpeg  {
     #Builds the audio argument array based on user input (none, aac, or copy)
     $audio = Set-AudioPreference $InputFile $AudioInput
 
-    Write-Host "Starting ffmpeg...`nTo view your progress, run 'gc path\to\crop.txt -Tail 10' in a different PowerShell session"
+    Write-Host "Starting ffmpeg...`nTo view your progress, run 'gc path\to\crop.txt -Tail 10' in a different PowerShell session`n`n"
     if ($Test) {
         ffmpeg -probesize 100MB -ss 00:01:00 -i $InputFile $audio -frames:v 1000 -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `

@@ -18,7 +18,7 @@ function Set-AudioPreference {
         { $_ -match "aac" } {
             $prompt = [System.Text.StringBuilder]::new()
             [void]$prompt.
-            AppendLine("`nPlease select the AAC encoder quality level (1 = low quality, 5 = high quality):`n").
+            AppendLine("`nPlease select the AAC encoder quality level:`n").
             AppendLine("1.`t32 kbps/channel").
             AppendLine("2.`t48 kbps/channel").
             AppendLine("3.`t64 kbps/channel").
