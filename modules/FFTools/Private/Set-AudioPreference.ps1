@@ -29,7 +29,7 @@ function Set-AudioPreference {
             } until ($qLevel -le 5 -and $qLevel -ge 1)
 
             #Call function to calculate the bitrate based on choice
-            $bitrate = Measure-AacBitrate $InputFile $qLevel
+            $bitrate = Measure-Channels $InputFile $qLevel
             return @('-c:a', 'aac', '-b:a', $bitrate)
         }
         #If 'n' or 'none' is selected. This is also the default behavior
