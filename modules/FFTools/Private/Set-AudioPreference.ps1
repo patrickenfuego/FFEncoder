@@ -9,27 +9,19 @@ function Set-AudioPreference {
         [String]$InputFile,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [string]$UserChoice
+        [string]$UserChoice,
+
+        # Parameter help description
+        [Parameter(Mandatory = $false, Position = 2)]
+        [int]$AacBitrate
     )
     switch -Regex ($UserChoice) {
         #If 'c' or 'copy' is selected
         { $_ -match "^c[opy]?" } { return @('-c:a', 'copy') }
         #If aac is selected, prompt for quality level (uses CBR for native ffmpeg aac)
         { $_ -match "aac" } {
-            $prompt = [System.Text.StringBuilder]::new()
-            [void]$prompt.
-            AppendLine("`nPlease select the AAC encoder quality level:`n").
-            AppendLine("1.`t32 kbps/channel").
-            AppendLine("2.`t48 kbps/channel").
-            AppendLine("3.`t64 kbps/channel").
-            AppendLine("4.`t72 kbps/channel").
-            AppendLine("5.`t112 kbps/channel")
-            do {
-                [int]$qLevel = Read-Host -Prompt $prompt.ToString()
-            } until ($qLevel -le 5 -and $qLevel -ge 1)
-
-            #Call function to calculate the bitrate based on choice
-            $bitrate = Measure-Channels $InputFile $qLevel
+            [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0
+            $bitrate = $numOfChannels * $AacBitrate
             return @('-c:a', 'aac', '-b:a', $bitrate)
         }
         #If 'n' or 'none' is selected. This is also the default behavior
