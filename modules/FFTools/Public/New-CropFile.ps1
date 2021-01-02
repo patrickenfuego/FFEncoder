@@ -31,12 +31,15 @@ function New-CropFile {
         [string]$CropFilePath
     )
 
+    Import-Module -Name ".\modules\PoshRSJob"
+
     #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
     if (Test-Path -Path $CropFilePath) { 
-        Write-Host "Crop file already exists. Skipping crop file generation..."
+        Write-Host "Crop file already exists. Skipping crop file generation..." @warnColors
         return
     }
     else {
+        Write-Host "Generating crop file...`n"
         #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspacepool for each item
         Start-RSJob -Name "Crop Start" -ArgumentList $InputPath -ScriptBlock {
             param($inFile)
@@ -57,5 +60,19 @@ function New-CropFile {
         } 
 
         Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $CropFilePath -Append
+    }
+
+    Start-Sleep -Milliseconds 500
+    if ((Get-Content $CropFilePath).Count -gt 0) {
+        Write-Host "`n** CROP FILE SUCCESSFULLY GENERATED **" @progressColors
+    }
+    #If the crop file fails to generate, sleep for 5 seconds and perform a recursive call to try again
+    else {
+        Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
+        Start-Sleep -Seconds 5
+        New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath
+        if ((Get-Content $CropFilePath).Count -le 0) {
+            throw "There was an issue creating the crop file. Check the input path and try again."
+        }
     }
 }
