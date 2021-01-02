@@ -1,10 +1,17 @@
+#Setting module run location
 $ScriptPath = Split-Path $MyInvocation.MyCommand.Path
 $PSModule = $ExecutionContext.SessionState.Module
 $PSModuleRoot = $PSModule.ModuleBase
 
+## module variables ##
 
+$progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black'}
+$warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black'}
+$emphasisColors = @{ForegroundColor = 'Cyan'; BackgroundColor = 'Black'}
 
-#region Load Public Functions
+## end module variables ##
+
+## region Load Public Functions ##
 try {
     Get-ChildItem "$ScriptPath\Public" -Filter *.ps1 | Select-Object -ExpandProperty FullName | ForEach-Object {
         $function = Split-Path $_ -Leaf
@@ -14,7 +21,7 @@ try {
     Write-Warning ("{0}: {1}" -f $function,$_.Exception.Message)
     continue
 }
-#region Load Private Functions
+## region Load Private Functions ##
 try {
     Get-ChildItem "$ScriptPath\Private" -Filter *.ps1 | Select-Object -ExpandProperty FullName | ForEach-Object {
         $function = Split-Path $_ -Leaf
@@ -25,6 +32,7 @@ try {
     continue
 }
 
+## Setting function aliases ##
 New-Alias -Name iffmpeg -Value Invoke-FFMpeg -Force
 New-Alias -Name ncf -Value New-CropFile1 -Force
 New-Alias -Name ghdr -Value Get-HDRMetadata -Force
@@ -32,7 +40,8 @@ New-Alias -Name mcd -Value Measure-CropDimensions -Force
 
 
 $ExportModule = @{
-    Alias = @("iffmpeg", "ncf", "ghdr")
+    Alias = @("iffmpeg", "ncf", "ghdr", "mcd")
     Function = @("Invoke-FFmpeg", "New-CropFile", "Get-HDRMetadata", 'Measure-CropDimensions')
+    Variable = @("progressColors", "warnColors", "emphasisColors" )
 }
 Export-ModuleMember @ExportModule
