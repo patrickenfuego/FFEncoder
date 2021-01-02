@@ -57,5 +57,7 @@ v. 1.4.5
     - Fixed bug with AAC audio encoding in Set-AudioPreference function. When I refactored the function, I forgot to add the 'k' to the end of the bitrate argument 
       and it was encoding in mbps instead of kbps.
     - Added Measure-CropDimensions function to FFTools module
+    - Overhauled console messages to give more information on progress before the encode begins
+    - Added color hash variables to the FFTools module for global use
     
     
