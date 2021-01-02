@@ -83,6 +83,12 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [ValidateRange(32, 160)]
+    [Alias("AQ", "AACQ")]
+    [int]$AacBitrate = 64,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
@@ -106,8 +112,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
-    [Alias("T")]
-    [switch]$Test
+    [Alias("T", "Test")]
+    [int]$TestFrames
 
 )
 
@@ -147,7 +153,7 @@ function Get-OperatingSystem {
     return $osInfo
 }
 
-#Returns an object containing the paths to the crop file and log file relative to the input
+#Returns an object containing the paths to the crop file and log file relative to the input path
 function Set-RootPath {
     if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.m[a-z 4]+") {
         $root = $Matches.root
@@ -160,8 +166,8 @@ function Set-RootPath {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
         $os = Get-OperatingSystem
         Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
-        $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_crop.txt"
-        $logPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_encode.log"
+        $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
+        $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
         Write-Host "Crop file path is <$cropPath>"
     }
 
@@ -243,21 +249,20 @@ $ffmpegParams = @{
     InputFile      = $InputPath
     CropDimensions = $cropDim
     AudioInput     = $Audio
+    AacBitrate     = $AacBitrate
     Preset         = $Preset
     CRF            = $CRF
     Deblock        = $Deblock
     HDR            = $hdrData
     OutputPath     = $OutputPath
     LogPath        = $logPath
-    Test           = $Test
+    TestFrames     = $TestFrames
 }
 Invoke-FFMpeg @ffmpegParams
 
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
-#Display a quick view of the finished log file
+#Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $logPath -Tail 8
-Write-Host "`nTotal Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds" 
-
-Read-Host -Prompt "Press enter to exit"
-
+Write-Host "`nEnd time: " $endTime
+Write-Host "Total Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds`n" 
