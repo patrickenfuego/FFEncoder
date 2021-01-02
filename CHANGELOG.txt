@@ -41,7 +41,13 @@ v 1.4.4
         -Private 
             - Measure-Channels - Uses ffprobe to find the number of audio channels and calculates bitrate. Used in Set-AudioPreference function
             - Set-AudioPreference - Helper function that builds a string array of audio arguments for ffmpeg to use, depending on user choice
-    - Removed 5 parameters related to HDR in FFEncoder.ps1 (no longer needed)
-    - Added Audio parameter to FFEncoder.ps1 and Invoke-FFMpeg function. There are now 3 different Audio options (none, copy, or aac)
+    - Removed 5 parameters related to HDR in FFEncoder.ps1 (no longer needed, see Get-HDRMetadata)
+    - Added -Audio parameter to FFEncoder.ps1 and Invoke-FFMpeg function. There are now 3 different Audio options (none, copy, or aac):
+        - 'copy' / 'c' will copy the primary audio stream. Note that this will fail if you try and pass object based audio like Atmos or DTS-X
+        - 'aac' will use ffmpeg's native encoder. A new optional parameter called -AacBitrate has been added to specify the bitrate to use for aac.
+          This value represents the bitrate per channel, and not the overall bitrate. Default is 64 kbps / channel. 
+        - 'none / 'n' will exclude audio streams entirely. 
     - Added aliases for module functions
+    - Changed -Test parameter to -TestFrames, which now accepts an integer number of frames to encode. Default is still 1000
+    - Fixed small null bug in Get-RootPath function when a match cannot be made for the root path and the crop/log path had to use the OS default path instead
     
