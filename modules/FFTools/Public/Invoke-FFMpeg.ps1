@@ -1,7 +1,7 @@
 ###################################################################
 #
 #   Written by: Patrick Kelly
-#   Last Modified: 12/31/2020
+#   Last Modified: 01/02/2021
 #
 ###################################################################
 <#
@@ -21,7 +21,7 @@
         4K HDR encoded video file
     .NOTES
         HDR metadata can be collected using module function Get-HDRMetadata
-        Get-AudioPreference is a private function that is not publically loaded by the module
+        Get-AudioPreference is a private function that is not publicly loaded by the module
 #>
 function Invoke-FFMpeg {      
     [CmdletBinding()]
@@ -82,7 +82,11 @@ function Invoke-FFMpeg {
     #Builds the audio argument array based on user input (none, aac, or copy)
     $audio = Set-AudioPreference $InputFile $AudioInput $AacBitrate
 
-    Write-Host "Starting ffmpeg...`nTo view your progress, run 'gc path\to\crop.txt -Tail 10' in a different PowerShell session`n`n"
+    Write-Host "***** STARTING FFMPEG *****" @progressColors
+    Write-Host "To view your progress, run " -NoNewline
+    Write-Host "Get-Content path\to\cropFile.txt -Tail 10" @emphasisColors -NoNewline
+    Write-Host " in a different PowerShell session`n`n"
+
     if ($PSBoundParameters['TestFrames']) {
         ffmpeg -probesize 100MB -ss 00:01:00 -i $InputFile $audio -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
