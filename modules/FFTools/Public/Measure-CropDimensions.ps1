@@ -11,8 +11,9 @@ function Measure-CropDimensions
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$CropFilePath
     )
-    
+
     if (!$CropFilePath) { throw "There was an issue reading the crop file. This usually happens when an empty file was generated on a previous run." }
+    Write-Host "`nScanning crop file for dimensions..."
     $cropFile = Get-Content $CropFilePath
     $cropHeight = 0
     $cropWidth = 0
@@ -25,10 +26,14 @@ function Measure-CropDimensions
             if ($height -gt $cropHeight) { $cropHeight = $height }
         }
     }
-    Write-Host "Crop Dimensions: "`n$cropWidth "x" $cropHeight`n
+    
     if ($cropWidth -eq 0 -or $cropHeight -eq 0) {
         throw "One or both of the crop values are equal to 0. Check the input path and try again."
     }
-    else { return @($cropWidth, $cropHeight) }
+    else {
+        Write-Host "** CROP DIMENSIONS SUCCESSFULLY RETRIEVED ** " @progressColors
+        Write-Host "Dimensions: $cropWidth x $cropHeight`n"
+        return @($cropWidth, $cropHeight) 
+    }
     
 }
