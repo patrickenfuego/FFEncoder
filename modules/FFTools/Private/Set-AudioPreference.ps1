@@ -26,7 +26,7 @@ function Set-AudioPreference {
     if ($UserChoice -match "^c[opy]?") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
         Write-Host "Audio stream 0 will be copied. " -NoNewline
-        Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL as ffmpeg does not yet know how to decode it`n" @warnColors
+        Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
         return @('-c:a', 'copy') 
     }
     elseif ($UserChoice -match "aac") {
