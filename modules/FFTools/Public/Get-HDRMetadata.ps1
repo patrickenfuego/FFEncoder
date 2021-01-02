@@ -21,8 +21,11 @@ function Get-HDRMetadata {
     #Constants for mastering display color primaries
     Set-Variable -Name Display_P3 -Value "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
     Set-Variable -Name BT_2020 -Value "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
+
+    Write-Host "`nRetrieving HDR Metadata..." 
+
     #Gather HDR metadata using ffprobe
-    $probe = ffprobe -hide_banner -loglevel warning -select_streams v -print_format json `
+    $probe = ffprobe -hide_banner -loglevel error -select_streams v -print_format json `
         -show_frames -read_intervals "%+#1" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
         -i $InputFile
 
@@ -59,7 +62,13 @@ function Get-HDRMetadata {
         MaxCLL         = $maxCLL
         MaxFAL         = $maxFAL
     }
-    return $metadataObj
+    if ($null -eq $metadataObj) {
+        throw "HDR object is null. ffprobe may have failed to retrieve the data. Reload the module and try again, or run ffprobe manually to investigate."
+    }
+    else {
+        Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **" @progressColors
+        return $metadataObj
+    }
 }
 
 
