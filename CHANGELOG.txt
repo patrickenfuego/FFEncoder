@@ -50,4 +50,12 @@ v 1.4.4
     - Added aliases for module functions
     - Changed -Test parameter to -TestFrames, which now accepts an integer number of frames to encode. Default is still 1000
     - Fixed small null bug in Get-RootPath function when a match cannot be made for the root path and the crop/log path had to use the OS default path instead
+
+v. 1.4.5
+    - Removed Measure-AudioChannels function from the FFTools module and put the logic inside Set-AudioPreference. It was adding an extra layer of complexity 
+      without providing much benefit.
+    - Fixed bug with AAC audio encoding in Set-AudioPreference function. When I refactored the function, I forgot to add the 'k' to the end of the bitrate argument 
+      and it was encoding in mbps instead of kbps.
+    - Added Measure-CropDimensions function to FFTools module
+    
     
