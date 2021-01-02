@@ -34,6 +34,7 @@
         "keyint",
         "libx",
         "loglevel",
+        "mbps",
         "nokey",
         "pacman",
         "probesize",
