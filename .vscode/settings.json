@@ -10,12 +10,16 @@
 
     //code spell checker extension dictionary
     "cSpell.words": [
+        "AACQ",
         "Deblock",
         "HEVC",
+        "Luma",
         "MDCP",
         "Subsampling",
         "Vorbis",
         "chromaloc",
+        "colormatrix",
+        "colorprim",
         "colorspace",
         "cropdetect",
         "dhdr",
@@ -23,6 +27,10 @@
         "ffmpeg",
         "ffmpeg's",
         "ffprobe",
+        "ghdr",
+        "hashtable",
+        "iffmpeg",
+        "kbps",
         "keyint",
         "libx",
         "loglevel",
