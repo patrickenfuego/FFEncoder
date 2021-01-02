@@ -72,9 +72,6 @@ param (
     [Alias("H", "/?", "?")]
     [switch]$Help,
 
-    # [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
-    # [switch]$1080p,
-
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "1080p")]
     [ValidateNotNullOrEmpty()]
