@@ -160,7 +160,6 @@ function Set-RootPath {
         $title = $Matches.title
         $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
         $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
-        Write-Host "Crop file path is <$cropPath>"
     }
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
@@ -168,8 +167,10 @@ function Set-RootPath {
         Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
-        Write-Host "Crop file path is <$cropPath>"
     }
+
+    Write-Host "Crop file path is: " -NoNewline 
+    Write-Host "<$cropPath>" @emphasisColors
 
     $pathObject = @{
         CropPath = $cropPath
@@ -184,39 +185,40 @@ function Set-RootPath {
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
-Import-Module -Name ".\modules\PoshRSJob"
 Import-Module -Name ".\modules\FFTools"
 
-Write-Host "`nFiring up FFEncoder...`n`n"
+Write-Host "`nFiring up FFEncoder...`n`n" @emphasisColors
 $startTime = (Get-Date).ToLocalTime()
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
-    do {
-        $response = Read-Host "The output path already exists. Would you like to delete it? (y/n)"
-    } until ($response -eq "y" -or $response -eq "n")
+    $title = "Output Path Already Exists"
+    $prompt = "Would you like to delete it?"
+    $yesPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&yes", "Delete the existing file. you will be asked to confirm again before deletion"
+    $noPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&no", "Do not delete the existing file and exit the script. The file must be renamed or deleted before continuing"
+    $options = [System.Management.Automation.Host.ChoiceDescription[]]($yesPrompt, $noPrompt)
+    $response = $host.ui.PromptForChoice($title, $prompt, $options, 1)
 
     switch ($response) {
-        "y" { 
+        0 { 
             Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4" -Confirm 
-            if ($?) { Write-Host "`nFile <$OutputPath> was successfully deleted" }
+            if ($?) { Write-Host "`nFile <$OutputPath> was successfully deleted`n" }
             else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another program.`nExiting script..."; exit }
         }
-        "n" { "Please choose a different file name, or delete the existing file. Exiting script..."; exit }
-        default { Write-Host "You have somehow reached an unreachable block. Exiting script..."; exit }
+        1 { Write-Host "Please choose a different file name, or delete the existing file. Exiting script..."; exit }
+        default { Write-Host "You have somehow reached an unreachable block. Exiting script..." @warnColors; exit }
     }
 }
-#Generating paths to the crop and log files
+#Generating paths to the crop and log files relative to the input path
 $paths = Set-RootPath
 $cropFilePath = $paths.CropPath
 $logPath = $paths.LogPath
 #Creating the crop file
 New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath
+#Gathering HDR metadata
 $hdrData = Get-HDRMetadata $InputPath
-if ($null -eq $hdrData) {
-    throw "HDR data is null. ffprobe may have failed to retrieve the data. Reload the module and try again, or run ffprobe manually to investigate."
-}
+#Calculating the crop values
 $cropDim = Measure-CropDimensions $cropFilePath
-
+#Building parameters for Invoke-FFMpeg function
 $ffmpegParams = @{
     InputFile      = $InputPath
     CropDimensions = $cropDim
