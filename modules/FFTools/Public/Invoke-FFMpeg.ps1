@@ -23,7 +23,7 @@
         HDR metadata can be collected using module function Get-HDRMetadata
         Get-AudioPreference is a private function that is not publically loaded by the module
 #>
-function Invoke-FFMpeg  {      
+function Invoke-FFMpeg {      
     [CmdletBinding()]
     param (
         # The input file to be encoded
@@ -40,6 +40,11 @@ function Invoke-FFMpeg  {
         [Parameter(Mandatory = $false)]
         [Alias("Audio", "A")]
         [string]$AudioInput = "none",
+
+        [Parameter(Mandatory = $false)]
+        [ValidateRange(32, 160)]
+        [Alias("AQ", "AACQ")]
+        [int]$AacBitrate,
 
         # x265 preset setting
         [Parameter(Mandatory = $false)]
@@ -71,15 +76,15 @@ function Invoke-FFMpeg  {
 
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
-        [switch]$Test
-
+        [Alias("T")]
+        [int]$TestFrames
     )
     #Builds the audio argument array based on user input (none, aac, or copy)
-    $audio = Set-AudioPreference $InputFile $AudioInput
+    $audio = Set-AudioPreference $InputFile $AudioInput $AacBitrate
 
     Write-Host "Starting ffmpeg...`nTo view your progress, run 'gc path\to\crop.txt -Tail 10' in a different PowerShell session`n`n"
-    if ($Test) {
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputFile $audio -frames:v 1000 -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+    if ($PSBoundParameters['TestFrames']) {
+        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputFile $audio -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
             transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr-opt=1" `
