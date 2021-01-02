@@ -10,10 +10,14 @@
 
     .EXAMPLE
         ## Windows ##
-        .\FFEncoder.ps1 -InputPath "Path\To\file" -CRF 16.5 -Preset medium -Deblock -3,-3 -Audio aac -OutputPath "Path\To\Encoded\File"
+        .\FFEncoder.ps1 -InputPath "Path\To\file.mkv" -CRF 16.5 -Preset medium -Deblock -3,-3 -Audio aac -AacBitrate 112 -OutputPath "Path\To\Encoded\File.mkv"
     .EXAMPLE
         ## MacOS or Linux ##
-        ./FFEncoder.ps1 -InputPath "Path/To/file" -CRF 16.5 -Preset medium -Deblock -2,-2 -Audio none -OutputPath "Path/To/Encoded/File"
+        ./FFEncoder.ps1 -InputPath "Path/To/file.mp4" -CRF 16.5 -Preset medium -Deblock -2,-2 -Audio none -OutputPath "Path/To/Encoded/File.mp4"
+    .EXAMPLE
+        .\FFEncoder "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -CRF 20 -a copy -dbf -3,-3 -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
+    .EXAMPLE
+        ./FFEncoder -Help
 
     .INPUTS
         4K HDR video file 
@@ -31,8 +35,8 @@
 
     .PARAMETER Help
         Displays help information for the script. Only required for the "Help" parameter set
-    .PARAMETER Test
-        Switch to enable a test run. Only encodes the first 1000 frames
+    .PARAMETER TestFrames
+        Performs a test encode with the number of frames provided. Default is 1000 frames
     .PARAMETER 1080p
         Switch to enable 1080p encode. Removes HDR arguments (still testing, don't use)
     .PARAMETER InputPath
@@ -42,6 +46,8 @@
             1. copy/c - Pass through the primary audio stream without encoding
             2. none/n - Excludes the audio stream entirely
             3. aac    - Convert primary audio stream to AAC. Choosing this option will display a console prompt asking you to select the quality level (1-5)
+    .PARAMETER AacBitrate
+        The constant bitrate for each audio channel (in kb/s). If the audio stream is 7.1 (8 CH), the total bitrate will be 8 * AacBitrate. Default is 64 kb/s per channel. 
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
     .PARAMETER CRF
