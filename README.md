@@ -6,7 +6,7 @@ FFEncoder is a PowerShell script that is meant to make high definition video enc
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run.
 
-FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate 8 minute segments of the source simultaneously. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height.
+FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate 8 minute segments of the source simultaneously. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height for encoding.
 
 FFEncoder will also automatically fetch and fill HDR metadata before encoding begins. This includes:
 
@@ -16,7 +16,7 @@ FFEncoder will also automatically fetch and fill HDR metadata before encoding be
 - Color Primaries
 - Color Transfer Characteristics
 - Maximum/Minimum Luminance
-- Maximum Content Light Level 
+- Maximum Content Light Level
 - Maximum Frame Average Light Level
 
 Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for nearly every source.
@@ -25,16 +25,17 @@ Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as
 
 FFEncoder can accept the following arguments from the command line:
 
-| Name           | Default     | Mandatory | Alias                | Description                                                                                                                                                 |
-| -------------- | ----------- | --------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Test**       | False       | False     | **T**                | Switch to enable a test run. Encodes only 1000 frames starting around the 1 minute mark                                                                     |
-| **Help**       | False       | False     | **H**, **/?**, **?** | Switch to display help information                                                                                                                          |
-| **InputPath**  | None        | True      | **I**                | The path of the source file                                                                                                                                 |
-| **Audio**      | None (skip) | False     | **A**                | Audio preference. Options are _none_/_n_, _copy_/_c_, or _aac_. AAC uses ffmpeg's native encoder, and the console will prompt you to select a quality level |
-| **Preset**     | slow        | False     | **P**                | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                                                                            |
-| **CRF**        | 16.0        | False     | None                 | Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate                                                                        |
-| **Deblock**    | -1,-1       | False     | **DBF**              | Deblock filter. The first value controls the strength, and the second value controls the frequency of use                                                   |
-| **OutputPath** | None        | True      | **O**                | The path of the encoded output file                                                                                                                         |
+| Name           | Default     | Mandatory | Alias                | Description                                                                                                                                           |
+| -------------- | ----------- | --------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Test**       | False       | False     | **T**                | Switch to enable a test run. Encodes only 1000 frames starting around the 1 minute mark                                                               |
+| **Help**       | False       | False     | **H**, **/?**, **?** | Switch to display help information                                                                                                                    |
+| **InputPath**  | None        | True      | **I**                | The path of the source file                                                                                                                           |
+| **Audio**      | None (skip) | False     | **A**                | Audio preference. Options are _none_/_n_, _copy_/_c_, or _aac_. AAC uses ffmpeg's native encoder at a constant bitrate (CBR)                          |
+| **AacBitrate** | 64 kb/s     | False     | **AQ**, **AACQ**     | AAC audio constant bitrate per channel. If the source is 7.1 (8 CH), then the total bitrate will be 8 \* AacBitrate. Uses FFMpeg's native AAC encoder |
+| **Preset**     | slow        | False     | **P**                | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                                                                      |
+| **CRF**        | 16.0        | False     | **C**                | Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate                                                                  |
+| **Deblock**    | -1,-1       | False     | **DBF**              | Deblock filter. The first value controls the strength, and the second value controls the frequency of use                                             |
+| **OutputPath** | None        | True      | **O**                | The path of the encoded output file                                                                                                                   |
 
 ## Requirements
 
@@ -80,4 +81,4 @@ My future plans for this script, in the order that they are likely to occur:
 - 1080p SDR support
 - Support for batch jobs
 
-I am also currently working on a cross platform GUI interface as well. 
+I am also currently working on a cross platform GUI interface as well.
