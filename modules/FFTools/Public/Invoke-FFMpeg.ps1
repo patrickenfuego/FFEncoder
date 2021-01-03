@@ -88,6 +88,7 @@ function Invoke-FFMpeg {
     Write-Host " in a different PowerShell session`n`n"
 
     if ($PSBoundParameters['TestFrames']) {
+        Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
         ffmpeg -probesize 100MB -ss 00:01:00 -i $InputFile $audio -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
