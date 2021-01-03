@@ -31,7 +31,10 @@
 
         Be sure to include ".mkv" or ".mp4" at the end of your output file, or you will be left with a file that will not play. 
 
-        FFEncoder will automatically retrieve HDR metadata for you using the Get-HDRMetadata function from FFTools module. 
+        FFEncoder will automatically retrieve HDR metadata for you using the Get-HDRMetadata function from the FFTools module. 
+
+        ffmpeg cannot decode Dolby Atmos streams, nor can they be easily identified using ffprobe. If you try and copy
+        a Dolby Atmos track, the script will fail.
 
     .PARAMETER Help
         Displays help information for the script. Only required for the "Help" parameter set
