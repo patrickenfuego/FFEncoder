@@ -6,32 +6,39 @@ FFEncoder is a PowerShell script that is meant to make high definition video enc
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run.
 
-FFEncoder will also auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate segments of the input source running in parallel. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height.
+FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. I found myself using Handbrake a lot for its auto-cropping magic, and decided to find a way to automate it in ffmpeg. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate 8 minute segments of the source simultaneously. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height.
 
-FFEncoder supports 
+FFEncoder will also automatically fetch and fill HDR metadata before encoding begins. This includes:
+
+- Mastering Display Color Primaries (Display P3 and BT.2020 supported)
+- Pixel format
+- Color Space (Matrix Coefficients)
+- Color Primaries
+- Color Transfer Characteristics
+- Maximum/Minimum Luminance
+- Maximum Content Light Level 
+- Maximum Frame Average Light Level
+
+Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for nearly every source.
 
 ## Script Arguments
 
 FFEncoder can accept the following arguments from the command line:
 
-| Name                 | Default | Mandatory          | Alias                                    | Description                                                                                               |
-| -------------------- | ------- | ------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Test**             | False   | False              | **T**                                    | Switch to enable a test run. Encodes only 1000 frames starting around the 1 minute mark                   |
-| **Help**             | False   | True for Help only | **H**, **/?**, **?**                     | Switch to display help information                                                                        |
-| **InputPath**        | None    | True               | **I**                                    | The path of the source file                                                                               |
-| **Preset**           | slow    | False              | **P**                                    | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                          |
-| **CRF**              | 16.0    | False              | None                                     | Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate                      |
-| **Deblock**          | -1,-1   | False              | **DBF**                                  | Deblock filter. The first value controls the strength, and the second value controls the frequency of use |
-| **MDColorPrimaries** | None    | True for HDR only  | **MasterDisplay**, **MDColor**, **MDCP** | Mastering Display Color Primaries used by the source. Accepts Display P3 or BT.2020                            |
-| **MaxLuminance**     | None    | True for HDR only  | **MaxL**                                 | Max master display luminance value for HDR. Mandatory only for the 2160p parameter set                    |
-| **MinLuminance**     | None    | True for HDR only  | **MinL**                                 | Min master display luminance value for HDR. Mandatory only for the 2160p parameter set                    |
-| **MaxCLL**           | None    | True for HDR only  | **CLL**                                  | Maximum content light level value for HDR. Mandatory only for the 2160p parameter set                     |
-| **MaxFAL**           | None    | True for HDR only  | **FAL**                                  | Maximum frame average light level value for HDR. Mandatory only for the 2160p parameter set               |
-| **OutputPath**       | None    | True               | **O**                                    | The path of the encoded output file                                                                       |
+| Name           | Default     | Mandatory | Alias                | Description                                                                                                                                                 |
+| -------------- | ----------- | --------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Test**       | False       | False     | **T**                | Switch to enable a test run. Encodes only 1000 frames starting around the 1 minute mark                                                                     |
+| **Help**       | False       | False     | **H**, **/?**, **?** | Switch to display help information                                                                                                                          |
+| **InputPath**  | None        | True      | **I**                | The path of the source file                                                                                                                                 |
+| **Audio**      | None (skip) | False     | **A**                | Audio preference. Options are _none_/_n_, _copy_/_c_, or _aac_. AAC uses ffmpeg's native encoder, and the console will prompt you to select a quality level |
+| **Preset**     | slow        | False     | **P**                | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                                                                            |
+| **CRF**        | 16.0        | False     | None                 | Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate                                                                        |
+| **Deblock**    | -1,-1       | False     | **DBF**              | Deblock filter. The first value controls the strength, and the second value controls the frequency of use                                                   |
+| **OutputPath** | None        | True      | **O**                | The path of the encoded output file                                                                                                                         |
 
 ## Requirements
 
-- <b>ffmpeg</b>
+- <b>ffmpeg</b> / **ffprobe**
 - <b>PowerShell Core (MacOS/Linux users only)</b>
 
 ### **Windows**
@@ -60,7 +67,6 @@ To install PowerShell core, run the following command using Homebrew:
 
 My future plans for this script, in the order that they are likely to occur:
 
-- Automate the gathering of HDR metadata using ffprobe. This would significantly reduce the number of parameters needed
 - 1080p HDR support
 - Add additional commonly modified parameters for x265, like:
   - `aq-mode` - FFEncoder uses 2, but for 1080p encodes, 3 is usually preferred. I will add a parameter for it when I add 1080p.
@@ -72,7 +78,6 @@ My future plans for this script, in the order that they are likely to occur:
   - `dhdr10` - Whenever I get a source that has Dynamic HDR, this parameter will get added.
 - 2160p SDR support
 - 1080p SDR support
-- AAC Audio Conversion - I already have a script that does this, so it's a matter of merging it in with this code
 - Support for batch jobs
 
-I am also currently working on a cross platform GUI interface for ffmpeg as well. As much as I love [Handbrake](https://handbrake.fr/), it still uses an 8-bit pipeline and cannot properly encode HDR content. Other GUIs exist, but they are usually lacking in one area or another (in my opinion).
+I am also currently working on a cross platform GUI interface as well. 
