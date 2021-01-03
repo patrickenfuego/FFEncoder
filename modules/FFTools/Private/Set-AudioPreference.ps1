@@ -7,6 +7,9 @@
         Options are copy (passthrough), aac, and none
     .PARAMETER AacBitrate
         The constant bitrate to be used with ffmpeg's native AAC encoder. Value is the bitrate per audio channel
+    .NOTES
+        ffmpeg cannot decode Dolby Atmos streams, nor can they be easily identified using ffprobe. If you try and
+        copy a Dolby Atmos track, the script will fail. 
 #>
 function Set-AudioPreference {
     [CmdletBinding()]
