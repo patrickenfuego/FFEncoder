@@ -15,7 +15,7 @@
         ## MacOS or Linux ##
         ./FFEncoder.ps1 -InputPath "Path/To/file.mp4" -CRF 16.5 -Preset medium -Deblock -2,-2 -Audio none -OutputPath "Path/To/Encoded/File.mp4"
     .EXAMPLE
-        .\FFEncoder "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -CRF 20 -a copy -dbf -3,-3 -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
+        .\FFEncoder "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -CRF 20 -a c -dbf -3,-3 -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
     .EXAMPLE
         ./FFEncoder -Help
 
