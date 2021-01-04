@@ -59,5 +59,6 @@ v. 1.4.5
     - Added Measure-CropDimensions function to FFTools module
     - Overhauled console messages to give more information on progress before the encode begins
     - Added color hash variables to the FFTools module for global use
+    - Changed default -CRF parameter value from 16.0 to 17.0
     
     

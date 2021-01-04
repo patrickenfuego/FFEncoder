@@ -53,7 +53,7 @@ function Invoke-FFMpeg {
 
         # x265 CRF setting
         [Parameter(Mandatory = $false)]
-        [double]$CRF = 16.0,
+        [double]$CRF = 17.0,
 
         # Deblock filter setting
         [Parameter(Mandatory = $false)]

@@ -103,7 +103,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
     [ValidateRange(0.0, 51.0)]
     [Alias("C")]
-    [double]$CRF = 16.0,
+    [double]$CRF = 17.0,
 
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
