@@ -1,14 +1,18 @@
 # FFEncoder
 
-FFEncoder is a PowerShell script that is meant to make high definition video encoding easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/) and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress 4K HDR (3840x2160) video files to be used for streaming or archiving.
+FFEncoder is a PowerShell script that is meant to make high definition video encoding easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress 4K HDR (3840x2160) video files to be used for streaming or archiving.
 
 ## About
 
-FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run.
+FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run. As much as I love ffmpeg/ffprobe, they can be complicated tools to use; the syntax is complex, and some of their commands are not easy to remember unless you use them often. The goal of FFEncoder is to take common workflows and make them easier, which continuing to leverage the power and flexibility of the tools.
+
+## Auto-Cropping
 
 FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate 8 minute segments of the source simultaneously. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height for encoding.
 
-FFEncoder will also automatically fetch and fill HDR metadata before encoding begins. This includes:
+## Automatic Metadata Fetching
+
+FFEncoder will automatically fetch and fill HDR metadata before encoding begins. This includes:
 
 - Mastering Display Color Primaries (Display P3 and BT.2020 supported)
 - Pixel format
@@ -19,7 +23,17 @@ FFEncoder will also automatically fetch and fill HDR metadata before encoding be
 - Maximum Content Light Level
 - Maximum Frame Average Light Level
 
-Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for nearly every source.
+Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for nearly every source (that I've seen).
+
+## Audio Options
+
+FFEncoder currently supports the following audio options wih the `-Audio` parameter, and more will be added soon:
+
+- **Audio Passthrough** - This option passes through the primary audio stream without re-encoding. Supported arguments are `copy`/ `c`. Note that copying **Dolby Atmos tracks will cause the script to crash** as ffmpeg currently does not have a decoder for it. See the script's help comments for more information
+- **AAC Audio** - This options converts the primary audio stream to AAC using ffmpeg's native AAC encoder and the supported argument is `aac`. The encoder uses constant bit rate (CBR) instead of variable bit rate (VBR), as ffmpeg's documentation states that the VBR encoder is experimental, and likely to give poor results. You can use the `-AacBitrate` parameter to specify the bitrate **per audio channel**; for example, if the source is 7.1 (8 channels), the total bitrate will be 8 * the `AacBitrate` parameter value. Default is 64 kb/s per channel.
+- **No Audio** - This option removes all audio streams from the output. This is ideal for object based formats like Dolby Atmos, as they cannot be decoded. I have seen DTS-X get passed without issues, but I have not tested it on an AV receiver yet. In these situations, I use tools like [MkvToolNix](https://mkvtoolnix.download) to mux out the audio stream and add it back in to my final encode. This is the default behavior of FFEncoder. Supported arguments are `none`/`n`.
+
+
 
 ## Script Arguments
 
@@ -64,21 +78,3 @@ To install PowerShell core, run the following command using Homebrew:
 
 > `brew install --cask powershell`
 
-## Development
-
-My future plans for this script, in the order that they are likely to occur:
-
-- 1080p HDR support
-- Add additional commonly modified parameters for x265, like:
-  - `aq-mode` - FFEncoder uses 2, but for 1080p encodes, 3 is usually preferred. I will add a parameter for it when I add 1080p.
-  - `aq-strength` - This can be helpful for controlling bitrate when encoding 1080p sources, so I will add a parameter for it.
-  - `tier` - FFEncoder currently uses Main10 profile, level 5.1 @ high tier. For 1080p encodes, high tier isn't necessary, so I'll add a switch to disable it.
-  - `subme` - My current default is 4, and this is what FFEncoder also uses. Sometimes I prefer a lower/higher value for performance reasons, so it's on the list.
-  - `psy-rd` - For 4K, I usually leave it at default (2.00), but I will add a parameter for it in the future.
-  - `psy-rdoq` - Like psy-rd, the default is usually fine. With sources that have a lot of grain, though, a parameter would be helpful.
-  - `dhdr10` - Whenever I get a source that has Dynamic HDR, this parameter will get added.
-- 2160p SDR support
-- 1080p SDR support
-- Support for batch jobs
-
-I am also currently working on a cross platform GUI interface as well.
