@@ -194,14 +194,18 @@ if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
 Import-Module -Name ".\modules\FFTools"
 
-Write-Host "`nFiring up FFEncoder...`n`n" @emphasisColors
+Write-Host
+Write-Host "|<<<< Firing up FFEncoder >>>>|" @emphasisColors
+Write-Host
 $startTime = (Get-Date).ToLocalTime()
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
     $title = "Output Path Already Exists"
     $prompt = "Would you like to delete it?"
-    $yesPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&yes", "Delete the existing file. you will be asked to confirm again before deletion"
-    $noPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&no", "Do not delete the existing file and exit the script. The file must be renamed or deleted before continuing"
+    $yesPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", 
+    "Delete the existing file. you will be asked to confirm again before deletion"
+    $noPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&No", 
+    "Do not delete the existing file and exit the script. The file must be renamed or deleted before continuing"
     $options = [System.Management.Automation.Host.ChoiceDescription[]]($yesPrompt, $noPrompt)
     $response = $host.ui.PromptForChoice($title, $prompt, $options, 1)
 
