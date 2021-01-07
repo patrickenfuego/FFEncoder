@@ -37,26 +37,30 @@
         a Dolby Atmos track, the script will fail.
 
     .PARAMETER Help
-        Displays help information for the script. Only required for the "Help" parameter set
+        Displays help information for the script
     .PARAMETER TestFrames
         Performs a test encode with the number of frames provided. Default is 1000 frames
     .PARAMETER 1080p
-        Switch to enable 1080p encode. Removes HDR arguments (still testing, don't use)
+        Switch to enable 1080p downsampling while retaining HDR metadata. Still testing
     .PARAMETER InputPath
         Location of the file to be encoded
     .PARAMETER Audio
-        Audio encoding option. FFEncoder has 3 audio options:
+        Audio encoding option. FFEncoder has 5 audio options:
             1. copy/c - Pass through the primary audio stream without encoding
             2. none/n - Excludes the audio stream entirely
             3. aac    - Convert primary audio stream to AAC. Choosing this option will display a console prompt asking you to select the quality level (1-5)
+            4. dts    - If there is an existing DTS Audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to DTS 
+                        (This feature is EXPERIMENTAL. Only transcode to DTS for compatibility purposes)
+            5. ac3    - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
     .PARAMETER AacBitrate
         The constant bitrate for each audio channel (in kb/s). If the audio stream is 7.1 (8 CH), the total bitrate will be 8 * AacBitrate. Default is 64 kb/s per channel. 
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
     .PARAMETER CRF
-        Constant rate factor setting. Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate
+        Constant rate factor setting. Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate (better quality). Recommended: 16.0 - 22.0. At very low values, the 
+        file may actually grow larger.
     .PARAMETER Deblock
-        Deblock filter settings. The first value represents strength, and the second value represents frequency
+        Deblock filter settings. The first value represents strength, and the second value represents frequency. Default is -1,-1
     .PARAMETER OutputPath
         Location of the encoded output video file
     
@@ -83,7 +87,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
-    [ValidateSet("copy", "aac", "none", "c", "n")]
+    [ValidateSet("copy", "copyall", "ca", "aac", "none", "c", "n", "AC3", "DD", "DTS")]
     [Alias("A")]
     [string]$Audio = "none",
 
@@ -192,11 +196,14 @@ function Set-RootPath {
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
-Import-Module -Name ".\modules\FFTools"
+Import-Module -Name ".\modules\FFTools" -Force
 
 Write-Host
-Write-Host "|<<<< Firing up FFEncoder >>>>|" @emphasisColors
+Write-Host "`t`t|<<<<<<<<<<<<<<<<<<<<" -ForegroundColor Magenta -BackgroundColor Black -NoNewline
+Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
+Write-Host ">>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
 Write-Host
+
 $startTime = (Get-Date).ToLocalTime()
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
@@ -213,7 +220,7 @@ if (Test-Path -Path $OutputPath) {
         0 { 
             Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4" -Confirm 
             if ($?) { Write-Host "`nFile <$OutputPath> was successfully deleted`n" }
-            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another program.`nExiting script..."; exit }
+            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another process.`nExiting script..."; exit }
         }
         1 { Write-Host "Please choose a different file name, or delete the existing file. Exiting script..."; exit }
         default { Write-Host "You have somehow reached an unreachable block. Exiting script..." @warnColors; exit }
