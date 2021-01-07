@@ -26,18 +26,37 @@ function Set-AudioPreference {
         [int]$AacBitrate
     )
 
-    if ($UserChoice -match "^c[opy]?") { 
+    if ($UserChoice -match "^c[opy]*$") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
         Write-Host "Audio stream 0 will be copied. " -NoNewline
         Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
-        return @('-c:a', 'copy') 
+        return @('-c:a', 'copy')
     }
-    elseif ($UserChoice -match "aac") {
+    elseif ($UserChoice -match "c[opy]*a[ll]*") {
+        Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
+        Write-Host "All audio streams will be copied. " -NoNewline
+        Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
+        return @('-c:a', 'copy', '-map', 0, '-sn')
+    }
+    elseif ($UserChoice -like "aac") {
         [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0
         $bitrate = "$($numOfChannels * $AacBitrate)k"
         Write-Host "** AAC AUDIO SELECTED **" @progressColors
         Write-Host "Primary audio stream has $numOfChannels channels. Total AAC bitrate: ~ $bitrate`n" 
         return @('-c:a', 'aac', '-b:a', $bitrate)
+    }
+    elseif ($UserChoice -like "dts" -or $UserChoice -like "ac3") {
+        Write-Host "** $($UserChoice.ToUpper()) AUDIO SELECTED **" @progressColors
+        $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+        if ($i) {
+            return @('-map', '0:v', '-map', "0:a:($i - 1)", '-c:a', 'copy')
+        }
+        else {
+            switch ($UserChoice) {
+                "DTS" { return @('-map', '0:v', '-map', '0:a:0', '-c:a:0', 'dca', '-strict', -2) }
+                "AC3" { return @('-map', '0:v', '-map', '0:a:0', '-c:a:0', 'ac3', '-b:a', '640k') }
+            }
+        }
     }
     elseif ($UserChoice -match "^n[one]?") { 
         Write-Host "** NO AUDIO SELECTED **" @progressColors
