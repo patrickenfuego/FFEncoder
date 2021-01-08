@@ -49,7 +49,7 @@ function Set-AudioPreference {
         Write-Host "** $($UserChoice.ToUpper()) AUDIO SELECTED **" @progressColors
         $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
         if ($i) {
-            return @('-map', '0:v', '-map', "0:a:($i - 1)", '-c:a', 'copy')
+            return @('-map', '0:v', '-map', "0:a:$($i - 1)", '-c:a', 'copy')
         }
         else {
             switch ($UserChoice) {
