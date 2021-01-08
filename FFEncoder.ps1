@@ -87,7 +87,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
     [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
-    [ValidateSet("copy", "copyall", "ca", "aac", "none", "c", "n", "AC3", "DD", "DTS")]
+    [ValidateSet("copy", "copyall", "ca", "aac", "none", "c", "n", "ac3", "dd", "dts", "flac", "f")]
     [Alias("A")]
     [string]$Audio = "none",
 
@@ -199,9 +199,9 @@ if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 Import-Module -Name ".\modules\FFTools" -Force
 
 Write-Host
-Write-Host "`t`t|<<<<<<<<<<<<<<<<<<<<" -ForegroundColor Magenta -BackgroundColor Black -NoNewline
+Write-Host "`t`t|<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" -ForegroundColor Magenta -BackgroundColor Black -NoNewline
 Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
-Write-Host ">>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
+Write-Host ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
 Write-Host
 
 $startTime = (Get-Date).ToLocalTime()
@@ -218,9 +218,9 @@ if (Test-Path -Path $OutputPath) {
 
     switch ($response) {
         0 { 
-            Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4" -Confirm 
+            Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4", "*.ts", "*.m2ts", "*.avi" -Confirm 
             if ($?) { Write-Host "`nFile <$OutputPath> was successfully deleted`n" }
-            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another process.`nExiting script..."; exit }
+            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another process.`nExiting script..." @warnColors; exit }
         }
         1 { Write-Host "Please choose a different file name, or delete the existing file. Exiting script..."; exit }
         default { Write-Host "You have somehow reached an unreachable block. Exiting script..." @warnColors; exit }
