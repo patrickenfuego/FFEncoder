@@ -24,8 +24,13 @@ function Get-HDRMetadata {
 
     Write-Host "`nRetrieving HDR Metadata..." 
 
+    #Exit script if the input file is null or empty
+    if (!(Test-Path -Path $InputFile)) {
+        Write-Warning "<$InputFile> could not be found. Check the input path and try again."
+        $ioError = New-Object System.IO.FileNotFoundException
+        throw $ioError
+    }
     #Gather HDR metadata using ffprobe
-    $InputFile = "M:\Blu Ray Rips\First.Man.2018.IMAX.2160p.BluRay.REMUX.HEVC.DTS-HD.MA.TrueHD.7.1.Atmos-FGT\First Man (2018) REMUX ATMOS DV EC Layer.mkv"
     $probe = ffprobe -hide_banner -loglevel error -select_streams v -print_format json `
         -show_frames -read_intervals "%+#5" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
         -i $InputFile
