@@ -35,7 +35,13 @@ function Get-HDRMetadata {
         -show_frames -read_intervals "%+#5" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
         -i $InputFile
 
-    $metadata = $probe | ConvertFrom-Json | Select-Object -ExpandProperty frames | Where-Object { $_.pix_fmt -like "yuv420p10le" }
+    $metadata = $probe | ConvertFrom-Json | Select-Object -ExpandProperty frames | Where-Object { $_.pix_fmt -like "yuv420p10le" } |
+        Select-Object -First 1
+
+    if (!$metadata) {
+        throw "yuv420p10le pixel format could not be found within the first 5 frames. Make sure the input file supports HDR."
+    }
+
     [string]$pixelFmt = $metadata.pix_fmt
     [string]$colorSpace = $metadata.color_space
     [string]$colorPrimaries = $metadata.color_primaries
