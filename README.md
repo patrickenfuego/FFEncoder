@@ -4,7 +4,7 @@ FFEncoder is a PowerShell script that is meant to make high definition video enc
 
 ## About
 
-FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run. As much as I love ffmpeg/ffprobe, they can be complicated tools to use; the syntax is complex, and some of their commands are not easy to remember unless you use them often. The goal of FFEncoder is to take common workflows and make them easier, which continuing to leverage the power and flexibility of the tools.
+FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run. As much as I love ffmpeg/ffprobe, they can be complicated tools to use; the syntax is complex, and some of their commands are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
 
 ## Auto-Cropping
 
@@ -25,16 +25,6 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 
 Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for nearly every source (that I've seen).
 
-## Audio Options
-
-FFEncoder currently supports the following audio options wih the `-Audio` parameter, and more will be added soon:
-
-- **Audio Passthrough** - This option passes through the primary audio stream without re-encoding. Supported arguments are `copy`/ `c`. Note that copying **Dolby Atmos tracks will cause the script to crash** as ffmpeg currently does not have a decoder for it. See the script's help comments for more information
-- **AAC Audio** - This options converts the primary audio stream to AAC using ffmpeg's native AAC encoder and the supported argument is `aac`. The encoder uses constant bit rate (CBR) instead of variable bit rate (VBR), as ffmpeg's documentation states that the VBR encoder is experimental, and likely to give poor results. You can use the `-AacBitrate` parameter to specify the bitrate **per audio channel**; for example, if the source is 7.1 (8 channels), the total bitrate will be 8 * the `AacBitrate` parameter value. Default is 64 kb/s per channel.
-- **No Audio** - This option removes all audio streams from the output. This is ideal for object based formats like Dolby Atmos, as they cannot be decoded. I have seen DTS-X get passed without issues, but I have not tested it on an AV receiver yet. In these situations, I use tools like [MkvToolNix](https://mkvtoolnix.download) to mux out the audio stream and add it back in to my final encode. This is the default behavior of FFEncoder. Supported arguments are `none`/`n`.
-
-
-
 ## Script Arguments
 
 FFEncoder can accept the following arguments from the command line:
@@ -44,12 +34,25 @@ FFEncoder can accept the following arguments from the command line:
 | **Test**       | False       | False     | **T**                | Switch to enable a test run. Encodes only 1000 frames starting around the 1 minute mark                                                               |
 | **Help**       | False       | False     | **H**, **/?**, **?** | Switch to display help information                                                                                                                    |
 | **InputPath**  | None        | True      | **I**                | The path of the source file                                                                                                                           |
-| **Audio**      | None (skip) | False     | **A**                | Audio preference. Options are _none_/_n_, _copy_/_c_, or _aac_. AAC uses ffmpeg's native encoder at a constant bitrate (CBR)                          |
+| **Audio**      | None (skip) | False     | **A**                | Audio preference. See the next section for options                                                                                                  |
 | **AacBitrate** | 64 kb/s     | False     | **AQ**, **AACQ**     | AAC audio constant bitrate per channel. If the source is 7.1 (8 CH), then the total bitrate will be 8 \* AacBitrate. Uses FFMpeg's native AAC encoder |
 | **Preset**     | slow        | False     | **P**                | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                                                                      |
 | **CRF**        | 16.0        | False     | **C**                | Constant rate factor. Ranges from 0.0 to 51.0. Lower value results in higher bitrate                                                                  |
 | **Deblock**    | -1,-1       | False     | **DBF**              | Deblock filter. The first value controls the strength, and the second value controls the frequency of use                                             |
 | **OutputPath** | None        | True      | **O**                | The path of the encoded output file                                                                                                                   |
+
+## Audio Options
+
+FFEncoder currently supports the following audio options wih the `-Audio` parameter:
+
+| Type            | Values      | Description                                                                                                                                                                                                         |
+| --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Passthrough** | `copy`, `c` | Passes through the primary audio stream without re-encoding. **Note that copying Dolby Atmos tracks will cause the script to crash** as ffmpeg currently does not have a decoder for it                             |
+| **AAC**         | `aac`       | Converts the primary audio stream to AAC using ffmpeg's native CBR encoder. Use the `-AacBitrate` parameter to specify the bitrate **per audio channel**                                                            |
+| **AC3**         | `ac3`, `dd` | Dolby Digital. FFEncoder will first scan the input file for an existing AC3 stream. If one is not present, the primary audio stream will be transcoded to AC3                                                       |
+| **DTS**         | `dts`       | DTS Core audio. FFEncoder will first scan the input file for an existing DTS stream. If one is not present, the primary audio stream will be transcoded to DTS. **Warning**: ffmpeg's DTS encoder is "experimental" |
+| **FLAC**        | `flac`, `f` | Converts the primary audio stream to FLAC lossless audio using ffmpeg's native FLAC encoder                                                                                                                         |
+| **None**        | `none`, `n` | Removes all audio streams from the output. This is ideal for object based streams like Dolby Atmos, as it cannot currently be decoded                                                                               |
 
 ## Requirements
 
@@ -77,4 +80,3 @@ For Mac users, the easiest way to install ffmpeg is through the [Homebrew](https
 To install PowerShell core, run the following command using Homebrew:
 
 > `brew install --cask powershell`
-
