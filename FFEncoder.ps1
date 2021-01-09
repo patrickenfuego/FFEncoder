@@ -73,56 +73,63 @@
 
 #>
 
-[CmdletBinding(DefaultParameterSetName = "2160p")]
+[CmdletBinding(DefaultParameterSetName = "HDR")]
 param (
     [Parameter(Mandatory = $true, ParameterSetName = "Help")]
     [Alias("H", "/?", "?")]
     [switch]$Help,
 
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "SDR")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
     [ValidateSet("copy", "copyall", "ca", "aac", "none", "c", "n", "ac3", "dd", "dts", "flac", "f")]
     [Alias("A")]
     [string]$Audio = "none",
 
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
     [ValidateRange(32, 160)]
     [Alias("AQ", "AACQ")]
     [int]$AacBitrate = 64,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fra", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
+        "chi", "kor", "gre", "rum")]
+    [Alias("S")]
+    [string]$Subtitles = "none",
+
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
 
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
     [ValidateRange(0.0, 51.0)]
     [Alias("C")]
     [double]$CRF = 17.0,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
     [int[]]$Deblock = @(-1, -1),
 
-    [Parameter(Mandatory = $true, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $true, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $true, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $true, ParameterSetName = "SDR")]
     [ValidateNotNullOrEmpty()]
     [Alias("O")]
     [string]$OutputPath,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "2160p")]
-    [Parameter(Mandatory = $false, ParameterSetName = "1080p")]
+    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
     [Alias("T", "Test")]
     [int]$TestFrames
 
