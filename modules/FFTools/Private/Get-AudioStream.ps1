@@ -22,20 +22,23 @@ function Get-AudioStream {
     $probe = ffprobe -hide_banner -loglevel error -show_streams -select_streams a -print_format json `
         -show_entries "stream=codec_name,channel_layout,channels,index,bit_rate,profile" `
         -i $InputFile
-        
+
+    [int]$i = 0
     $probe | ConvertFrom-Json | Select-Object -ExpandProperty streams | ForEach-Object {
         if ($_.profile -like $Codec -and $_.codec_name -like $Codec) {
-            $index = $_.index
-            $bitrate = $_.bit_rate  
+            $bitrate = $_.bit_rate
+            $index = $i  
         }
         elseif ([string]::IsNullOrEmpty($_.profile) -and $_.codec_name -like $Codec) {
-            $index = $_.index
             $bitrate = $_.bit_rate
+            $index = $i
         }
-        else { $index = $false }
+        else { $index = $false; $i++ }     
     }
+    
     if ($index) { Write-Host "$codecStr stream found. Bit rate: $($bitrate / 1000) kb/s`n" }
-    else { Write-Host "A $codecStr stream could not be found. Audio will be transcoded to the selected format.`n" @warnColors }
-
+    else { Write-Host "A $codecStr stream could not be found. Audio will be transcoded to the selected format.`n" @warnColors}
     return $index
 }
+
+
