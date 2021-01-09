@@ -25,31 +25,32 @@ function Get-HDRMetadata {
     Write-Host "`nRetrieving HDR Metadata..." 
 
     #Gather HDR metadata using ffprobe
+    $InputFile = "M:\Blu Ray Rips\First.Man.2018.IMAX.2160p.BluRay.REMUX.HEVC.DTS-HD.MA.TrueHD.7.1.Atmos-FGT\First Man (2018) REMUX ATMOS DV EC Layer.mkv"
     $probe = ffprobe -hide_banner -loglevel error -select_streams v -print_format json `
-        -show_frames -read_intervals "%+#1" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
+        -show_frames -read_intervals "%+#5" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
         -i $InputFile
 
-    $metadata = $probe | ConvertFrom-Json
-    [string]$pixelFmt = $metadata.frames.pix_fmt
-    [string]$colorSpace = $metadata.frames.color_space
-    [string]$colorPrimaries = $metadata.frames.color_primaries
-    [string]$colorTransfer = $metadata.frames.color_transfer
+    $metadata = $probe | ConvertFrom-Json | Select-Object -ExpandProperty frames | Where-Object { $_.pix_fmt -like "yuv420p10le" }
+    [string]$pixelFmt = $metadata.pix_fmt
+    [string]$colorSpace = $metadata.color_space
+    [string]$colorPrimaries = $metadata.color_primaries
+    [string]$colorTransfer = $metadata.color_transfer
     #Compares the red coordinates to determine the mastering display color primaries
-    if ($metadata.frames.side_data_list[0].red_x -match "35400/\d+" -and 
-        $metadata.frames.side_data_list[0].red_y -match "14600/\d+") {
+    if ($metadata.side_data_list[0].red_x -match "35400/\d+" -and 
+        $metadata.side_data_list[0].red_y -match "14600/\d+") {
         $masterDisplayStr = $BT_2020
     }
-    elseif ($metadata.frames.side_data_list[0].red_x -match "34000/\d+" -and
-        $metadata.frames.side_data_list[0].red_y -match "16000/\d+") {
+    elseif ($metadata.side_data_list[0].red_x -match "34000/\d+" -and
+        $metadata.side_data_list[0].red_y -match "16000/\d+") {
         $masterDisplayStr = $Display_P3
     }
     else { throw "Unknown mastering display colors found. Only BT.2020 and Display P3 are supported." }
     #HDR min and max luminance values
-    [int]$minLuma = $metadata.frames.side_data_list[0].min_luminance -replace "/.*", ""
-    [int]$maxLuma = $metadata.frames.side_data_list[0].max_luminance -replace "/.*", ""
+    [int]$minLuma = $metadata.side_data_list[0].min_luminance -replace "/.*", ""
+    [int]$maxLuma = $metadata.side_data_list[0].max_luminance -replace "/.*", ""
     #MAx content light level and max frame average light level
-    $maxCLL = $metadata.frames.side_data_list[1].max_content
-    $maxFAL = $metadata.frames.side_data_list[1].max_average
+    $maxCLL = $metadata.side_data_list[1].max_content
+    $maxFAL = $metadata.side_data_list[1].max_average
 
     $metadataObj = @{
         PixelFmt       = $pixelFmt
