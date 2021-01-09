@@ -63,7 +63,7 @@ function Set-AudioPreference {
         Write-Host "All audio streams will be excluded from the file`n"
         return '-an' 
     }
-    elseif ($UserChoice -like "flac") {
+    elseif ($UserChoice -like "^f[lac]*") {
         Write-Host "** FLAC AUDIO SELECTED **" @progressColors
         Write-Host "Audio Stream 0 will be transcoded to FLAC`n"
         return @('-map', '0:v', '-map', '0:a:0', '-c:a', 'flac')
