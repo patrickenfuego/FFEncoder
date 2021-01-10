@@ -34,14 +34,13 @@ try {
 
 ## Setting function aliases ##
 New-Alias -Name iffmpeg -Value Invoke-FFMpeg -Force
-New-Alias -Name ncf -Value New-CropFile1 -Force
-New-Alias -Name ghdr -Value Get-HDRMetadata -Force
+New-Alias -Name ncf -Value New-CropFile -Force
 New-Alias -Name mcd -Value Measure-CropDimensions -Force
 
 
 $ExportModule = @{
-    Alias = @("iffmpeg", "ncf", "ghdr", "mcd")
-    Function = @("Invoke-FFmpeg", "New-CropFile", "Get-HDRMetadata", 'Measure-CropDimensions')
+    Alias = @("iffmpeg", "ncf", "mcd")
+    Function = @("Invoke-FFmpeg", "New-CropFile", 'Measure-CropDimensions')
     Variable = @("progressColors", "warnColors", "emphasisColors" )
 }
 Export-ModuleMember @ExportModule

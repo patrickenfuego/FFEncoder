@@ -61,7 +61,7 @@ function Set-AudioPreference {
     }
     elseif ($UserChoice -match "^n[one]?") { 
         Write-Host "** NO AUDIO SELECTED **" @progressColors
-        Write-Host "All audio streams will be excluded from the file`n"
+        Write-Host "All audio streams will be excluded from the output file`n"
         return '-an' 
     }
     elseif ($UserChoice -like "^f[lac]*") {

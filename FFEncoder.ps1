@@ -239,8 +239,6 @@ $cropFilePath = $paths.CropPath
 $logPath = $paths.LogPath
 #Creating the crop file
 New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath
-#Gathering HDR metadata
-$hdrData = Get-HDRMetadata $InputPath
 #Calculating the crop values
 $cropDim = Measure-CropDimensions $cropFilePath
 #Building parameters for Invoke-FFMpeg function
@@ -252,7 +250,6 @@ $ffmpegParams = @{
     Preset         = $Preset
     CRF            = $CRF
     Deblock        = $Deblock
-    HDR            = $hdrData
     OutputPath     = $OutputPath
     LogPath        = $logPath
     TestFrames     = $TestFrames
