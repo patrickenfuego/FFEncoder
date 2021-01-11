@@ -36,7 +36,7 @@ function Set-AudioPreference {
         Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
         Write-Host "All audio streams will be copied. " -NoNewline
         Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
-        return @('-c:a', 'copy', '-map', 0, '-sn')
+        return @('-map', '0:v','-map', '0:a', '-c:a', 'copy')
     }
     elseif ($UserChoice -like "aac") {
         [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0
