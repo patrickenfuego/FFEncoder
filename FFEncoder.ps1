@@ -5,20 +5,33 @@
     .DESCRIPTION
         This script is meant to make video encoding easier with ffmpeg. Instead of manually changing
         the script parameters for each encode, you can pass dynamic parameters to this script and it  
-        will use the arguments as needed. Supports 2160p HDR encoding with automatic fetching ofHDR 
-        metadata. I plan to add 1080p soon.   
+        will use the arguments as needed. Supports 2160p HDR encoding with automatic fetching of HDR 
+        metadata, automatic cropping, and multiple audio & subtitle options.   
 
     .EXAMPLE
         ## Windows ##
-        .\FFEncoder.ps1 -InputPath "Path\To\file.mkv" -CRF 16.5 -Preset medium -Deblock -3,-3 -Audio aac -AacBitrate 112 -OutputPath "Path\To\Encoded\File.mkv"
+        .\FFEncoder.ps1 -InputPath "Path\To\file.mkv" -CRF 16.5 -Preset medium -Deblock -3,-3 -Audio copy -OutputPath "Path\To\Encoded\File.mkv"
     .EXAMPLE
         ## MacOS or Linux ##
         ./FFEncoder.ps1 -InputPath "Path/To/file.mp4" -CRF 16.5 -Preset medium -Deblock -2,-2 -Audio none -OutputPath "Path/To/Encoded/File.mp4"
+    .EXAMPLE 
+        ## Test run. Encode only 10 frames ##
+        ./FFEncoder.ps1 "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -CRF 20.0 -Audio copy -Subtitles none -TestFrames 10 -OutputPath "~/Movies/Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE
-        .\FFEncoder "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -CRF 20 -a c -dbf -3,-3 -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
+        ## Using shorthand parameter aliases ##
+        .\FFEncoder.ps1 "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -c 20 -a c -dbf -3,-3 -a copyall -s d -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
     .EXAMPLE
-        ./FFEncoder -Help
-
+        ## Copy English subtitles and all audio streams ##
+        ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -CRF 22.0 -Subtitles eng -Audio copyall -o "~/Movies/Ex Machina (2014) DTS-HD.mkv"
+    .EXAMPLE 
+        ## Copy existing AC3 stream, or transcode to AC3 if no existing streams are found ##
+        .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio ac3 -Subtitles default -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
+    .EXAMPLE 
+        ## Copy existing DTS stream, or transcode to DTS if no existing streams are found ##
+        .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio dts -Subtitles default -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
+    .EXAMPLE 
+        ## Convert primary audio stream to AAC at 112 kb/s per channel ##
+        ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -Audio aac -AacBitrate 112 -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .INPUTS
         4K HDR video file 
 
@@ -29,10 +42,8 @@
     .NOTES
         For FFEncoder to work, ffmpeg must be in your PATH (consult your OS documentation for info on how to verify this).
 
-        Be sure to include ".mkv" or ".mp4" at the end of your output file, or you will be left with a file that will not play. 
-
-        FFEncoder will automatically retrieve HDR metadata for you using the Get-HDRMetadata function from the FFTools module. 
-
+        Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.), or you may be left with a file that will not play. 
+ 
         ffmpeg cannot decode Dolby Atmos streams, nor can they be easily identified using ffprobe. If you try and copy
         a Dolby Atmos track, the script will fail.
 
@@ -46,14 +57,36 @@
         Location of the file to be encoded
     .PARAMETER Audio
         Audio encoding option. FFEncoder has 5 audio options:
-            1. copy/c - Pass through the primary audio stream without encoding
-            2. none/n - Excludes the audio stream entirely
-            3. aac    - Convert primary audio stream to AAC. Choosing this option will display a console prompt asking you to select the quality level (1-5)
-            4. dts    - If there is an existing DTS Audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to DTS 
-                        (This feature is EXPERIMENTAL. Only transcode to DTS for compatibility purposes)
-            5. ac3    - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
+            1. copy/c       - Pass through the primary audio stream without re-encoding
+            2. copyall/ca   - Pass through all audio streams without re-encoding
+            2. none/n       - Excludes the audio stream entirely
+            3. aac          - Convert primary audio stream to AAC. Choosing this option will display a console prompt asking you to select the quality level (1-5)
+            4. dts          - If there is an existing DTS Audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to DTS 
+                              (This feature is EXPERIMENTAL. Only transcode to DTS for compatibility purposes)
+            5. ac3          - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
+            6. flac/f       - Convert the primary audio stream to FLAC lossless audio 
     .PARAMETER AacBitrate
-        The constant bitrate for each audio channel (in kb/s). If the audio stream is 7.1 (8 CH), the total bitrate will be 8 * AacBitrate. Default is 64 kb/s per channel. 
+        The constant bitrate for each audio channel (in kb/s). If the audio stream is 7.1 (8 CH), the total bitrate will be 8 * AacBitrate 
+    .PARAMETER Subtitles
+        Supports passthrough of embedded subtitles with the following options and languages:
+
+        - All               - "all"  / "a"
+        - None              - "none" / "n"
+        - Default (first)   - "default" / "d"
+        - English           - "eng"
+        - French            - "fra"
+        - German            - "ger"
+        - Spanish           - "spa"
+        - Dutch             - "dut"
+        - Danish            - "dan"
+        - Finnish           - "fin"
+        - Norwegian         - "nor"
+        - Czech             - "cze"
+        - Polish            - "pol"
+        - Chinese           - "chi"
+        - Korean            - "kor"
+        - Greek             - "gre"
+        - Romanian          - "rum"
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
     .PARAMETER CRF
