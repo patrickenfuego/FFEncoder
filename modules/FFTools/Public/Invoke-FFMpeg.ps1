@@ -54,11 +54,11 @@ function Invoke-FFMpeg {
         # x265 preset setting
         [Parameter(Mandatory = $false)]
         [Alias("P")]
-        [string]$Preset = "slow",
+        [string]$Preset,
 
         # x265 CRF setting
         [Parameter(Mandatory = $false)]
-        [double]$CRF = 17.0,
+        [double]$CRF,
 
         # Deblock filter setting
         [Parameter(Mandatory = $false)]
@@ -84,6 +84,8 @@ function Invoke-FFMpeg {
     $HDR = Get-HDRMetadata $InputFile
     #Builds the audio argument array based on user input
     $audio = Set-AudioPreference $InputFile $AudioInput $AacBitrate
+    #Builds the subtitle argument array based on user input
+    $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
 
     Write-Host "***** STARTING FFMPEG *****" @progressColors
     Write-Host "To view your progress, run " -NoNewline
@@ -92,15 +94,15 @@ function Invoke-FFMpeg {
 
     if ($PSBoundParameters['TestFrames']) {
         Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-        ffmpeg -probesize 100MB -ss 00:01:00 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -c:v libx265 $audio -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
+        ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+            -color_range tv -c:v libx265 $audio $subs -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
             transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath
     }
     else {
-        ffmpeg -probesize 100MB -i $InputFile $audio -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -c:v libx265 -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
+        ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+            -color_range tv -c:v libx265 $audio $subs -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
             transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath

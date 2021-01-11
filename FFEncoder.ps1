@@ -99,10 +99,10 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
     [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
-    [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fra", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
+    [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
         "chi", "kor", "gre", "rum")]
     [Alias("S")]
-    [string]$Subtitles = "none",
+    [string]$Subtitles = "default",
 
     [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
     [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
@@ -247,6 +247,7 @@ $ffmpegParams = @{
     CropDimensions = $cropDim
     AudioInput     = $Audio
     AacBitrate     = $AacBitrate
+    Subtitles      = $Subtitles
     Preset         = $Preset
     CRF            = $CRF
     Deblock        = $Deblock
