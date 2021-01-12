@@ -17,7 +17,7 @@ function Set-SubtitlePreference {
     }
     elseif ($UserChoice -match "n[one]*$") {
         Write-Host "** NO SUBTITLES SELECTED **" @progressColors
-        Write-Host "All subtitles streams will be excluded from the output file`n"
+        Write-Host "All subtitle streams will be excluded from the output file`n"
         return '-sn'
     }
     elseif ($UserChoice -match "d[efault]*$") {
