@@ -1,5 +1,5 @@
 <#
-    Enumerates the crop file to find the max crop width and height
+    Enumerates the crop file to find the max crop width and height values
 
     .PARAMETER cropPath
         The path to the crop file
@@ -32,7 +32,7 @@ function Measure-CropDimensions
     }
     else {
         Write-Host "** CROP DIMENSIONS SUCCESSFULLY RETRIEVED ** " @progressColors
-        Write-Host "Dimensions: $cropWidth x $cropHeight`n"
+        Write-Host "Dimensions: $cropWidth x $cropHeight"
         return @($cropWidth, $cropHeight) 
     }
     
