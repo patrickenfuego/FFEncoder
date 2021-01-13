@@ -19,7 +19,7 @@
         ./FFEncoder.ps1 "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -CRF 20.0 -Audio copy -Subtitles none -TestFrames 10 -OutputPath "~/Movies/Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE
         ## Using shorthand parameter aliases ##
-        .\FFEncoder.ps1 "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -c 20 -a c -dbf -3,-3 -a copyall -s d -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
+        .\FFEncoder.ps1 "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -c 20.5 -a c -dbf -3,-3 -a copyall -s d -o "C:\Users\user\Videos\Ex Machina Test.mkv" -t 500
     .EXAMPLE
         ## Copy English subtitles and all audio streams ##
         ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -CRF 22.0 -Subtitles eng -Audio copyall -o "~/Movies/Ex Machina (2014) DTS-HD.mkv"
@@ -28,7 +28,7 @@
         .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio ac3 -Subtitles default -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE 
         ## Copy existing DTS stream, or transcode to DTS if no existing streams are found ##
-        .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio dts -Subtitles default -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
+        .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio dts -Subtitles default -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE 
         ## Convert primary audio stream to AAC at 112 kb/s per channel ##
         ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -Audio aac -AacBitrate 112 -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
@@ -59,8 +59,8 @@
         Audio encoding option. FFEncoder has 5 audio options:
             1. copy/c       - Pass through the primary audio stream without re-encoding
             2. copyall/ca   - Pass through all audio streams without re-encoding
-            2. none/n       - Excludes the audio stream entirely
-            3. aac          - Convert primary audio stream to AAC. Choosing this option will display a console prompt asking you to select the quality level (1-5)
+            2. none/n       - No audio will be copied. This is useful for Dolby Atmos tracks
+            3. aac          - Convert primary audio stream to AAC. Default setting is 64 kb/s per channel. Use the -AacBitrate parameter to specify a custom value
             4. dts          - If there is an existing DTS Audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to DTS 
                               (This feature is EXPERIMENTAL. Only transcode to DTS for compatibility purposes)
             5. ac3          - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
