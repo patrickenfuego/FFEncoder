@@ -54,8 +54,8 @@ function Set-AudioPreference {
         }
         else {
             switch ($UserChoice) {
-                "DTS" { return @('-map', '0:v', '-map', '0:a:0', '-c:a:0', 'dca', '-strict', -2) }
-                "AC3" { return @('-map', '0:v', '-map', '0:a:0', '-c:a:0', 'ac3', '-b:a', '640k') }
+                "DTS" { return @('-map', '0:a:0', '-c:a:0', 'dca', '-strict', -2) }
+                "AC3" { return @('-map', '0:a:0', '-c:a:0', 'ac3', '-b:a', '640k') }
             }
         }
     }
