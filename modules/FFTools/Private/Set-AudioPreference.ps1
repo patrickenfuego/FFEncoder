@@ -36,7 +36,7 @@ function Set-AudioPreference {
         Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
         Write-Host "All audio streams will be copied. " -NoNewline
         Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
-        return @('-map', '0:v','-map', '0:a', '-c:a', 'copy')
+        return @('-map', '0:a', '-c:a', 'copy')
     }
     elseif ($UserChoice -like "aac") {
         [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0
@@ -45,12 +45,12 @@ function Set-AudioPreference {
         Write-Host "Audio stream 0 has $numOfChannels channels. Total AAC bitrate: ~ $bitrate`n" 
         return @('-c:a', 'aac', '-b:a', $bitrate)
     }
-    elseif ($UserChoice -like "dts" -or $UserChoice -like "ac3") {
+    elseif (@("dd", "ac3", "dts") -contains $UserChoice) {
         Write-Host "** $($UserChoice.ToUpper()) AUDIO SELECTED **" @progressColors
         #Get the index of the desired stream. If no stream is found, $i will be $false
         $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
         if ($i) {
-            return @('-map', '0:v', '-map', "0:a:$i", '-c:a', 'copy')
+            return @('-map', "0:a:$i", '-c:a', 'copy')
         }
         else {
             switch ($UserChoice) {
@@ -64,7 +64,7 @@ function Set-AudioPreference {
         Write-Host "All audio streams will be excluded from the output file`n"
         return '-an' 
     }
-    elseif ($UserChoice -like "^f[lac]*") {
+    elseif ($UserChoice -match "^f[lac]*") {
         Write-Host "** FLAC AUDIO SELECTED **" @progressColors
         Write-Host "Audio Stream 0 will be transcoded to FLAC`n"
         return @('-map', '0:v', '-map', '0:a:0', '-c:a', 'flac')

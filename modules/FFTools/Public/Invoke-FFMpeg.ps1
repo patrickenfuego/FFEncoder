@@ -95,14 +95,14 @@ function Invoke-FFMpeg {
     if ($PSBoundParameters['TestFrames']) {
         Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
         ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -c:v libx265 $audio $subs -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
+            -color_range tv -map 0:v:0 -c:v libx265 $subs $audio -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
             transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath
     }
     else {
         ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -c:v libx265 $audio $subs -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
+            -color_range tv -map 0:v:0 -c:v libx265 $audio $subs -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
             transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath
