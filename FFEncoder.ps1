@@ -106,63 +106,89 @@
 
 #>
 
-[CmdletBinding(DefaultParameterSetName = "HDR")]
+[CmdletBinding(DefaultParameterSetName = "CRF")]
 param (
     [Parameter(Mandatory = $true, ParameterSetName = "Help")]
     [Alias("H", "/?", "?")]
     [switch]$Help,
 
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "ConstantBitrate")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
     [ValidateSet("copy", "copyall", "ca", "aac", "none", "c", "n", "ac3", "dd", "dts", "flac", "f")]
     [Alias("A")]
     [string]$Audio = "none",
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
     [ValidateRange(32, 160)]
     [Alias("AQ", "AACQ")]
     [int]$AacBitrate = 64,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
     [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
         "chi", "kor", "gre", "rum")]
     [Alias("S")]
     [string]$Subtitles = "default",
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [ValidateRange(0.0, 51.0)]
     [Alias("C")]
-    [double]$CRF = 17.0,
+    [double]$CRF,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $true, ParameterSetName = "ConstantBitrate")]
+    [Alias("VBitrate")]
+    [ValidateScript(
+        {
+            $_ -match "(?<num>\d+)(?<suffix>[K M]+)"
+            if ($Matches) {
+                switch ($Matches.suffix) {
+                    "K" { 
+                        if ($Matches.num -gt 99000 -or $Matches.num -lt 1000) {
+                            throw "Bitrate out of range. Must be between 1,000-99,000 kb/s"
+                        }
+                        else { $true }
+                    }
+                    "M" {
+                        if ($Matches.num -gt 99 -or $Matches.num -le 1) {
+                            throw "Bitrate out of range. Must be between 1-99 mb/s"
+                        }
+                        else { $true }
+                    }
+                    default { throw "Invalid Suffix. Suffix must be 'K' (kb/s) or 'M' (mb/s)" }
+                }
+            }
+            else { throw "Invalid bitrate value. Example formats: 10000K (10,000 kb/s) | 10M (10 mb/s)" }
+        }
+    )]
+    [string]$VideoBitrate,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
     [int[]]$Deblock = @(-1, -1),
 
-    [Parameter(Mandatory = $true, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $true, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $true, ParameterSetName = "ConstantBitrate")]
     [ValidateNotNullOrEmpty()]
     [Alias("O")]
     [string]$OutputPath,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "HDR")]
-    [Parameter(Mandatory = $false, ParameterSetName = "SDR")]
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
     [Alias("T", "Test")]
     [int]$TestFrames
 
@@ -206,7 +232,7 @@ function Get-OperatingSystem {
 
 #Returns an object containing the paths to the crop file and log file relative to the input path
 function Set-RootPath {
-    if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.m[a-z 4]+") {
+    if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.[a-z 2 4]+") {
         $root = $Matches.root
         $title = $Matches.title
         $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
@@ -274,6 +300,19 @@ $logPath = $paths.LogPath
 New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath
 #Calculating the crop values
 $cropDim = Measure-CropDimensions $cropFilePath
+
+#Setting the rate control argument array
+if ($PSBoundParameters['CRF']) {
+    $rateControl = @('-crf', $CRF)
+}
+elseif ($PSBoundParameters['VideoBitrate']) {
+    $rateControl = @('-b:v', $VideoBitrate)
+}
+else {
+    Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 17.0 will be used"
+    $rateControl = @('-crf', 17.0) 
+}
+
 #Building parameters for Invoke-FFMpeg function
 $ffmpegParams = @{
     InputFile      = $InputPath
@@ -282,7 +321,7 @@ $ffmpegParams = @{
     AacBitrate     = $AacBitrate
     Subtitles      = $Subtitles
     Preset         = $Preset
-    CRF            = $CRF
+    RateControl    = $rateControl
     Deblock        = $Deblock
     OutputPath     = $OutputPath
     LogPath        = $logPath

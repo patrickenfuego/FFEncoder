@@ -57,8 +57,8 @@ function Invoke-FFMpeg {
         [string]$Preset,
 
         # x265 CRF setting
-        [Parameter(Mandatory = $false)]
-        [double]$CRF,
+        [Parameter(Mandatory = $true)]
+        [array]$RateControl,
 
         # Deblock filter setting
         [Parameter(Mandatory = $false)]
@@ -95,7 +95,7 @@ function Invoke-FFMpeg {
     if ($PSBoundParameters['TestFrames']) {
         Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
         ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -map 0:v:0 -c:v libx265 $subs $audio -preset $Preset -crf $CRF -pix_fmt $HDR.PixelFmt `
+            -color_range tv -map 0:v:0 -c:v libx265 $subs $audio $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
             transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath
