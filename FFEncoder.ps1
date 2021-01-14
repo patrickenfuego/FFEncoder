@@ -32,6 +32,9 @@
     .EXAMPLE 
         ## Convert primary audio stream to AAC at 112 kb/s per channel ##
         ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -Audio aac -AacBitrate 112 -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
+    .EXAMPLE 
+        ## Encode the video to 25 mb/s using the -VideoBitrate parameter ##
+        .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio copy -VideoBitrate 25M -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv" 
     .INPUTS
         4K HDR video file 
 
@@ -50,7 +53,7 @@
     .PARAMETER Help
         Displays help information for the script
     .PARAMETER TestFrames
-        Performs a test encode with the number of frames provided. Default is 1000 frames
+        Performs a test encode with the number of frames provided
     .PARAMETER 1080p
         Switch to enable 1080p downsampling while retaining HDR metadata. Still testing
     .PARAMETER InputPath
@@ -90,10 +93,14 @@
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
     .PARAMETER CRF
-        Constant rate factor setting. Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate (better quality). Recommended: 16.0 - 22.0. At very low values, the 
-        file may actually grow larger.
+        Constant rate factor setting for video rate control. This setting attempts to keep quality consistent throughout the encode. Ranges from 0.0 to 51.0. Lower values equate to a    
+        higher bitrate (better quality). Recommended: 14.0 - 24.0. At very low values, the output file may actually grow larger than the source. CRF 0.0 is considered lossless.
+    .PARAMETER VideoBitrate
+        Constant bitrate setting for video rate control. This can be used as an alternative to CRF rate control. Use the 'K' suffix to denote kb/s, or the 'M' suffix for mb/s:
+          ex: 10000k (10,000 kb/s)
+          ex: 10m (10 mb/s) | 10.5M (10.5 mb/s)
     .PARAMETER Deblock
-        Deblock filter settings. The first value represents strength, and the second value represents frequency. Default is -1,-1
+        Deblock filter settings. The first value represents strength, and the second value represents frequency.
     .PARAMETER OutputPath
         Location of the encoded output video file
     
@@ -152,7 +159,7 @@ param (
     [Alias("VBitrate")]
     [ValidateScript(
         {
-            $_ -match "(?<num>\d+)(?<suffix>[K M]+)"
+            $_ -cmatch "(?<num>\d+\.?\d{0,2})(?<suffix>[K M]+)"
             if ($Matches) {
                 switch ($Matches.suffix) {
                     "K" { 
@@ -170,7 +177,7 @@ param (
                     default { throw "Invalid Suffix. Suffix must be 'K' (kb/s) or 'M' (mb/s)" }
                 }
             }
-            else { throw "Invalid bitrate value. Example formats: 10000K (10,000 kb/s) | 10M (10 mb/s)" }
+            else { throw "Invalid bitrate value. Example formats: 10000K (10,000 kb/s) | 10M (10 mb/s). Suffixes must be CAPITALIZED" }
         }
     )]
     [string]$VideoBitrate,
