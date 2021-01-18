@@ -42,9 +42,8 @@ function Invoke-FFMpeg {
         [string]$AudioInput = "none",
 
         [Parameter(Mandatory = $false)]
-        [ValidateRange(32, 160)]
-        [Alias("AQ", "AACQ")]
-        [int]$AacBitrate,
+        [Alias("AB", "AQ")]
+        [int]$AudioBitrate,
 
         # Parameter help description
         [Parameter(Mandatory = $false)]
@@ -56,7 +55,7 @@ function Invoke-FFMpeg {
         [Alias("P")]
         [string]$Preset,
 
-        # x265 CRF setting
+        # x265 CRF / constant bitrate array of arguments
         [Parameter(Mandatory = $true)]
         [array]$RateControl,
 
@@ -83,7 +82,7 @@ function Invoke-FFMpeg {
     #Gathering HDR metadata
     $HDR = Get-HDRMetadata $InputFile
     #Builds the audio argument array based on user input
-    $audio = Set-AudioPreference $InputFile $AudioInput $AacBitrate
+    $audio = Set-AudioPreference -InputFile $InputFile -UserChoice $AudioInput -Bitrate $AudioBitrate
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
 
