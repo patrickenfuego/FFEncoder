@@ -68,8 +68,9 @@
                               (This feature is EXPERIMENTAL. Only transcode to DTS for compatibility purposes)
             5. ac3          - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
             6. flac/f       - Convert the primary audio stream to FLAC lossless audio 
-    .PARAMETER AacBitrate
-        The constant bitrate for each audio channel (in kb/s). If the audio stream is 7.1 (8 CH), the total bitrate will be 8 * AacBitrate 
+    .PARAMETER AudioBitrate
+        Constant bitrate value for supported codec streams. It is advised that you consult the chosen codec's documentation for recommended bitrate per channel before setting this parameter.
+        Codecs that support the use of this parameter (so far) are AAC and EAC3
     .PARAMETER Subtitles
         Supports passthrough of embedded subtitles with the following options and languages:
 
@@ -133,9 +134,9 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
-    [ValidateRange(32, 160)]
-    [Alias("AQ", "AACQ")]
-    [int]$AacBitrate = 64,
+    [ValidateRange(32, 3000)]
+    [Alias("AB", "ABitrate")]
+    [int]$AudioBitrate,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
@@ -272,12 +273,13 @@ if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 Import-Module -Name ".\modules\FFTools" -Force
 
 Write-Host
-Write-Host "`t`t|<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" -ForegroundColor Magenta -BackgroundColor Black -NoNewline
+Write-Host "|<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" -ForegroundColor Magenta -BackgroundColor Black -NoNewline
 Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
 Write-Host ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
 Write-Host
 
 $startTime = (Get-Date).ToLocalTime()
+Write-Host "Start Time: $startTime`n"
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) {
     $title = "Output Path Already Exists"
@@ -325,7 +327,7 @@ $ffmpegParams = @{
     InputFile      = $InputPath
     CropDimensions = $cropDim
     AudioInput     = $Audio
-    AacBitrate     = $AacBitrate
+    AudioBitrate   = $AudioBitrate
     Subtitles      = $Subtitles
     Preset         = $Preset
     RateControl    = $rateControl
