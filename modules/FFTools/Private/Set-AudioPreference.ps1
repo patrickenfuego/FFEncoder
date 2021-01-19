@@ -23,8 +23,15 @@ function Set-AudioPreference {
         [string]$UserChoice,
 
         [Parameter(Mandatory = $false, Position = 2)]
-        [int]$AacBitrate
+        [int]$Bitrate
     )
+
+    #Private inner function that returns the number of channels for the primary audio stream
+    function Get-ChannelCount {
+        [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels `
+            -select_streams a:0 -of compact=p=0:nk=1 -v 0
+        return $numOfChannels
+    }
 
     if ($UserChoice -match "^c[opy]*$") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
@@ -39,14 +46,16 @@ function Set-AudioPreference {
         return @('-map', '0:a', '-c:a', 'copy')
     }
     elseif ($UserChoice -like "aac") {
-        [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels -select_streams a:0 -of compact=p=0:nk=1 -v 0
-        $bitrate = "$($numOfChannels * $AacBitrate)k"
+        if (!$Bitrate) { $Bitrate = 512 }
+        $channels = Get-ChannelCount
+        $bitsPerChannel = "$($Bitrate / $channels) kb/s"
         Write-Host "** AAC AUDIO SELECTED **" @progressColors
-        Write-Host "Audio stream 0 has $numOfChannels channels. Total AAC bitrate: ~ $bitrate`n" 
-        return @('-c:a', 'aac', '-b:a', $bitrate)
+        Write-Host "Audio stream 0 has $channels channels. Total bitrate per channel: ~ $bitsPerChannel`n" 
+        return @('-map', '0:a:0', '-c:a', 'aac', '-b:a', "$Bitrate`k")
     }
     elseif (@("dd", "ac3", "dts") -contains $UserChoice) {
         Write-Host "** $($UserChoice.ToUpper()) AUDIO SELECTED **" @progressColors
+        if ($UserChoice -eq "dd") { $UserChoice = 'ac3' }
         #Get the index of the desired stream. If no stream is found, $i will be $false
         $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
         if ($i) {
@@ -59,15 +68,31 @@ function Set-AudioPreference {
             }
         }
     }
-    elseif ($UserChoice -match "^n[one]?") { 
-        Write-Host "** NO AUDIO SELECTED **" @progressColors
-        Write-Host "All audio streams will be excluded from the output file`n"
-        return '-an' 
+    elseif ($UserChoice -eq "eac3") {
+        Write-Host "** E-AC3 AUDIO SELECTED **" @progressColors
+        if ($Bitrate) {
+            $channels = Get-ChannelCount
+            $bitsPerChannel = "$($Bitrate / 6) kb/s"
+            Write-Host "Audio stream 0 has $channels channels. 7.1 will be reduced to 5.1. Total bitrate per channel: ~ $bitsPerChannel`n"
+            return @('-map', '0:a:0', '-c:a', 'eac3', '-b:a', "$Bitrate`k")
+        }
+        else {
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            if ($i) {
+                return @('-map', "0:a:$i", '-c:a', 'copy')
+            }
+            else { return @('-map', '0:a:0', '-c:a', 'eac3') }
+        }
     }
     elseif ($UserChoice -match "^f[lac]*") {
         Write-Host "** FLAC AUDIO SELECTED **" @progressColors
         Write-Host "Audio Stream 0 will be transcoded to FLAC`n"
-        return @('-map', '0:v', '-map', '0:a:0', '-c:a', 'flac')
+        return @('-map', '0:a:0', '-c:a', 'flac')
+    }
+    elseif ($UserChoice -match "^n[one]?") { 
+        Write-Host "** NO AUDIO SELECTED **" @progressColors
+        Write-Host "All audio streams will be excluded from the output file`n"
+        return '-an' 
     }
     else { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
 }
