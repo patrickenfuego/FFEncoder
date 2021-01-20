@@ -128,7 +128,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
-    [ValidateSet("copy", "copyall", "ca", "aac", "none", "c", "n", "ac3", "dd", "dts", "flac", "f")]
+    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3")]
     [Alias("A")]
     [string]$Audio = "none",
 
