@@ -18,6 +18,7 @@ function Get-AudioStream {
     $codecStr = switch ($Codec) {
         "DTS" { "DTS Core Audio" }
         "AC3" { "Dolby Digital" }
+        "EAC3" { "Dolby Digital Plus" }
     }
     $probe = ffprobe -hide_banner -loglevel error -show_streams -select_streams a -print_format json `
         -show_entries "stream=codec_name,channel_layout,channels,index,bit_rate,profile" `
@@ -25,10 +26,12 @@ function Get-AudioStream {
 
     [int]$i = 0
     $probe | ConvertFrom-Json | Select-Object -ExpandProperty streams | ForEach-Object {
+        #Distinguishing between DTS Master Audio and DTS core audio
         if ($_.profile -like $Codec -and $_.codec_name -like $Codec) {
             $bitrate = $_.bit_rate
             $index = $i  
         }
+        #Matching for all other supported codecs
         elseif ([string]::IsNullOrEmpty($_.profile) -and $_.codec_name -like $Codec) {
             $bitrate = $_.bit_rate
             $index = $i
