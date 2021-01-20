@@ -32,6 +32,12 @@ function Set-AudioPreference {
             -select_streams a:0 -of compact=p=0:nk=1 -v 0
         return $numOfChannels
     }
+    #Private inner function that prints audio data when the -Bitrate parameter is used
+    function Write-BitrateInfo ($channels, $bitsPerChannel) {
+        Write-Host "Audio stream 0 has $channels channels. " -NoNewline
+        Write-Host "If the input layout is 7.1, it will be downmixed to 5.1. " @warnColors -NoNewline
+        Write-Host "Total bitrate per channel: ~ $bitsPerChannel`n"
+    }
 
     if ($UserChoice -match "^c[opy]*$") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
@@ -45,7 +51,7 @@ function Set-AudioPreference {
         Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
         return @('-map', '0:a', '-c:a', 'copy')
     }
-    elseif ($UserChoice -like "aac") {
+    elseif ($UserChoice -eq "aac") {
         if (!$Bitrate) { $Bitrate = 512 }
         $channels = Get-ChannelCount
         $bitsPerChannel = "$($Bitrate / $channels) kb/s"
@@ -53,28 +59,45 @@ function Set-AudioPreference {
         Write-Host "Audio stream 0 has $channels channels. Total bitrate per channel: ~ $bitsPerChannel`n" 
         return @('-map', '0:a:0', '-c:a', 'aac', '-b:a', "$Bitrate`k")
     }
-    elseif (@("dd", "ac3", "dts") -contains $UserChoice) {
-        Write-Host "** $($UserChoice.ToUpper()) AUDIO SELECTED **" @progressColors
-        if ($UserChoice -eq "dd") { $UserChoice = 'ac3' }
-        #Get the index of the desired stream. If no stream is found, $i will be $false
-        $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
-        if ($i) {
-            return @('-map', "0:a:$i", '-c:a', 'copy')
-        }
-        else {
-            switch ($UserChoice) {
-                "DTS" { return @('-map', '0:a:0', '-c:a:0', 'dca', '-strict', -2) }
-                "AC3" { return @('-map', '0:a:0', '-c:a:0', 'ac3', '-b:a', '640k') }
-            }
-        }
-    }
-    elseif ($UserChoice -eq "eac3") {
-        Write-Host "** E-AC3 AUDIO SELECTED **" @progressColors
+    elseif (@('ac3', 'dd') -contains $UserChoice) {
+        Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
         if ($Bitrate) {
             $channels = Get-ChannelCount
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
-            Write-Host "Audio stream 0 has $channels channels. 7.1 will be reduced to 5.1. Total bitrate per channel: ~ $bitsPerChannel`n"
-            return @('-map', '0:a:0', '-c:a', 'eac3', '-b:a', "$Bitrate`k")
+            Write-BitrateInfo $channels $bitsPerChannel
+            return @('-map', '0:a:0', '-c:a:0', 'ac3', '-b:a', "$Bitrate`k")
+        }
+        else {
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            if ($i) {
+                return @('-map', "0:a:$i", '-c:a', 'copy')
+            }
+            else { return @('-map', '0:a:0', '-c:a', 'ac3', '-b:a', '640k') }
+        }
+    }
+    elseif ($UserChoice -eq "dts") {
+        Write-Host "** DTS AUDIO SELECTED **" @progressColors
+        if ($Bitrate) {
+            $channels = Get-ChannelCount
+            $bitsPerChannel = "$($Bitrate / 6) kb/s"
+            Write-BitrateInfo $channels $bitsPerChannel
+            return @('-map', '0:a:0', '-c:a:0', 'dca', '-b:a', "$Bitrate`k", '-strict', -2)
+        }
+        else {
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            if ($i) {
+                return @('-map', "0:a:$i", '-c:a', 'copy')
+            }
+            else { return @('-map', '0:a:0', '-c:a', 'dca') }
+        }
+    }
+    elseif ($UserChoice -eq "eac3") {
+        Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
+        if ($Bitrate) {
+            $channels = Get-ChannelCount
+            $bitsPerChannel = "$($Bitrate / 6) kb/s"
+            Write-BitrateInfo $channels $bitsPerChannel
+            return @('-map', '0:a:0', '-c:a:0', 'eac3', '-b:a', "$Bitrate`k")
         }
         else {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
