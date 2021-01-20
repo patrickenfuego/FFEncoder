@@ -160,7 +160,7 @@ param (
     [Alias("VBitrate")]
     [ValidateScript(
         {
-            $_ -cmatch "(?<num>\d+\.?\d{0,2})(?<suffix>[K M]+)"
+            $_ -cmatch "(?<num>\d+\.?\d{0,2})(?<suffix>[K k M]+)"
             if ($Matches) {
                 switch ($Matches.suffix) {
                     "K" { 
@@ -188,6 +188,30 @@ param (
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
     [int[]]$Deblock = @(-1, -1),
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [ValidateRange(0, 4)]
+    [Alias("AQM")]
+    [int]$AqMode = 2,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [ValidateRange(0.0, 3.0)]
+    [Alias("AQS")]
+    [double]$AqStrength = 1.00,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [ValidateRange(0.0, 5.0)]
+    [Alias("PRD")]
+    [double]$PsyRd = 2.00,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [ValidateRange(0.0, 50.0)]
+    [Alias("PRDQ")]
+    [double]$PsyRdoq = 1.00,
 
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "ConstantBitrate")]
@@ -295,9 +319,9 @@ if (Test-Path -Path $OutputPath) {
         0 { 
             Remove-Item -Path $OutputPath -Include "*.mkv", "*.mp4", "*.ts", "*.m2ts", "*.avi" -Confirm 
             if ($?) { Write-Host "`nFile <$OutputPath> was successfully deleted`n" }
-            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another process.`nExiting script..." @warnColors; exit }
+            else { Write-Host "<$OutputPath> could not be deleted. Make sure it is not in use by another process. Exiting script..." @warnColors; exit }
         }
-        1 { Write-Host "Please choose a different file name, or delete the existing file. Exiting script..."; exit }
+        1 { Write-Host "Please choose a different file name, or delete the existing file. Exiting script..." @warnColors; exit }
         default { Write-Host "You have somehow reached an unreachable block. Exiting script..." @warnColors; exit }
     }
 }
@@ -332,6 +356,10 @@ $ffmpegParams = @{
     Preset         = $Preset
     RateControl    = $rateControl
     Deblock        = $Deblock
+    AqMode         = $AqMode
+    AqStrength     = $AqStrength
+    PsyRd          = $PsyRd
+    PsyRdoq        = $PsyRdoq
     OutputPath     = $OutputPath
     LogPath        = $logPath
     TestFrames     = $TestFrames

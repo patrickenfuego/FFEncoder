@@ -1,9 +1,3 @@
-###################################################################
-#
-#   Written by: Patrick Kelly
-#   Last Modified: 01/02/2021
-#
-###################################################################
 <#
     .SYNOPSIS
         Function that calls ffmpeg to encode the input file using passed parameters
@@ -62,7 +56,22 @@ function Invoke-FFMpeg {
         # Deblock filter setting
         [Parameter(Mandatory = $false)]
         [Alias("DBF")]
-        [int[]]$Deblock = @(-1, -1),
+        [int[]]$Deblock,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("AQM")]
+        [int]$AqMode,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("AQS")]
+        [double]$AqStrength,
+
+        [Parameter(Mandatory = $false)]
+        [double]$PsyRd,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("PRDQ")]
+        [double]$PsyRdoq,
 
         # Path to the output file
         [Parameter(Mandatory = $true)]
@@ -95,15 +104,17 @@ function Invoke-FFMpeg {
         Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
         ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-            -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
-            transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+            -x265-params "aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
+            colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath
     }
     else {
         ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-            -x265-params "level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:colorprim=$($HDR.ColorPrimaries):`
-            transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+            -x265-params "aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
+            colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$logPath
     }
 }
+
+#aq-strength=0.80:psy-rdoq=0:psy-rd=4.0:nr-inter=50:
