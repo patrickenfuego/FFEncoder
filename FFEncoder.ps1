@@ -101,7 +101,15 @@
           ex: 10000k (10,000 kb/s)
           ex: 10m (10 mb/s) | 10.5M (10.5 mb/s)
     .PARAMETER Deblock
-        Deblock filter settings. The first value represents strength, and the second value represents frequency.
+        Deblock filter settings. The first value represents strength, and the second value represents frequency
+    .PARAMETER AqMode
+        x265 AQ mode setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work
+    .PARAMETER AqStrength
+        Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates.
+    .PARAMETER PsyRd
+        Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 docs for more info
+    .PARAMETER PsyRdoq
+        Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 docs for more info
     .PARAMETER OutputPath
         Location of the encoded output video file
     
@@ -175,10 +183,10 @@ param (
                         }
                         else { $true }
                     }
-                    default { throw "Invalid Suffix. Suffix must be 'K' (kb/s) or 'M' (mb/s)" }
+                    default { throw "Invalid Suffix. Suffix must be 'K/k' (kb/s) or 'M' (mb/s)" }
                 }
             }
-            else { throw "Invalid bitrate value. Example formats: 10000K (10,000 kb/s) | 10M (10 mb/s). Suffixes must be CAPITALIZED" }
+            else { throw "Invalid bitrate input. Example formats: 10000k (10,000 kb/s) | 10M (10 mb/s)" }
         }
     )]
     [string]$VideoBitrate,
