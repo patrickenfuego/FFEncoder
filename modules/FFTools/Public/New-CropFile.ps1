@@ -28,7 +28,10 @@ function New-CropFile {
         [string]$InputPath,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [string]$CropFilePath
+        [string]$CropFilePath,
+
+        [Parameter(Mandatory = $true, Position = 2)]
+        [int]$Count
     )
 
     Import-Module -Name ".\modules\PoshRSJob"
@@ -63,16 +66,25 @@ function New-CropFile {
     }
 
     Start-Sleep -Milliseconds 500
-    if ((Get-Content $CropFilePath).Count -gt 0) {
+    if ((Get-Content $CropFilePath).Count -gt 10) {
         Write-Host "`n** CROP FILE SUCCESSFULLY GENERATED **" @progressColors
     }
     #If the crop file fails to generate, sleep for 5 seconds and perform a recursive call to try again
     else {
-        Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
-        Start-Sleep -Seconds 5
+        #base case
+        if ($Count -eq 0) { throw "There was an issue creating the crop file. Check the input path and try again." }
+        else {
+            Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
+            Start-Sleep -Seconds 5
+            $Count = $Count - 1 
+            New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath -Count $Count
+        }
+    }
+}
+
+Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
+        
         New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath
         if ((Get-Content $CropFilePath).Count -le 0) {
             throw "There was an issue creating the crop file. Check the input path and try again."
         }
-    }
-}
