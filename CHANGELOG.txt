@@ -61,4 +61,38 @@ v. 1.4.5
     - Added color hash variables to the FFTools module for global use
     - Changed default -CRF parameter value from 16.0 to 17.0
     
+v. 1.5.5
+    - Added option "copyall" / "ca" as an argument to the -Audio parameter. This option will copy all audio streams from the source without encoding
+    - Added support for Dolby Digital AC-3 as an argument for the -Audio parameter using "AC3". If the source contains a Dolby Digital track already, 
+      it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to AC-3 at the standard 640 kb/s.
+    - Added support for DTS Core Audio as an argument for the -Audio parameter using "DTS". If the source contains a DTS track already, 
+      it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to DTS (EXPERIMENTAL)
+    - Added support for FLAC audio transcoding as an argument to the -Audio parameter using "FLAC" or "F". This is only recommended for lossless codecs.
+    - Added support for Dolby Digital Plus (E-AC3) audio
+    - Changed -AacBitrate to -AudioBitrate / -AB so it works with AC3, EAC3, DTS, and AAC
+    - Added subtitle passthrough support with the -Subtitles parameter. Supported language arguments are:
+
+        - All               - "all"  / "a"
+        - None              - "none" / "n"
+        - Default (first)   - "default" / "d"
+        - English           - "eng"
+        - French            - "fra"
+        - German            - "ger"
+        - Spanish           - "spa"
+        - Dutch             - "dut"
+        - Danish            - "dan"
+        - Finnish           - "fin"
+        - Norwegian         - "nor"
+        - Czech             - "cze"
+        - Polish            - "pol"
+        - Chinese           - "chi"
+        - Korean            - "kor"
+        - Greek             - "gre"
+        - Romanian          - "rum"
+
+    - Added support for constant bitrate mode as an alternative to CRF with the -VideoBitrate parameter
+    - Added -AqMode parameter. Default is 2
+    - Added -AqStrength parameter. Default is 1.00
+    - Added -PsyRd parameter. Default is 2.00
+    - Added -PsyRdoq parameter. Default is 1.00
     
