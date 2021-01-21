@@ -105,11 +105,11 @@
     .PARAMETER AqMode
         x265 AQ mode setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work
     .PARAMETER AqStrength
-        Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates.
+        Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates
     .PARAMETER PsyRd
-        Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 docs for more info
+        Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info
     .PARAMETER PsyRdoq
-        Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 docs for more info
+        Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info
     .PARAMETER OutputPath
         Location of the encoded output video file
     
@@ -338,7 +338,7 @@ $paths = Set-RootPath
 $cropFilePath = $paths.CropPath
 $logPath = $paths.LogPath
 #Creating the crop file
-New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath
+New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath -Count 1
 #Calculating the crop values
 $cropDim = Measure-CropDimensions $cropFilePath
 
