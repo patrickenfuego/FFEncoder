@@ -76,15 +76,8 @@ function New-CropFile {
         else {
             Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
             Start-Sleep -Seconds 5
-            $Count = $Count - 1 
+            $Count--
             New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath -Count $Count
         }
     }
 }
-
-Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
-        
-        New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath
-        if ((Get-Content $CropFilePath).Count -le 0) {
-            throw "There was an issue creating the crop file. Check the input path and try again."
-        }
