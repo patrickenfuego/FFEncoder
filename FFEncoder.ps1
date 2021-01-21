@@ -301,6 +301,7 @@ function Set-RootPath {
 ######################################## Main Script Logic ########################################
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
+if (!(Test-Path -Path $InputPath)) { throw "Input path does not exist. Check the path and try again" }
 
 Import-Module -Name ".\modules\FFTools" -Force
 
@@ -350,8 +351,8 @@ elseif ($PSBoundParameters['VideoBitrate']) {
     $rateControl = @('-b:v', $VideoBitrate)
 }
 else {
-    Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 17.0 will be used"
-    $rateControl = @('-crf', 17.0) 
+    Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 18.0 will be used"
+    $rateControl = @('-crf', 18.0) 
 }
 
 #Building parameters for Invoke-FFMpeg function
