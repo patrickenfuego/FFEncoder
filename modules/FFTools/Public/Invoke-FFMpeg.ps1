@@ -73,6 +73,11 @@ function Invoke-FFMpeg {
         [Alias("PRDQ")]
         [double]$PsyRdoq,
 
+        # Filter to help reduce high frequency noise (grain)
+        [Parameter(Mandatory = $false)]
+        [Alias("NRTR")]
+        [int]$NrInter,
+
         # Path to the output file
         [Parameter(Mandatory = $true)]
         [Alias("O")]

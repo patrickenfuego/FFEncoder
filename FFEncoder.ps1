@@ -221,6 +221,12 @@ param (
     [Alias("PRDQ")]
     [double]$PsyRdoq = 1.00,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [ValidateRange(0, 2000)]
+    [Alias("NRTR")]
+    [int]$NrInter = 0,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "ConstantBitrate")]
     [ValidateNotNullOrEmpty()]
