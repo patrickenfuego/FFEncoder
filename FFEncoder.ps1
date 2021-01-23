@@ -1,13 +1,11 @@
 <#
     .SYNOPSIS
         Script for encoding 4K HDR video content using ffmpeg and x265
-    
     .DESCRIPTION
         This script is meant to make video encoding easier with ffmpeg. Instead of manually changing
         the script parameters for each encode, you can pass dynamic parameters to this script and it  
         will use the arguments as needed. Supports 2160p HDR encoding with automatic fetching of HDR 
         metadata, automatic cropping, and multiple audio & subtitle options.   
-
     .EXAMPLE
         ## Windows ##
         .\FFEncoder.ps1 -InputPath "Path\To\file.mkv" -CRF 16.5 -Preset medium -Deblock -3,-3 -Audio copy -OutputPath "Path\To\Encoded\File.mkv"
@@ -35,27 +33,25 @@
     .EXAMPLE 
         ## Encode the video to 25 mb/s using the -VideoBitrate parameter ##
         .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio copy -VideoBitrate 25M -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv" 
+    .EXAMPLE 
+        ## Adjust psycho visual settings and aq-mode level/strength ##
+        ./FFEncoder.ps1 "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -PsyRd 4.0 -PsyRdoq 1.50 -AqMode 1 -AqStrength 0.90 -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .INPUTS
         4K HDR video file 
-
     .OUTPUTS
         crop.txt - File used for auto-cropping
         4K HDR encoded video file
-
     .NOTES
-        For FFEncoder to work, ffmpeg must be in your PATH (consult your OS documentation for info on how to verify this).
+        For FFEncoder to work, ffmpeg must be in your system PATH (consult your OS documentation for info on how to verify this).
 
         Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.), or you may be left with a file that will not play. 
  
-        ffmpeg cannot decode Dolby Atmos streams, nor can they be easily identified using ffprobe. If you try and copy
-        a Dolby Atmos track, the script will fail.
-
+        ffmpeg cannot decode Dolby Atmos streams, nor can the metadata be identified using ffprobe. If you try and copy a Dolby Atmos track, THE SCRIPT WILL FAIL.
+        This is not a flaw in the script, but rather a limitation of ffmpeg.
     .PARAMETER Help
         Displays help information for the script
     .PARAMETER TestFrames
         Performs a test encode with the number of frames provided
-    .PARAMETER 1080p
-        Switch to enable 1080p downsampling while retaining HDR metadata. Still testing
     .PARAMETER InputPath
         Location of the file to be encoded
     .PARAMETER Audio
@@ -69,8 +65,8 @@
             5. ac3          - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
             6. flac/f       - Convert the primary audio stream to FLAC lossless audio 
     .PARAMETER AudioBitrate
-        Constant bitrate value for supported codec streams. It is advised that you consult the chosen codec's documentation for recommended bitrate per channel before setting this parameter.
-        Codecs that support the use of this parameter (so far) are AAC and EAC3
+        Constant bitrate value for supported codec streams. It is advised that you consult the chosen codec's documentation for the recommended bitrate per channel before setting this parameter.
+        Codecs that support the use of this parameter (so far) are AAC, EAC3, DTS, and AAC. Unit is always kb/s, and the 'k' should be excluded from the passed value 
     .PARAMETER Subtitles
         Supports passthrough of embedded subtitles with the following options and languages:
 
@@ -92,14 +88,17 @@
         - Greek             - "gre"
         - Romanian          - "rum"
     .PARAMETER Preset
-        The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest)
+        The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest). Slower presets improve quality by enabling additional, more expensive, x265 parameters at the expensive of encoding time.
+        Recommended presets (depending on source and purpose) are slow, medium, or fast. 
     .PARAMETER CRF
-        Constant rate factor setting for video rate control. This setting attempts to keep quality consistent throughout the encode. Ranges from 0.0 to 51.0. Lower values equate to a    
-        higher bitrate (better quality). Recommended: 14.0 - 24.0. At very low values, the output file may actually grow larger than the source. CRF 0.0 is considered lossless.
+        Constant rate factor setting for video rate control. This setting attempts to keep quality consistent from frame to frame, and is most useful for targeting a specific quality level.    
+        Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate (better quality). Recommended: 14.0 - 24.0. At very low values, the output file may actually grow larger than the source.
+        CRF 4.0 is considered mathematically lossless in x265 (vs. CRF 0.0 in x264)
     .PARAMETER VideoBitrate
-        Constant bitrate setting for video rate control. This can be used as an alternative to CRF rate control. Use the 'K' suffix to denote kb/s, or the 'M' suffix for mb/s:
-          ex: 10000k (10,000 kb/s)
-          ex: 10m (10 mb/s) | 10.5M (10.5 mb/s)
+        Average bitrate (ABR) setting for video rate control. This can be used as an alternative to CRF rate control, and is most useful for targeting a specific file size (bitrate / duration).
+        Use the 'K' suffix to denote kb/s, or the 'M' suffix for mb/s:
+            ex: 10000k (10,000 kb/s)
+            ex: 10m (10 mb/s) | 10.5M (10.5 mb/s)
     .PARAMETER Deblock
         Deblock filter settings. The first value represents strength, and the second value represents frequency
     .PARAMETER AqMode
@@ -110,9 +109,10 @@
         Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info
     .PARAMETER PsyRdoq
         Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info
+    .PARAMETER NrInter
+        Filter to help preserve high frequency noise (such as film grain) throughout the GOP, and can be useful for controlling the bitrate of grainy sources. Default disabled. 
     .PARAMETER OutputPath
         Location of the encoded output video file
-    
     .lINK
         GitHub Page - https://github.com/patrickenfuego/FFEncoder
     .LINK
