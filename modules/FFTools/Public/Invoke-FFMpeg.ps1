@@ -114,7 +114,7 @@ function Invoke-FFMpeg {
 
     Write-Host "***** STARTING FFMPEG *****" @progressColors
     Write-Host "To view your progress, run " -NoNewline
-    Write-Host "Get-Content '$LogPath' -Tail 10" @emphasisColors -NoNewline
+    Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
     Write-Host " in a different PowerShell session`n`n"
 
     if ($PSBoundParameters['TestFrames']) {
