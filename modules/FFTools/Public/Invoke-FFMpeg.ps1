@@ -1,15 +1,17 @@
 <#
     .SYNOPSIS
-        Function that calls ffmpeg to encode the input file using passed parameters
+        Calls ffmpeg to encode the input file using CRF or 1 Pass ABR rate control
     .DESCRIPTION
-        This function takes a series of input parameters and uses them to encode
-        a 4K HDR file. It uses the module function Set-AudioPreference to build an 
-        argument array that ffmpeg can parse based on the -Audio parameter. 
+        This function takes the input parameters and uses them to encode a 4K HDR file.
+        It uses module functions from FFTools to set video metadata, audio, and
+        subtitle preferences
     .INPUTS
         Path of the source file to be encoded
         Path of the output file
-        HDR metadata (as hashtable)
         Crop dimensions for the output file
+        Audio preference
+        Subtitle preference
+        Rate Control method
         Optional x265 parameter values that differ from -Preset
     .OUTPUTS
         4K HDR encoded video file
@@ -49,7 +51,7 @@ function Invoke-FFMpeg {
         [Alias("P")]
         [string]$Preset,
 
-        # x265 CRF / constant bitrate array of arguments
+        # x265 CRF / 1 pass ABR array of arguments
         [Parameter(Mandatory = $true)]
         [array]$RateControl,
 
@@ -58,17 +60,21 @@ function Invoke-FFMpeg {
         [Alias("DBF")]
         [int[]]$Deblock,
 
+        # aq-mode setting. Default is 2
         [Parameter(Mandatory = $false)]
         [Alias("AQM")]
         [int]$AqMode,
 
+        # aq-strength. Higher values equate to a lower QP, but can also increase bitrate significantly
         [Parameter(Mandatory = $false)]
         [Alias("AQS")]
         [double]$AqStrength,
 
+        # psy-rd. Psycho visual setting
         [Parameter(Mandatory = $false)]
         [double]$PsyRd,
 
+        # psy-rdoq (trellis). Psycho visual setting
         [Parameter(Mandatory = $false)]
         [Alias("PRDQ")]
         [double]$PsyRdoq,
@@ -86,13 +92,14 @@ function Invoke-FFMpeg {
         # Path to the log file
         [Parameter(Mandatory = $true)]
         [Alias("L")]
-        [string]$LogPath,
+        [hashtable]$Paths,
 
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
         [Alias("T")]
         [int]$TestFrames
     )
+
     #Gathering HDR metadata
     $HDR = Get-HDRMetadata $InputFile
     #Builds the audio argument array based on user input
@@ -102,7 +109,7 @@ function Invoke-FFMpeg {
 
     Write-Host "***** STARTING FFMPEG *****" @progressColors
     Write-Host "To view your progress, run " -NoNewline
-    Write-Host "Get-Content path\to\cropFile.txt -Tail 10" @emphasisColors -NoNewline
+    Write-Host "Get-Content '$LogPath' -Tail 10" @emphasisColors -NoNewline
     Write-Host " in a different PowerShell session`n`n"
 
     if ($PSBoundParameters['TestFrames']) {
@@ -111,15 +118,13 @@ function Invoke-FFMpeg {
             -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
             colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
-            $OutputPath 2>$logPath
+            $OutputPath 2>$Paths.LogPath
     }
     else {
         ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
             colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
-            $OutputPath 2>$logPath
+            $OutputPath 2>$Paths.LogPath
     }
 }
-
-#aq-strength=0.80:psy-rdoq=0:psy-rd=4.0:nr-inter=50:
