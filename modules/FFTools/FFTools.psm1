@@ -18,7 +18,7 @@ try {
         . $_
     }
 } catch {
-    Write-Warning ("{0}: {1}" -f $function,$_.Exception.Message)
+    Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
     continue
 }
 ## region Load Private Functions ##
@@ -28,19 +28,20 @@ try {
         . $_
     }
 } catch {
-    Write-Warning ("{0}: {1}" -f $function,$_.Exception.Message)
+    Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
     continue
 }
 
 ## Setting function aliases ##
 New-Alias -Name iffmpeg -Value Invoke-FFMpeg -Force
+New-Alias -Name itpffmpeg -Value Invoke-TwoPassFFMpeg -Force
 New-Alias -Name ncf -Value New-CropFile -Force
 New-Alias -Name mcd -Value Measure-CropDimensions -Force
 
 
 $ExportModule = @{
-    Alias = @("iffmpeg", "ncf", "mcd")
-    Function = @("Invoke-FFmpeg", "New-CropFile", 'Measure-CropDimensions')
+    Alias = @("iffmpeg", "itpffmpeg", "ncf", "mcd")
+    Function = @("Invoke-FFmpeg", "Invoke-TwoPassFFmpeg","New-CropFile", 'Measure-CropDimensions')
     Variable = @("progressColors", "warnColors", "emphasisColors" )
 }
 Export-ModuleMember @ExportModule
