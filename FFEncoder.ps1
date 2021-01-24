@@ -191,50 +191,54 @@ param (
     )]
     [string]$VideoBitrate,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [ValidateRange(1, 2)]
+    [int]$Pass = 2,
+
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
     [int[]]$Deblock = @(-1, -1),
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(0, 4)]
     [Alias("AQM")]
     [int]$AqMode = 2,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(0.0, 3.0)]
     [Alias("AQS")]
     [double]$AqStrength = 1.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(0.0, 5.0)]
     [Alias("PRD")]
     [double]$PsyRd = 2.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(0.0, 50.0)]
     [Alias("PRDQ")]
     [double]$PsyRdoq = 1.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(0, 2000)]
     [Alias("NRTR")]
     [int]$NrInter = 0,
 
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AverageBitrate")]
     [ValidateNotNullOrEmpty()]
     [Alias("O")]
     [string]$OutputPath,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [Alias("T", "Test")]
     [int]$TestFrames
 
