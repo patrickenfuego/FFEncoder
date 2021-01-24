@@ -63,6 +63,11 @@ function Invoke-TwoPassFFMpeg {
         [Alias("NRTR")]
         [int]$NrInter,
 
+        # Adjusts the quantizer curve compression factor
+        [Parameter(Mandatory = $false)]
+        [Alias("Q")]
+        [double]$QComp,
+
         # Path to the output file
         [Parameter(Mandatory = $true)]
         [Alias("O")]
@@ -90,7 +95,6 @@ function Invoke-TwoPassFFMpeg {
         Write-Host "To view your progress, run " -NoNewline
         Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
         Write-Host " in a different PowerShell session`n`n"
-        Write-Host "`n`nTest Run Enabled. Encoding $TestFrames frames`n" @warnColors
     }
     #$stats =" M:\\Blu Ray Rips\\Jurassic Park II The Lost World 1997 2160p\\2pass.log"
     #Gathering HDR metadata
@@ -100,15 +104,15 @@ function Invoke-TwoPassFFMpeg {
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
 
-    Write-Host "2 Pass Average Bitrate Selected" @emphasisColors
+    Write-Host "## 2 Pass Average Bitrate Selected ##" @emphasisColors
 
     if ($PSBoundParameters['TestFrames']) {
         Write-FirstBanner
-        Write-Host "`n`nTest Run Enabled. Encoding $TestFrames frames`n" @warnColors
+        Write-Host "`n`nTest Run Enabled. Analyzing $TestFrames frames`n" @warnColors
         ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-            open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
+            open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
             colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
             chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             -f null - 2>$Paths.LogPath
@@ -116,10 +120,11 @@ function Invoke-TwoPassFFMpeg {
         Start-Sleep -Seconds 1
 
         Write-SecondBanner
+        Write-Host "`n`nTest Run Enabled. Encoding $TestFrames frames`n" @warnColors
         ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-            open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
+            open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
             colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
             chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$Paths.LogPath
@@ -130,7 +135,7 @@ function Invoke-TwoPassFFMpeg {
         ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-            open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
+            open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
             colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
             chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             -f null - 2>$Paths.LogPath
@@ -141,7 +146,7 @@ function Invoke-TwoPassFFMpeg {
         ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
             -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
             -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-            open-gop=0:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
+            open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:`
             colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
             chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
             $OutputPath 2>$Paths.logPath
