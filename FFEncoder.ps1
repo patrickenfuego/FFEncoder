@@ -129,32 +129,32 @@ param (
     [switch]$Help,
 
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "AverageBitrate")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3")]
     [Alias("A")]
     [string]$Audio = "none",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(32, 3000)]
     [Alias("AB", "ABitrate")]
     [int]$AudioBitrate,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
         "chi", "kor", "gre", "rum")]
     [Alias("S")]
     [string]$Subtitles = "default",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
@@ -164,7 +164,7 @@ param (
     [Alias("C")]
     [double]$CRF,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "ConstantBitrate")]
+    [Parameter(Mandatory = $true, ParameterSetName = "AverageBitrate")]
     [Alias("VBitrate")]
     [ValidateScript(
         {
