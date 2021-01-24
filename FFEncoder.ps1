@@ -355,13 +355,17 @@ $cropDim = Measure-CropDimensions $cropFilePath
 
 #Setting the rate control argument array
 if ($PSBoundParameters['CRF']) {
+    $rcTwoPass = $false
     $rateControl = @('-crf', $CRF)
 }
 elseif ($PSBoundParameters['VideoBitrate']) {
     $rateControl = @('-b:v', $VideoBitrate)
+    if ($Pass -eq 1) { $rcTwoPass = $false }
+    elseif ($Pass -eq 2) { $rcTwoPass = $true }
 }
 else {
     Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 18.0 will be used"
+    $rcTwoPass = $false
     $rateControl = @('-crf', 18.0) 
 }
 
@@ -379,11 +383,15 @@ $ffmpegParams = @{
     AqStrength     = $AqStrength
     PsyRd          = $PsyRd
     PsyRdoq        = $PsyRdoq
+    NrInter        = $NrInter
     OutputPath     = $OutputPath
     LogPath        = $logPath
     TestFrames     = $TestFrames
 }
-Invoke-FFMpeg @ffmpegParams
+
+#Setting which FFMpeg function to call
+if ($rcTwoPass) { Invoke-TwoPassFFMpeg @ffmpegParams }
+else { Invoke-FFMpeg @ffmpegParams }
 
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
