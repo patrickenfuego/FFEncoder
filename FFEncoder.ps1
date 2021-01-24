@@ -287,6 +287,7 @@ function Set-RootPath {
         $title = $Matches.title
         $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
         $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
+        $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
     }
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
@@ -294,6 +295,7 @@ function Set-RootPath {
         Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
+        $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
@@ -302,6 +304,7 @@ function Set-RootPath {
     $pathObject = @{
         CropPath = $cropPath
         LogPath  = $logPath
+        X265Log  = $x265Log
     }
     return $pathObject
 }
@@ -346,12 +349,10 @@ if (Test-Path -Path $OutputPath) {
 }
 #Generating paths to the crop and log files relative to the input path
 $paths = Set-RootPath
-$cropFilePath = $paths.CropPath
-$logPath = $paths.LogPath
 #Creating the crop file
-New-CropFile -InputPath $InputPath -CropFilePath $cropFilePath -Count 1
+New-CropFile -InputPath $InputPath -CropFilePath $paths.CropPath -Count 1
 #Calculating the crop values
-$cropDim = Measure-CropDimensions $cropFilePath
+$cropDim = Measure-CropDimensions $paths.CropPath
 
 #Setting the rate control argument array
 if ($PSBoundParameters['CRF']) {
@@ -385,7 +386,7 @@ $ffmpegParams = @{
     PsyRdoq        = $PsyRdoq
     NrInter        = $NrInter
     OutputPath     = $OutputPath
-    LogPath        = $logPath
+    Paths          = $paths
     TestFrames     = $TestFrames
 }
 
@@ -396,6 +397,6 @@ else { Invoke-FFMpeg @ffmpegParams }
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = $endTime - $startTime
 #Display a quick view of the finished log file, the end time and total encoding time
-Get-Content -Path $logPath -Tail 8
+Get-Content -Path $Paths.LogPath -Tail 8
 Write-Host "`nEnd time: " $endTime
 Write-Host "Total Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds`n" 
