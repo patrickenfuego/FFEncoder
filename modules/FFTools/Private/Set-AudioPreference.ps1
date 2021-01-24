@@ -43,7 +43,7 @@ function Set-AudioPreference {
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
         Write-Host "Audio stream 0 will be copied. " -NoNewline
         Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
-        return @('-c:a', 'copy')
+        return @('-map', '0:a:0', '-c:a:0', 'copy')
     }
     elseif ($UserChoice -match "c[opy]*a[ll]*") {
         Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
