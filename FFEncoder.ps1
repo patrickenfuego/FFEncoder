@@ -361,18 +361,16 @@ New-CropFile -InputPath $InputPath -CropFilePath $paths.CropPath -Count 1
 $cropDim = Measure-CropDimensions $paths.CropPath
 
 #Setting the rate control argument array
+$rcTwoPass = $false
 if ($PSBoundParameters['CRF']) {
-    $rcTwoPass = $false
     $rateControl = @('-crf', $CRF)
 }
 elseif ($PSBoundParameters['VideoBitrate']) {
     $rateControl = @('-b:v', $VideoBitrate)
-    if ($Pass -eq 1) { $rcTwoPass = $false }
-    elseif ($Pass -eq 2) { $rcTwoPass = $true }
+    if ($Pass -eq 2) { $rcTwoPass = $true }
 }
 else {
     Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 18.0 will be used"
-    $rcTwoPass = $false
     $rateControl = @('-crf', 18.0) 
 }
 
