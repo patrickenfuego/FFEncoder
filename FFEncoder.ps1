@@ -199,7 +199,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
-    [int[]]$Deblock = @(-1, -1),
+    [int[]]$Deblock = @(-3, -3),
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
