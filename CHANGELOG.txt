@@ -67,6 +67,7 @@ v. 1.5.5
       it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to AC-3 at the standard 640 kb/s.
     - Added support for DTS Core Audio as an argument for the -Audio parameter using "DTS". If the source contains a DTS track already, 
       it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to DTS (EXPERIMENTAL)
+    - Added support for selecting audio by stream number. Accepts values 1 (first stream) through 5 (5th stream)
     - Added support for FLAC audio transcoding as an argument to the -Audio parameter using "FLAC" or "F". This is only recommended for lossless codecs.
     - Added support for Dolby Digital Plus (E-AC3) audio
     - Changed -AacBitrate to -AudioBitrate / -AB so it works with AC3, EAC3, DTS, and AAC
@@ -90,9 +91,13 @@ v. 1.5.5
         - Greek             - "gre"
         - Romanian          - "rum"
 
-    - Added support for constant bitrate mode as an alternative to CRF with the -VideoBitrate parameter
-    - Added -AqMode parameter. Default is 2
-    - Added -AqStrength parameter. Default is 1.00
-    - Added -PsyRd parameter. Default is 2.00
-    - Added -PsyRdoq parameter. Default is 1.00
-    
+    - Added support for average bitrate rate control (ABR) as an alternative to CRF with the -VideoBitrate / -VBitrate parameter
+        - Supports 2 pass ABR using the optional -Pass parameter. Default is 2 pass
+    - Created new public function Invoke-TwoPassFFMpeg for 2 pass ABR encodes
+    - Added -AqMode parameter. Default is 2 (all presets)
+    - Added -AqStrength parameter. Default is 1.00 (preset slow)
+    - Added -PsyRd parameter. Default is 2.00 (preset slow)
+    - Added -PsyRdoq parameter. Default is 1.00 (preset slow)
+    - Added -NrInter parameter. Default is 0
+    - Added -QComp parameter. Default is 0.6 (all presets)
+    - Changed -Deblock default to -2,-2
