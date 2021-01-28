@@ -3,12 +3,13 @@
   - [Auto-Cropping](#auto-cropping)
   - [Automatic Metadata Fetching](#automatic-metadata-fetching)
   - [Script Parameters](#script-parameters)
+  - [Hard Coded Parameters](#hard-coded-parameters)
   - [Audio Options](#audio-options)
   - [Subtitles](#subtitles)
   - [Requirements](#requirements)
-    - [**Windows**](#windows)
-    - [**Linux**](#linux)
-    - [**MacOS**](#macos)
+    - [Windows](#windows)
+    - [Linux](#linux)
+    - [MacOS](#macos)
 
 &nbsp;
 
@@ -67,8 +68,22 @@ FFEncoder can accept the following arguments from the command line. An Asterisk 
 | **AqStrength**   | 1.00            | False         | **AQS**              | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates               |
 | **PsyRd**        | 2.00            | False         | **PRD**              | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                                        |
 | **PsyRdoq**      | 1.00            | False         | **PRDDQ**            | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info                    |
-| **QComp**        | 0.60            | False         | **Q**                | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode                                                                  |
+| **QComp**        | 0.60            | False         | **Q**                | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                                    |
 | **OutputPath**   | None            | True          | **O**                | The path of the encoded output file                                                                                                                                    |
+
+&nbsp;
+
+## Hard Coded Parameters
+
+I am a bit opinionated about certain settings, so the following parameters are hard coded (they can be changed manually):
+
+- `subme=4` - This is the default for the veryslow preset, and I find that it gives better high motion clarity without too much of a performance hit. I plan to add a parameter for this sometime soon
+- `no-strong-intra-smoothing` - By default, I keep this setting off at all times, regardless of resolution
+- `no-sao` - I really hate the way sao looks, so it's disabled along with `selective-sao`. There's a reason it has earned the moniker "smooth all objects", and it makes everything look waxy in my opinion
+- `rc-lookahead=48` - People are all over the board with this, but I have found 48 (2 \* 24 fps) to be a number with good gains and no diminishing returns
+- `keyint-120` - This is personal preference. I like to spend a few extra bits for better seeking
+- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. I don't notice much of a difference either way
+- `level-idc=5.1`, `high tier=1` - I have found this to be ideal for 4K content as `Main 10@L5@Main` only allows for a maximum bitrate of 25 mb/s (and 4K content often exceeds this)
 
 &nbsp;
 
@@ -123,11 +138,11 @@ The different parameter options are:
 
 &nbsp;
 
-### **Windows**
+### Windows
 
 For Windows users, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages.
 
-### **Linux**
+### Linux
 
 For Linux users, you can install ffmpeg using your package manager of choice (apt/yum/pacman):
 
@@ -135,7 +150,7 @@ For Linux users, you can install ffmpeg using your package manager of choice (ap
 
 To install PowerShell core, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
 
-### **MacOS**
+### MacOS
 
 For Mac users, the easiest way to install ffmpeg is through the [Homebrew](https://brew.sh/) package manager:
 
