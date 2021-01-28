@@ -67,6 +67,7 @@ FFEncoder can accept the following arguments from the command line. An Asterisk 
 | **AqStrength**   | 1.00            | False         | **AQS**              | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates               |
 | **PsyRd**        | 2.00            | False         | **PRD**              | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                                        |
 | **PsyRdoq**      | 1.00            | False         | **PRDDQ**            | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info                    |
+| **QComp**        | 0.60            | False         | **Q**                | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode                                                                  |
 | **OutputPath**   | None            | True          | **O**                | The path of the encoded output file                                                                                                                                    |
 
 &nbsp;
