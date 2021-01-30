@@ -42,12 +42,12 @@
         crop.txt - File used for auto-cropping
         4K HDR encoded video file
     .NOTES
-        For FFEncoder to work, ffmpeg must be in your system PATH (consult your OS documentation for info on how to verify this).
+        For FFEncoder to work, ffmpeg must be in your system PATH (consult your OS documentation for info on how to verify this)
 
-        Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.), or you may be left with a file that will not play. 
+        Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.), or you may be left with a file that will not play
  
         ffmpeg cannot decode Dolby Atmos streams, nor can the metadata be identified using ffprobe. If you try and copy a Dolby Atmos track, THE SCRIPT WILL FAIL.
-        This is not a flaw in the script, but rather a limitation of ffmpeg.
+        This is not a flaw in the script, but rather a limitation of ffmpeg
     .PARAMETER Help
         Displays help information for the script
     .PARAMETER TestFrames
@@ -136,13 +136,14 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
-    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3")]
+    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
+        "fdkaac", "faac", 1, 2, 3, 4, 5)]
     [Alias("A")]
     [string]$Audio = "none",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
-    [ValidateRange(32, 3000)]
+    [ValidateRange(1, 3000)]
     [Alias("AB", "ABitrate")]
     [int]$AudioBitrate,
 

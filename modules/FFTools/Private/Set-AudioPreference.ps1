@@ -35,7 +35,9 @@ function Set-AudioPreference {
     #Private inner function that prints audio data when the -Bitrate parameter is used
     function Write-BitrateInfo ($channels, $bitsPerChannel) {
         Write-Host "Audio stream 0 has $channels channels. " -NoNewline
-        Write-Host "If the input layout is 7.1, it will be downmixed to 5.1. " @warnColors -NoNewline
+        if (@("eac3", "dts", "ac3", "dd") -contains $UserChoice) {
+            Write-Host "7.1 channel layout will be downmixed to 5.1" @warnColors
+        }
         Write-Host "Total bitrate per channel: ~ $bitsPerChannel`n"
     }
 
@@ -56,8 +58,25 @@ function Set-AudioPreference {
         $channels = Get-ChannelCount
         $bitsPerChannel = "$($Bitrate / $channels) kb/s"
         Write-Host "** AAC AUDIO SELECTED **" @progressColors
-        Write-Host "Audio stream 0 has $channels channels. Total bitrate per channel: ~ $bitsPerChannel`n" 
+        Write-BitrateInfo $channels $bitsPerChannel
         return @('-map', '0:a:0', '-c:a', 'aac', '-b:a', "$Bitrate`k")
+    }
+    elseif (@("fdkaac", "faac") -contains $UserChoice) {
+        Write-Host "** FRAUNHOFER AAC AUDIO SELECTED **" @progressColors
+        if (!$Bitrate) {
+            Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 4" @warnColors
+            return @('-map', '0:a:0', '-c:a', 'libfdk_aac', '-vbr', 4) 
+        }
+        if (1..5 -contains $Bitrate) {
+            Write-Host "Variable bitrate (VBR) selected. Quality value: $Bitrate"`n
+            return @('-map', '0:a:0', '-c:a', 'libfdk_aac', '-vbr', $Bitrate)
+        }
+        else {
+            $channels = Get-ChannelCount
+            $bitsPerChannel = "$($Bitrate / $channels) kb/s"
+            Write-BitrateInfo $channels $bitsPerChannel
+            return @('-map', '0:a:0', '-c:a', 'libfdk_aac', '-b:a', "$Bitrate`k")
+        }
     }
     elseif (@('ac3', 'dd') -contains $UserChoice) {
         Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
@@ -111,6 +130,9 @@ function Set-AudioPreference {
         Write-Host "** FLAC AUDIO SELECTED **" @progressColors
         Write-Host "Audio Stream 0 will be transcoded to FLAC`n"
         return @('-map', '0:a:0', '-c:a', 'flac')
+    }
+    elseif (1..5 -contains $UserChoice) {
+        return @('-map', "0:a:$UserChoice", '-c:a', 'copy')
     }
     elseif ($UserChoice -match "^n[one]?") { 
         Write-Host "** NO AUDIO SELECTED **" @progressColors
