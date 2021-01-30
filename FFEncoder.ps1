@@ -237,6 +237,12 @@ param (
     [Alias("Q")]
     [double]$QComp = 0.60,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [ValidateRange(0, 16)]
+    [Alias("B")]
+    [int]$BFrames = 4,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "AverageBitrate")]
     [ValidateNotNullOrEmpty()]
@@ -390,6 +396,7 @@ $ffmpegParams = @{
     PsyRdoq        = $PsyRdoq
     NrInter        = $NrInter
     Qcomp          = $QComp
+    BFrames        = $BFrames
     OutputPath     = $OutputPath
     Paths          = $paths
     TestFrames     = $TestFrames
