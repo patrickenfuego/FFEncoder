@@ -13,7 +13,7 @@ function Set-SubtitlePreference {
     if ($UserChoice -match "a[ll]*$") {
         Write-Host "** ALL SUBTITLES SELECTED **" @progressColors
         Write-Host "All subtitle streams will be copied`n"
-        return @('-map', '0:s', '-c:s', 'copy')
+        return @('-map', '0:s?', '-c:s', 'copy')
     }
     elseif ($UserChoice -match "n[one]*$") {
         Write-Host "** NO SUBTITLES SELECTED **" @progressColors
@@ -23,7 +23,7 @@ function Set-SubtitlePreference {
     elseif ($UserChoice -match "d[efault]*$") {
         Write-Host "** DEFAULT SUBTITLE SELECTED **" @progressColors
         Write-Host "The primary subtitle stream will be copied`n"
-        return @('-map', '0:s:0', '-c:s', 'copy')
+        return @('-map', '0:s:0?', '-c:s', 'copy')
     }
     else {
         Write-Host "** $($UserChoice.ToUpper()) SUBTITLES SELECTED **" @progressColors
@@ -31,7 +31,7 @@ function Set-SubtitlePreference {
         if ($null -ne $subStreams) {
             $args = @()
             foreach ($s in $subStreams) {
-                $args += '-map', "0:s:$s", '-c:s', 'copy'
+                $args += '-map', "0:s:$s`?", '-c:s', 'copy'
             }
             return $args
         }
