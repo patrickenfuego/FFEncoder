@@ -47,16 +47,18 @@ function Set-AudioPreference {
         Write-Host "Total bitrate per channel: ~ $bitsPerChannel`n"
     }
 
+    $atmosWarning = "If you are attempting to copy Dolby Atmos streams, you must have the latest ffmpeg build or the SCRIPT WILL FAIL`n"
+
     if ($UserChoice -match "^c[opy]*$") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
         Write-Host "Audio stream 0 will be copied. " -NoNewline
-        Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
+        Write-Host $atmosWarning @warnColors
         return @('-map', '0:a:0', '-c:a:0', 'copy')
     }
     elseif ($UserChoice -match "c[opy]*a[ll]*") {
         Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
         Write-Host "All audio streams will be copied. " -NoNewline
-        Write-Host "If you are attempting to copy a Dolby Atmos stream, FFENCODER WILL FAIL`n" @warnColors
+        Write-Host $atmosWarning @warnColors
         return @('-map', '0:a', '-c:a', 'copy')
     }
     elseif ($UserChoice -eq "aac") {
