@@ -149,6 +149,19 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
+        "fdkaac", "faac", 1, 2, 3, 4, 5)]
+    [Alias("A2")]
+    [string]$Audio2 = "none",
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [ValidateRange(1, 3000)]
+    [Alias("AB2", "ABitrate2")]
+    [int]$AudioBitrate2,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
     [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
         "chi", "kor", "gre", "rum")]
     [Alias("S")]
@@ -380,13 +393,25 @@ else {
     Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 18.0 will be used"
     $rateControl = @('-crf', 18.0) 
 }
+#Condensing audio parameters
+$audioHash1 = @{
+    Audio = $Audio
+    Bitrate = $AudioBitrate
+}
+if ($PSBoundParameters['Audio2']) {
+    $audioHash2 = @{
+        Audio = $Audio2
+        Bitrate = $AudioBitrate2
+    }
+}
+else { $audioHash2 = $null }
+$audioArray = @($audioHash1, $audioHash2)
 
 #Building parameters for Invoke-FFMpeg function
 $ffmpegParams = @{
     InputFile      = $InputPath
     CropDimensions = $cropDim
-    AudioInput     = $Audio
-    AudioBitrate   = $AudioBitrate
+    AudioInput     = $audioArray
     Subtitles      = $Subtitles
     Preset         = $Preset
     RateControl    = $rateControl

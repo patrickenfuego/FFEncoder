@@ -1,12 +1,15 @@
 <#
-    Helper function which builds the audio argument array for ffmpeg
-
+    .SYNOPSIS
+        Helper function which builds the audio argument arrays for ffmpeg based on user input
     .PARAMETER InputFile
-        The source file. This is used to determine the number of audio channels for lossy encoding
+        The source (input) file. This is used to determine the number of audio channels for lossy encoding
     .PARAMETER UserChoice
-        Options are copy (passthrough), aac, and none
-    .PARAMETER AacBitrate
-        The constant bitrate to be used with ffmpeg's native AAC encoder. Value is the bitrate per audio channel
+        Audio option selected before running the script. See documentation for all available options
+    .PARAMETER Bitrate
+        Bitrate for the selected audio stream in kb/s. Values 1-5 are reserved for libfdk's variable bitrate 
+        (vbr) encoder
+    .PARAMETER Stream
+        References the different output streams if a second audio option is passed to the script
     .NOTES
         ffmpeg cannot decode Dolby Atmos streams, nor can they be identified using ffprobe. If you try and
         copy a Dolby Atmos track, the script will fail. 
@@ -23,7 +26,10 @@ function Set-AudioPreference {
         [string]$UserChoice,
 
         [Parameter(Mandatory = $false, Position = 2)]
-        [int]$Bitrate
+        [int]$Bitrate,
+
+        [Parameter(Mandatory = $false, Position = 3)]
+        [int]$Stream
     )
 
     #Private inner function that returns the number of channels for the primary audio stream
@@ -56,26 +62,26 @@ function Set-AudioPreference {
     elseif ($UserChoice -eq "aac") {
         if (!$Bitrate) { $Bitrate = 512 }
         $channels = Get-ChannelCount
-        $bitsPerChannel = "$($Bitrate / $channels) kb/s"
+        $bitsPerChannel = "$(($Bitrate / $channels),2) kb/s"
         Write-Host "** AAC AUDIO SELECTED **" @progressColors
         Write-BitrateInfo $channels $bitsPerChannel
-        return @('-map', '0:a:0', '-c:a', 'aac', '-b:a', "$Bitrate`k")
+        return @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k")
     }
     elseif (@("fdkaac", "faac") -contains $UserChoice) {
         Write-Host "** FRAUNHOFER AAC AUDIO SELECTED **" @progressColors
         if (!$Bitrate) {
-            Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 4" @warnColors
-            return @('-map', '0:a:0', '-c:a', 'libfdk_aac', '-vbr', 4) 
+            Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 4`n" @warnColors
+            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 4) 
         }
         if (1..5 -contains $Bitrate) {
             Write-Host "Variable bitrate (VBR) selected. Quality value: $Bitrate"`n
-            return @('-map', '0:a:0', '-c:a', 'libfdk_aac', '-vbr', $Bitrate)
+            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
         }
         else {
             $channels = Get-ChannelCount
             $bitsPerChannel = "$($Bitrate / $channels) kb/s"
             Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', '-c:a', 'libfdk_aac', '-b:a', "$Bitrate`k")
+            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-b:a', "$Bitrate`k")
         }
     }
     elseif (@('ac3', 'dd') -contains $UserChoice) {
@@ -84,14 +90,14 @@ function Set-AudioPreference {
             $channels = Get-ChannelCount
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
             Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', '-c:a:0', 'ac3', '-b:a', "$Bitrate`k")
+            return @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k")
         }
         else {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
             if ($i) {
-                return @('-map', "0:a:$i", '-c:a', 'copy')
+                return @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
-            else { return @('-map', '0:a:0', '-c:a', 'ac3', '-b:a', '640k') }
+            else { return @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
         }
     }
     elseif ($UserChoice -eq "dts") {
@@ -100,14 +106,14 @@ function Set-AudioPreference {
             $channels = Get-ChannelCount
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
             Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', '-c:a:0', 'dca', '-b:a', "$Bitrate`k", '-strict', -2)
+            return @('-map', '0:a:0', "-c:a:$Stream", 'dca', "-b:a:$Stream", "$Bitrate`k", '-strict', -2)
         }
         else {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
             if ($i) {
-                return @('-map', "0:a:$i", '-c:a', 'copy')
+                return @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
-            else { return @('-map', '0:a:0', '-c:a', 'dca') }
+            else { return @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
         }
     }
     elseif ($UserChoice -eq "eac3") {
@@ -116,20 +122,20 @@ function Set-AudioPreference {
             $channels = Get-ChannelCount
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
             Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', '-c:a:0', 'eac3', '-b:a', "$Bitrate`k")
+            return @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k")
         }
         else {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
             if ($i) {
-                return @('-map', "0:a:$i", '-c:a', 'copy')
+                return @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
-            else { return @('-map', '0:a:0', '-c:a', 'eac3') }
+            else { return @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
         }
     }
     elseif ($UserChoice -match "^f[lac]*") {
         Write-Host "** FLAC AUDIO SELECTED **" @progressColors
         Write-Host "Audio Stream 0 will be transcoded to FLAC`n"
-        return @('-map', '0:a:0', '-c:a', 'flac')
+        return @('-map', '0:a:0', "-c:a:$Stream", 'flac')
     }
     elseif (1..5 -contains $UserChoice) {
         return @('-map', "0:a:$UserChoice", '-c:a', 'copy')
