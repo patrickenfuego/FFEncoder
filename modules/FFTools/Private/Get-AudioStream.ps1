@@ -1,8 +1,8 @@
 <#
-    function that searches for an existing AC3 or DTS audio stream and returns the index if found.
-
+    .SYNOPSIS
+        Function that searches for an existing AC3, EAC3, or DTS audio stream and returns the index if found
     .PARAMETER Codec
-        The audio codec to search for. Accepts AC3 (Dolby Digital) and DTS Audio as arguments
+        The audio codec to search for. Accepts AC3 (Dolby Digital), EAC3, and DTS Audio as arguments
     .PARAMETER InputFile
         The input file to probe
 #>
@@ -36,7 +36,7 @@ function Get-AudioStream {
             $bitrate = $_.bit_rate
             $index = $i
         }
-        else { $index = $false; $i++ }     
+        else { $index = $false; $i++ }   
     }
     
     if ($index) { Write-Host "$codecStr stream found. Bit rate: $($bitrate / 1000) kb/s`n" }
