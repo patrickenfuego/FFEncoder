@@ -35,11 +35,7 @@ function Invoke-FFMpeg {
         # Audio preference for the output file
         [Parameter(Mandatory = $false)]
         [Alias("Audio", "A")]
-        [string]$AudioInput = "none",
-
-        [Parameter(Mandatory = $false)]
-        [Alias("AB", "AQ")]
-        [int]$AudioBitrate,
+        [array]$AudioInput,
 
         # Parameter help description
         [Parameter(Mandatory = $false)]
@@ -109,10 +105,29 @@ function Invoke-FFMpeg {
         [int]$TestFrames
     )
 
-    #Gathering HDR metadata
-    $HDR = Get-HDRMetadata $InputFile
-    #Builds the audio argument array based on user input
-    $audio = Set-AudioPreference -InputFile $InputFile -UserChoice $AudioInput -Bitrate $AudioBitrate
+    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $InputFile }
+    else { $UHD = $false }
+    
+    Write-Host "**** Audio Stream 1 ****" @emphasisColors
+    #Building the audio argument array(s) based on user input
+    $audioParam1 = @{
+        InputFile  = $InputFile
+        UserChoice = $AudioInput[0].Audio
+        Bitrate    = $AudioInput[0].Bitrate
+        Stream     = 0
+    }
+    $audio = Set-AudioPreference @audioParam1
+    if ($null -ne $AudioInput[1]) {
+        Write-Host "**** Audio Stream 2 ****" @emphasisColors
+        $audioParam2 = @{
+            InputFile  = $InputFile
+            UserChoice = $AudioInput[1].Audio
+            Bitrate    = $AudioInput[1].Bitrate
+            Stream     = 1
+        }
+        $audio2 = Set-AudioPreference @audioParam2
+        $audio = $audio + $audio2
+    }
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
 
@@ -121,23 +136,47 @@ function Invoke-FFMpeg {
     Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
     Write-Host " in a different PowerShell session`n`n"
 
-    if ($PSBoundParameters['TestFrames']) {
-        Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-        ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-            -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:`
-            keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
-            colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
-            chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
-            $OutputPath 2>$Paths.LogPath
+    #Encode with HDR metadata if input is 4K, which is signaled by an enable HDR flag in $CropDimensions[2] 
+    if ($UHD) {
+        if ($PSBoundParameters['TestFrames']) {
+            Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
+            ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
+                -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:`
+                keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
+                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                $OutputPath 2>$Paths.LogPath
+        }
+        else {
+            ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
+                -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:`
+                keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
+                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                $OutputPath 2>$Paths.LogPath
+        }
     }
+    #Encode SDR content (1080p and below)
     else {
-        ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-            -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-            -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:open-gop=0:`
-            keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
-            colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
-            chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
-            $OutputPath 2>$Paths.LogPath
+        if ($PSBoundParameters['TestFrames']) {
+            Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
+            ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
+                -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:`
+                keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
+                merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                $OutputPath 2>$Paths.LogPath
+        }
+        else {
+            ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
+                -x265-params "nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:`
+                keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
+                merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                $OutputPath 2>$Paths.LogPath
+        }
     }
 }
+

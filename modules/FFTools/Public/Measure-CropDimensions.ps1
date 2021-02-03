@@ -34,8 +34,6 @@ function Measure-CropDimensions
     else { $enableHDR = $false }
     
     Write-Host "** CROP DIMENSIONS SUCCESSFULLY RETRIEVED ** " @progressColors
-        Write-Host "Dimensions: $cropWidth x $cropHeight"
-        return @($cropWidth, $cropHeight) 
-    }
-    
+    Write-Host "Dimensions: $cropWidth x $cropHeight`n"
+    return @($cropWidth, $cropHeight, $enableHDR) 
 }
