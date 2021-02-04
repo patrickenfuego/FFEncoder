@@ -47,7 +47,7 @@ function Set-AudioPreference {
         Write-Host "Total bitrate per channel: ~ $bitsPerChannel`n"
     }
 
-    $atmosWarning = "If you are attempting to copy Dolby Atmos streams, you must have the latest ffmpeg build or the SCRIPT WILL FAIL`n"
+    $atmosWarning = "If you are attempting to copy a Dolby Atmos stream,`n you must have the latest ffmpeg build or the SCRIPT WILL FAIL`n"
 
     if ($UserChoice -match "^c[opy]*$") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
