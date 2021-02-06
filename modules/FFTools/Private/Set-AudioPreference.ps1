@@ -70,10 +70,10 @@ function Set-AudioPreference {
         return @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k")
     }
     elseif (@("fdkaac", "faac") -contains $UserChoice) {
-        Write-Host "** FRAUNHOFER AAC AUDIO SELECTED **" @progressColors
+        Write-Host "** FDK AAC AUDIO SELECTED **" @progressColors
         if (!$Bitrate) {
-            Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 4`n" @warnColors
-            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 4) 
+            Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 3`n" @warnColors
+            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3) 
         }
         if (1..5 -contains $Bitrate) {
             Write-Host "Variable bitrate (VBR) selected. Quality value: $Bitrate"`n
