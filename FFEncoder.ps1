@@ -129,20 +129,20 @@ param (
     [switch]$Help,
 
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
     [Alias("I")]
     [string]$InputPath,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
         "fdkaac", "faac", 1, 2, 3, 4, 5)]
     [Alias("A")]
-    [string]$Audio = "none",
+    [string]$Audio = "copy",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(1, 3000)]
     [Alias("AB", "ABitrate")]
     [int]$AudioBitrate,
@@ -155,7 +155,7 @@ param (
     [string]$Audio2 = "none",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(1, 3000)]
     [Alias("AB2", "ABitrate2")]
     [int]$AudioBitrate2,
@@ -168,7 +168,7 @@ param (
     [string]$Subtitles = "default",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias("P")]
     [string]$Preset = "slow",
@@ -178,7 +178,7 @@ param (
     [Alias("C")]
     [double]$CRF,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [Alias("VBitrate")]
     [ValidateScript(
         {
@@ -205,66 +205,66 @@ param (
     )]
     [string]$VideoBitrate,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(1, 2)]
     [int]$Pass = 2,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(-6, 6)]
     [Alias("DBF")]
     [int[]]$Deblock = @(-2, -2),
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 4)]
     [Alias("AQM")]
     [int]$AqMode = 2,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.0, 3.0)]
     [Alias("AQS")]
     [double]$AqStrength = 1.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.0, 5.0)]
     [Alias("PRD")]
     [double]$PsyRd = 2.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.0, 50.0)]
     [Alias("PRDQ")]
     [double]$PsyRdoq = 1.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 2000)]
     [Alias("NRTR")]
     [int]$NrInter = 0,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.5, 1.0)]
     [Alias("Q")]
     [double]$QComp = 0.60,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 16)]
     [Alias("B")]
     [int]$BFrames = 4,
 
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
     [Alias("O")]
     [string]$OutputPath,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [Alias("T", "Test")]
     [int]$TestFrames
 
@@ -352,6 +352,8 @@ Write-Host
 
 $startTime = (Get-Date).ToLocalTime()
 Write-Host "Start Time: $startTime`n"
+#Generating paths to various files
+$paths = Set-RootPath
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) { Remove-FilePrompt -Path $OutputPath -Type "Primary" }
 #Generating paths to the crop and log files relative to the input path
@@ -376,13 +378,15 @@ else {
 }
 #Condensing audio parameters
 $audioHash1 = @{
-    Audio = $Audio
+    Audio   = $Audio
     Bitrate = $AudioBitrate
+    Stereo  = $Stereo
 }
 if ($PSBoundParameters['Audio2']) {
     $audioHash2 = @{
-        Audio = $Audio2
+        Audio   = $Audio2
         Bitrate = $AudioBitrate2
+        Stereo  = $Stereo2
     }
 }
 else { $audioHash2 = $null }
@@ -414,8 +418,8 @@ if ($rcTwoPass) { Invoke-TwoPassFFMpeg @ffmpegParams }
 else { Invoke-FFMpeg @ffmpegParams }
 
 $endTime = (Get-Date).ToLocalTime()
-$totalTime = $endTime - $startTime
+$totalTime = New-TimeSpan $startTime $endTime 
 #Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $Paths.LogPath -Tail 8
 Write-Host "`nEnd time: " $endTime
-Write-Host "Total Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds`n" 
+Write-Host "Total Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds`n" @progressColors
