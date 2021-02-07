@@ -8,6 +8,8 @@ function Remove-FilePrompt {
         [string]$Type
     )
 
+    Write-Host "`n"
+
     $title = "$Type Output Path Already Exists"
     $prompt = "Would you like to delete it?"
     $yesPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", 
