@@ -91,15 +91,3 @@ function Convert-ToStereo {
     }
 }
 
-# $params = @{
-#     InputFile   = "M:\Blu Ray Rips\The.Bourne.Identity.2002.UHD.BluRay.2160p.DTS-X.7.1.HEVC.REMUX-FraMeSToR\The.Bourne.Identity.2002.UHD.mkv"
-#     Codec       = 'faac'
-#     Bitrate     = 3
-#     AudioFrames = 500
-#     RemuxStream = $true
-#     OutputPath  = @{StereoPath = "M:\Blu Ray Rips\The.Bourne.Identity.2002.UHD.BluRay.2160p.DTS-X.7.1.HEVC.REMUX-FraMeSToR\The.Bourne.Identity_stereo.mkv"
-#         Root                  = "M:\Blu Ray Rips\The.Bourne.Identity.2002.UHD.BluRay.2160p.DTS-X.7.1.HEVC.REMUX-FraMeSToR\"
-#     }
-# }
-
-# Convert-ToStereo @params
