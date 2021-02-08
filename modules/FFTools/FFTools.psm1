@@ -31,6 +31,15 @@ try {
     Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
     continue
 }
+try {
+    Get-ChildItem "$ScriptPath\Utils" -Filter *.ps1 | Select-Object -ExpandProperty FullName | ForEach-Object {
+        $function = Split-Path $_ -Leaf
+        . $_
+    }
+} catch {
+    Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
+    continue
+}
 
 ## Setting function aliases ##
 New-Alias -Name iffmpeg -Value Invoke-FFMpeg -Force
@@ -41,7 +50,7 @@ New-Alias -Name mcd -Value Measure-CropDimensions -Force
 
 $ExportModule = @{
     Alias = @("iffmpeg", "itpffmpeg", "ncf", "mcd")
-    Function = @("Invoke-FFmpeg", "Invoke-TwoPassFFmpeg","New-CropFile", 'Measure-CropDimensions')
+    Function = @("Invoke-FFmpeg", "Invoke-TwoPassFFmpeg","New-CropFile", 'Measure-CropDimensions', 'Remove-FilePrompt')
     Variable = @("progressColors", "warnColors", "emphasisColors" )
 }
 Export-ModuleMember @ExportModule

@@ -102,7 +102,7 @@
     .PARAMETER Deblock
         Deblock filter settings. The first value represents strength, and the second value represents frequency
     .PARAMETER AqMode
-        x265 AQ mode setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work
+        x265 AQ mode setting. Ranges from 0 (disabled) - 4. See x265 documentation for more info on AQ Modes and how they work
     .PARAMETER AqStrength
         Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates
     .PARAMETER PsyRd
@@ -110,7 +110,7 @@
     .PARAMETER PsyRdoq
         Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info
     .PARAMETER NrInter
-        Filter to help preserve high frequency noise (such as film grain) throughout the GOP, and can be useful for controlling the bitrate of grainy sources. Default disabled. 
+        Filter to help reduce high frequency noise (such as film grain) throughout a GOP, and can be useful for controlling the bitrate of grainy sources. Default disabled. 
     .PARAMETER OutputPath
         Location of the encoded output video file
     .lINK
@@ -148,7 +148,12 @@ param (
     [int]$AudioBitrate,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Alias("2CH", "ST")]
+    [switch]$Stereo,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
         "fdkaac", "faac", 1, 2, 3, 4, 5)]
     [Alias("A2")]
@@ -161,7 +166,12 @@ param (
     [int]$AudioBitrate2,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "AverageBitrate")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Alias("2CH2", "ST2")]
+    [switch]$Stereo2,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
         "chi", "kor", "gre", "rum")]
     [Alias("S")]
@@ -266,7 +276,12 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [Alias("T", "Test")]
-    [int]$TestFrames
+    [int]$TestFrames,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("Del", "RMFiles")]
+    [switch]$RemoveFiles
 
 )
 
@@ -308,12 +323,18 @@ function Get-OperatingSystem {
 
 #Returns an object containing the paths to the crop file and log file relative to the input path
 function Set-RootPath {
-    if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.[a-z 2 4]+") {
+    if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.(?<ext>[a-z 2 4]+)") {
         $root = $Matches.root
         $title = $Matches.title
+        $ext = $Matches.ext
         $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
         $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
         $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
+        $stereoPath = Join-Path -Path $root -ChildPath "$title`_stereo.$ext"
+        if ($OutputPath -match "(?<oRoot>.*(?:\\|\/)+)(?<oTitle>.*)\.(?<oExt>[a-z 2 4]+)") {
+            $remuxPath = Join-Path -Path $Matches.oRoot -ChildPath "$($Matches.oTitle)`_stereo-remux.$($Matches.oExt)"
+        }
+        else { $remuxPath = Join-Path -Path $root -ChildPath "$title`_stereo-remux.$ext" }
     }
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
@@ -322,15 +343,20 @@ function Set-RootPath {
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
         $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
+        $stereoPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo.mkv"
+        $RemuxPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_stereo-remux.mkv"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
     Write-Host "<$cropPath>" @emphasisColors
 
     $pathObject = @{
-        CropPath = $cropPath
-        LogPath  = $logPath
-        X265Log  = $x265Log
+        Root       = $root
+        RemuxPath  = $remuxPath
+        StereoPath = $stereoPath
+        CropPath   = $cropPath
+        LogPath    = $logPath
+        X265Log    = $x265Log
     }
     return $pathObject
 }
@@ -356,8 +382,7 @@ Write-Host "Start Time: $startTime`n"
 $paths = Set-RootPath
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $OutputPath) { Remove-FilePrompt -Path $OutputPath -Type "Primary" }
-#Generating paths to the crop and log files relative to the input path
-$paths = Set-RootPath
+elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
 #Creating the crop file
 New-CropFile -InputPath $InputPath -CropFilePath $paths.CropPath -Count 1
 #Calculating the crop values
@@ -416,6 +441,19 @@ $ffmpegParams = @{
 #Setting which FFMpeg function to call
 if ($rcTwoPass) { Invoke-TwoPassFFMpeg @ffmpegParams }
 else { Invoke-FFMpeg @ffmpegParams }
+
+if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
+    Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
+    ffmpeg -i $OutputPath -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $paths.RemuxPath
+    Write-Host "Cleaning up..."
+    Remove-Item -Path $OutputPath
+    if ($?) { Write-Host "done!" -NoNewLine @progressColors; Write-Host "`n" }
+    else { Write-Host ""; Write-Warning "Could not delete the original output file. It may be in use by another process" } 
+}
+if ($PSBoundParameters['RemoveFiles']) {
+    Write-Host "`nDeleting generated files..."
+    Get-Content -Path $Paths.LogPath -Tail 8
+}
 
 $endTime = (Get-Date).ToLocalTime()
 $totalTime = New-TimeSpan $startTime $endTime 

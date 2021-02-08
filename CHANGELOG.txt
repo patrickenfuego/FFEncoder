@@ -63,7 +63,7 @@ v. 1.4.5
     
 v. 1.5.5
     - Added option "copyall" / "ca" as an argument to the -Audio parameter. This option will copy all audio streams from the source without encoding
-    - Added support for Dolby Digital AC-3 as an argument for the -Audio parameter using "AC3". If the source contains a Dolby Digital track already, 
+    - Added support for Dolby Digital AC-3 as an argument for the -Audio parameter using "AC3" / "DD". If the source contains a Dolby Digital track already, 
       it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to AC-3 at the standard 640 kb/s.
     - Added support for DTS Core Audio as an argument for the -Audio parameter using "DTS". If the source contains a DTS track already, 
       it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to DTS (EXPERIMENTAL)
@@ -93,11 +93,22 @@ v. 1.5.5
 
     - Added support for average bitrate rate control (ABR) as an alternative to CRF with the -VideoBitrate / -VBitrate parameter
         - Supports 2 pass ABR using the optional -Pass parameter. Default is 2 pass
-    - Created new public function Invoke-TwoPassFFMpeg for 2 pass ABR encodes
+    - Created new public module function Invoke-TwoPassFFMpeg for 2 pass ABR encodes
     - Added -AqMode parameter. Default is 2 (all presets)
     - Added -AqStrength parameter. Default is 1.00 (preset slow)
     - Added -PsyRd parameter. Default is 2.00 (preset slow)
     - Added -PsyRdoq parameter. Default is 1.00 (preset slow)
     - Added -NrInter parameter. Default is 0
-    - Added -QComp parameter. Default is 0.6 (all presets)
-    - Changed -Deblock default to -2,-2
+
+v. 1.6.5
+
+- Added support for Fraunhofer AAC (libfdk_aac). When values 1-5 are used with -AudioBitrate parameter, variable bitrate (vbr) mode will be used instead at the corresponding input level
+- Added -QComp parameter. Default is 0.6 (all presets)
+- Changed -Deblock default to -2,-2
+- Added -BFrames parameter. Default is 4
+- Added BIntra switch parameter. This turns on b-intra during encodes, which allows for the evaluation of intra modes in B frame slices
+- Added support for source resolutions of 1080p and lower. Source dimensions are determined by the Measure-CropDimensions function. All 8 bit sources are encoded using profile main10 to help with banding
+    - Currently no support for 1080p HDR. I plan to add this down the line
+- Added aud and hrd parameters for HDR metadata (it was fine without them, but they are "recommended")
+- Added the option to include a second audio stream, which is compatible with all audio options
+- Added option to downmix audio stream to stereo, while still retaining the LFE track

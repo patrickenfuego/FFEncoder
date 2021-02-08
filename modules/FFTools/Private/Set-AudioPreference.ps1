@@ -29,7 +29,23 @@ function Set-AudioPreference {
         [int]$Bitrate,
 
         [Parameter(Mandatory = $false, Position = 3)]
-        [int]$Stream
+        [int]$Stream,
+
+        # Parameter help description
+        [Parameter(Mandatory = $false, Position = 4)]
+        [switch]$Stereo,
+
+        # Parameter help description
+        [Parameter()]
+        [int]$AudioFrames,
+
+        # Parameter help description
+        [Parameter()]
+        [bool]$RemuxStream,
+
+        # Parameter help description
+        [Parameter()]
+        [hashtable]$OutputPath
     )
 
     #Private inner function that returns the number of channels for the primary audio stream
@@ -47,7 +63,29 @@ function Set-AudioPreference {
         Write-Host "Total bitrate per channel: ~ $bitsPerChannel`n"
     }
 
-    $atmosWarning = "If you are attempting to copy a Dolby Atmos stream,`n you must have the latest ffmpeg build or the SCRIPT WILL FAIL`n"
+    Write-Host "**** Audio Stream $($Stream + 1) ****" @emphasisColors
+
+    $atmosWarning = "If you are attempting to copy a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL`n"
+    #Params for downmixing to stereo. Passed to the Convert-ToStereo function
+    $stereoParams = @{
+        InputFile   = $InputFile
+        Codec       = $UserChoice
+        Bitrate     = $Bitrate
+        AudioFrames = $AudioFrames
+        RemuxStream = $RemuxStream
+        OutputPath  = $OutputPath
+    }
+    if ($Stereo) {
+        if ($RemuxStream) { 
+            $temp = Convert-ToStereo @stereoParams 
+            return $temp
+        }
+        else {
+            $stereoArray = Convert-ToStereo @stereoParams
+            if ($null -ne $stereoArray) { return @('-map', '0:a:0', "-c:a:$Stream") + $stereoArray }
+            else { return $null }
+        }
+    }
 
     if ($UserChoice -match "^c[opy]*$") { 
         Write-Host "** COPY AUDIO SELECTED **" @progressColors
@@ -75,7 +113,7 @@ function Set-AudioPreference {
             Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 3`n" @warnColors
             return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3) 
         }
-        if (1..5 -contains $Bitrate) {
+        elseif (1..5 -contains $Bitrate) {
             Write-Host "Variable bitrate (VBR) selected. Quality value: $Bitrate"`n
             return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
         }

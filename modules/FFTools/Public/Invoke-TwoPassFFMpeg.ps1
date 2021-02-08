@@ -101,23 +101,65 @@ function Invoke-TwoPassFFMpeg {
     else { $UHD = $false }
     #Builds the audio argument array(s) based on user input
     Write-Host "** Audio Stream 1 **" @emphasisColors
+    # $audioParam1 = @{
+    #     InputFile  = $InputFile
+    #     UserChoice = $AudioInput[0].Audio
+    #     Bitrate    = $AudioInput[0].Bitrate
+    #     Stream     = 0
+    # }
+    # $audio = Set-AudioPreference @audioParam1
+    # if ($null -ne $AudioInput[1]) {
+    #     Write-Host "** Audio Stream 2 **" @emphasisColors
+    #     $audioParam2 = @{
+    #         InputFile  = $InputFile
+    #         UserChoice = $AudioInput[1].Audio
+    #         Bitrate    = $AudioInput[1].Bitrate
+    #         Stream     = 1
+    #     }
+    #     $audio2 = Set-AudioPreference @audioParam2
+    #     $audio = $audio + $audio2
+    # }
+
     $audioParam1 = @{
-        InputFile  = $InputFile
-        UserChoice = $AudioInput[0].Audio
-        Bitrate    = $AudioInput[0].Bitrate
-        Stream     = 0
+        InputFile   = $InputFile
+        UserChoice  = $AudioInput[0].Audio
+        Bitrate     = $AudioInput[0].Bitrate
+        Stream      = 0
+        Stereo      = $AudioInput[0].Stereo
+        RemuxStream = $false
+        OutputPath  = $Paths
     }
     $audio = Set-AudioPreference @audioParam1
     if ($null -ne $AudioInput[1]) {
-        Write-Host "** Audio Stream 2 **" @emphasisColors
-        $audioParam2 = @{
-            InputFile  = $InputFile
-            UserChoice = $AudioInput[1].Audio
-            Bitrate    = $AudioInput[1].Bitrate
-            Stream     = 1
+        $copyOpt = @("copy", "c", "copyall", "ca")
+        if ($AudioInput[1].Stereo -and 
+            $copyOpt -contains $AudioInput[0].Audio -and 
+            $copyOpt -notcontains $AudioInput[1].Audio) {
+            $audioParam2 = @{
+                InputFile   = $InputFile
+                UserChoice  = $AudioInput[1].Audio
+                Bitrate     = $AudioInput[1].Bitrate
+                Stream      = 1
+                Stereo      = $AudioInput[1].Stereo
+                AudioFrames = $TestFrames
+                RemuxStream = $true
+                OutputPath  = $Paths
+            }
+        }
+        else {
+            $audioParam2 = @{
+                InputFile   = $InputFile
+                UserChoice  = $AudioInput[1].Audio
+                Bitrate     = $AudioInput[1].Bitrate
+                Stream      = 1
+                Stereo      = $AudioInput[1].Stereo
+                AudioFrames = $TestFrames
+                RemuxStream = $false
+                OutputPath  = $Paths
+            } 
         }
         $audio2 = Set-AudioPreference @audioParam2
-        $audio = $audio + $audio2
+        if ($null -ne $audio2) { $audio = $audio + $audio2 }
     }
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
@@ -132,6 +174,7 @@ function Invoke-TwoPassFFMpeg {
                 -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
                 -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
                 open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
+                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
                 chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
                 -f null - 2>$Paths.LogPath
@@ -144,6 +187,7 @@ function Invoke-TwoPassFFMpeg {
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
                 -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
                 open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
+                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
                 chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
                 $OutputPath 2>$Paths.LogPath
@@ -156,6 +200,8 @@ function Invoke-TwoPassFFMpeg {
                 -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
                 open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
+                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
                 chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
                 -f null - 2>$Paths.LogPath
                 
@@ -167,6 +213,8 @@ function Invoke-TwoPassFFMpeg {
                 -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
                 open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):`
+                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
                 chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
                 $OutputPath 2>$Paths.logPath
         }
