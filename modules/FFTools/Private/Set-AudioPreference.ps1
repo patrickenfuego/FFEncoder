@@ -60,12 +60,12 @@ function Set-AudioPreference {
         if (@("eac3", "dts", "ac3", "dd") -contains $UserChoice) {
             Write-Host "7.1 channel layout will be downmixed to 5.1" @warnColors
         }
-        Write-Host "Total bitrate per channel: ~ $bitsPerChannel`n"
+        Write-Host "Bitrate per channel: ~ $bitsPerChannel`n"
     }
 
     Write-Host "**** Audio Stream $($Stream + 1) ****" @emphasisColors
 
-    $atmosWarning = "If you are attempting to copy a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL`n"
+    $atmosWarning = "If you are attempting to copy a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL"
     #Params for downmixing to stereo. Passed to the Convert-ToStereo function
     $stereoParams = @{
         InputFile   = $InputFile
@@ -87,103 +87,93 @@ function Set-AudioPreference {
         }
     }
 
-    if ($UserChoice -match "^c[opy]*$") { 
-        Write-Host "** COPY AUDIO SELECTED **" @progressColors
-        Write-Host "Audio stream 0 will be copied. " -NoNewline
-        Write-Host $atmosWarning @warnColors
-        return @('-map', '0:a:0', '-c:a:0', 'copy')
-    }
-    elseif ($UserChoice -match "c[opy]*a[ll]*") {
-        Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
-        Write-Host "All audio streams will be copied. " -NoNewline
-        Write-Host $atmosWarning @warnColors
-        return @('-map', '0:a', '-c:a', 'copy')
-    }
-    elseif ($UserChoice -eq "aac") {
-        if (!$Bitrate) { $Bitrate = 512 }
+    $audioArgs = switch -Regex ($UserChoice) {
+        "^c[opy]*$" {
+            Write-Host "** COPY AUDIO SELECTED **" @progressColors
+            Write-Host "Audio stream 0 will be copied. " -NoNewline
+            Write-Host $atmosWarning @warnColors
+            @('-map', '0:a:0', '-c:a:0', 'copy')
+        }
+        "c[opy]*a[ll]*" {
+            Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
+            Write-Host "All audio streams will be copied. " -NoNewline
+            Write-Host $atmosWarning @warnColors
+            @('-map', '0:a', '-c:a', 'copy')
+        }
+        "aac" {
+            Write-Host "** AAC AUDIO SELECTED **" @progressColors
+            if (!$Bitrate) { $Bitrate = 512 }
+            else { @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k") }
+        }
+        "dts" {
+            Write-Host "** DTS AUDIO SELECTED **" @progressColors
+            if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
+            if ($i) {
+                @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+            }
+            else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
+        }
+        "eac3" {
+            Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
+            if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k") }
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            if ($i) {
+                @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+            }
+            else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
+
+        }
+        "^f[lac]*" {
+            Write-Host "** FLAC AUDIO SELECTED **" @progressColors
+            @('-map', '0:a:0', "-c:a:$Stream", 'flac')
+        }
+        { @("fdkaac", "faac") -contains $_ } {
+            Write-Host "** FDK AAC AUDIO SELECTED **" @progressColors
+            if (!$Bitrate) { 
+                Write-Host "No bitrate specified. Using VBR 3" @warnColors
+                @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3) 
+            }
+            elseif (1..5 -contains $Bitrate) { 
+                Write-Host "VBR selected. Quality value: $Bitrate`n"
+                @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
+            }
+            else {
+                Write-Host "CBR Selected. Bitrate: $Bitrate`k"
+                @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-b:a', "$Bitrate`k")
+            }
+        }
+        { @('ac3', 'dd') -contains $_ } {
+            Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
+            if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k") }
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            if ($i) {
+                @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+            }
+            else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
+        }
+        { 0..5 -contains $_ } { 
+            Write-Host "AUDIO STREAM $UserChoice SELECTED" @progressColors
+            Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in output"
+            @('-map', "0:a:$UserChoice`?", "-c:a:$Stream", 'copy')
+        }
+        "^n[one]?" {
+            Write-Host "** NO AUDIO SELECTED **" @progressColors
+            Write-Host "All audio streams will be excluded from the output file`n"
+            '-an'
+        }
+        default { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
+    } 
+
+    if (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
         $channels = Get-ChannelCount
-        $bitsPerChannel = "$(($Bitrate / $channels),2) kb/s"
-        Write-Host "** AAC AUDIO SELECTED **" @progressColors
+        $bitsPerChannel = "$(($Bitrate / 6),2) kb/s"
         Write-BitrateInfo $channels $bitsPerChannel
-        return @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k")
     }
-    elseif (@("fdkaac", "faac") -contains $UserChoice) {
-        Write-Host "** FDK AAC AUDIO SELECTED **" @progressColors
-        if (!$Bitrate) {
-            Write-Host "No bitrate specified. Using variable bitrate (VBR) quality 3`n" @warnColors
-            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3) 
-        }
-        elseif (1..5 -contains $Bitrate) {
-            Write-Host "Variable bitrate (VBR) selected. Quality value: $Bitrate"`n
-            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
-        }
-        else {
-            $channels = Get-ChannelCount
-            $bitsPerChannel = "$($Bitrate / $channels) kb/s"
-            Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-b:a', "$Bitrate`k")
-        }
+    else {
+        $channels = Get-ChannelCount
+        $bitsPerChannel = "$($Bitrate / $channels) kb/s"
+        Write-BitrateInfo $channels $bitsPerChannel
     }
-    elseif (@('ac3', 'dd') -contains $UserChoice) {
-        Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
-        if ($Bitrate) {
-            $channels = Get-ChannelCount
-            $bitsPerChannel = "$($Bitrate / 6) kb/s"
-            Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k")
-        }
-        else {
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
-            if ($i) {
-                return @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
-            }
-            else { return @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
-        }
-    }
-    elseif ($UserChoice -eq "dts") {
-        Write-Host "** DTS AUDIO SELECTED **" @progressColors
-        if ($Bitrate) {
-            $channels = Get-ChannelCount
-            $bitsPerChannel = "$($Bitrate / 6) kb/s"
-            Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', "-c:a:$Stream", 'dca', "-b:a:$Stream", "$Bitrate`k", '-strict', -2)
-        }
-        else {
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
-            if ($i) {
-                return @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
-            }
-            else { return @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
-        }
-    }
-    elseif ($UserChoice -eq "eac3") {
-        Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
-        if ($Bitrate) {
-            $channels = Get-ChannelCount
-            $bitsPerChannel = "$($Bitrate / 6) kb/s"
-            Write-BitrateInfo $channels $bitsPerChannel
-            return @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k")
-        }
-        else {
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
-            if ($i) {
-                return @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
-            }
-            else { return @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
-        }
-    }
-    elseif ($UserChoice -match "^f[lac]*") {
-        Write-Host "** FLAC AUDIO SELECTED **" @progressColors
-        Write-Host "Audio Stream 0 will be transcoded to FLAC`n"
-        return @('-map', '0:a:0', "-c:a:$Stream", 'flac')
-    }
-    elseif (1..5 -contains $UserChoice) {
-        return @('-map', "0:a:$UserChoice", '-c:a', 'copy')
-    }
-    elseif ($UserChoice -match "^n[one]?") { 
-        Write-Host "** NO AUDIO SELECTED **" @progressColors
-        Write-Host "All audio streams will be excluded from the output file`n"
-        return '-an' 
-    }
-    else { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
+
+    return $audioArgs
 }
