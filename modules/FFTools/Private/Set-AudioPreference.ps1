@@ -164,9 +164,10 @@ function Set-AudioPreference {
         default { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
     } 
 
-    if (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
+    if (@('copy', 'c', 'copyall', 'ca') -contains $UserChoice) { continue }
+    elseif (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
         $channels = Get-ChannelCount
-        $bitsPerChannel = "$(($Bitrate / 6),2) kb/s"
+        $bitsPerChannel = "$($Bitrate / 6) kb/s"
         Write-BitrateInfo $channels $bitsPerChannel
     }
     else {
