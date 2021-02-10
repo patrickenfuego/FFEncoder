@@ -376,8 +376,8 @@ Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
 Write-Host ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
 Write-Host
 
-$startTime = (Get-Date).ToLocalTime()
-Write-Host "Start Time: $startTime`n"
+$Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+Write-Host "Start Time: $((Get-Date).ToLocalTime())`n"
 #Generating paths to various files
 $paths = Set-RootPath
 #if the output path already exists, prompt to delete the existing file or exit script
@@ -445,9 +445,9 @@ else { Invoke-FFMpeg @ffmpegParams }
 if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
     Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
     ffmpeg -i $OutputPath -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $paths.RemuxPath
-    Write-Host "Cleaning up..."
+    Write-Host "Cleaning up..." -NoNewline
     Remove-Item -Path $OutputPath
-    if ($?) { Write-Host "done!" -NoNewLine @progressColors; Write-Host "`n" }
+    if ($?) { Write-Host "done!" @progressColors; Write-Host "`n" }
     else { Write-Host ""; Write-Warning "Could not delete the original output file. It may be in use by another process" } 
 }
 if ($PSBoundParameters['RemoveFiles']) {
@@ -455,9 +455,9 @@ if ($PSBoundParameters['RemoveFiles']) {
     Get-Content -Path $Paths.LogPath -Tail 8
 }
 
-$endTime = (Get-Date).ToLocalTime()
-$totalTime = New-TimeSpan $startTime $endTime 
+$Stopwatch.Stop()
+
 #Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $Paths.LogPath -Tail 8
-Write-Host "`nEnd time: " $endTime
-Write-Host "Total Encoding Time: $($totalTime.Hours) Hours, $($totalTime.Minutes) Minutes, $($totalTime.Seconds) Seconds`n" @progressColors
+Write-Host "`nEnd time: $((Get-Date).ToLocalTime())"
+"Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f $Stopwatch.Elapsed
