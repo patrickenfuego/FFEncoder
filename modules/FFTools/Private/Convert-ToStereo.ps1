@@ -1,3 +1,14 @@
+<#
+    .SYNOPSIS
+        Converts, multiplexes, and returns parameters for stereo downmixing
+    .DESCRIPTION
+        As ffmpeg cannot stream copy and filter simultaneously, this function
+        is used to multiplex audio tracks out of their container and convert
+        them to stereo separately before being re-added back into the output 
+        container at the end of the script. If stream copy is not selected, this 
+        function returns the stereo arguments back to the calling function
+#>
+
 function Convert-ToStereo {
     [CmdletBinding()]
     param (
@@ -64,28 +75,26 @@ function Convert-ToStereo {
         Write-Host "Copy stream and audio filtering cannot be used simultaneously. " @warnColors -NoNewline
         Write-Host "Multiplexing audio stream 0 out of the container for conversion..."
         if (Test-Path -Path $muxedStreamPath) {
-            Write-Host "Multiplexed audio track found. Skipping creation..." @warnColors
+            Write-Host "Multiplexed audio file found. Skipping creation..." @warnColors
         }
-        #If the target stereo file already exists, prompt to delete it
-        if (Test-Path -Path $OutputPath.StereoPath) { Remove-FilePrompt -Path $OutputPath.StereoPath -Type "Stereo" }
         else { 
             ffmpeg -hide_banner -i $InputFile -loglevel error -map 0:a:0 -c:a copy -map -0:t? -map_chapters -1 `
                 -vn -sn $muxedStreamPath
         }
-        Write-Host "downmixing multi-channel audio file to stereo...`n" @progressColors
+        Write-Host "Downmixing multi-channel audio file to stereo...`n" @progressColors
         if ($PSBoundParameters['AudioFrames']) {
             $AudioFrames = $AudioFrames * 1.5
-            ffmpeg -ss 00:01:30 -i $muxedStreamPath -loglevel error -frames:a $AudioFrames $stereoArgs $OutputPath.StereoPath
+            ffmpeg -ss 00:01:30 -i $muxedStreamPath -loglevel error -frames:a $AudioFrames $stereoArgs -y $OutputPath.StereoPath
         }
         else {
-            ffmpeg -i $muxedStreamPath $stereoArgs $OutputPath.StereoPath 2>$OutputPath.LogPath
+            ffmpeg -i $muxedStreamPath -loglevel error $stereoArgs -y $OutputPath.StereoPath
             Start-Sleep -Seconds 1
         }
 
         return $null
     }
     else { 
-        Write-Host "downmixing multi-channel audio stream to stereo...`n" @progressColors
+        Write-Host "Downmixing multi-channel audio stream to stereo...`n" @progressColors
         $stereoArgs = $stereoArgs[1..($stereoArgs.Length - 1)]
         return $stereoArgs 
     }
