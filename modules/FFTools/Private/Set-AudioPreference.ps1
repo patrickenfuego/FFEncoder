@@ -65,7 +65,7 @@ function Set-AudioPreference {
 
     Write-Host "**** Audio Stream $($Stream + 1) ****" @emphasisColors
 
-    $atmosWarning = "If you are attempting to copy a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL"
+    $atmosWarning = "If you're copying a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL"
     #Params for downmixing to stereo. Passed to the Convert-ToStereo function
     $stereoParams = @{
         InputFile   = $InputFile
@@ -90,14 +90,14 @@ function Set-AudioPreference {
     $audioArgs = switch -Regex ($UserChoice) {
         "^c[opy]*$" {
             Write-Host "** COPY AUDIO SELECTED **" @progressColors
-            Write-Host "Audio stream 0 will be copied. " -NoNewline
-            Write-Host $atmosWarning @warnColors
+            Write-Host "Audio stream 0 will be copied. " -NoNewline  
+            Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a:0', '-c:a:0', 'copy')
         }
         "c[opy]*a[ll]*" {
             Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
             Write-Host "All audio streams will be copied. " -NoNewline
-            Write-Host $atmosWarning @warnColors
+            Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a', '-c:a', 'copy')
         }
         "aac" {
@@ -108,6 +108,7 @@ function Set-AudioPreference {
         "dts" {
             Write-Host "** DTS AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
             if ($i) {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
@@ -164,7 +165,7 @@ function Set-AudioPreference {
         default { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
     } 
 
-    if (@('copy', 'c', 'copyall', 'ca') -contains $UserChoice) { continue }
+    if (@('copy', 'c', 'copyall', 'ca', 'none', 'n') -contains $UserChoice) {  } #do nothing
     elseif (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
         $channels = Get-ChannelCount
         $bitsPerChannel = "$($Bitrate / 6) kb/s"
