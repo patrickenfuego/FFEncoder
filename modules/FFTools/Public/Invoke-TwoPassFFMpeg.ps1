@@ -57,7 +57,7 @@ function Invoke-TwoPassFFMpeg {
         # Filter to help reduce high frequency noise (grain)
         [Parameter(Mandatory = $false)]
         [Alias("NRTR")]
-        [int]$NrInter,
+        [int[]]$NoiseReduction,
 
         # Adjusts the quantizer curve compression factor
         [Parameter(Mandatory = $false)]
@@ -100,26 +100,6 @@ function Invoke-TwoPassFFMpeg {
     if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $InputFile }
     else { $UHD = $false }
     #Builds the audio argument array(s) based on user input
-    Write-Host "** Audio Stream 1 **" @emphasisColors
-    # $audioParam1 = @{
-    #     InputFile  = $InputFile
-    #     UserChoice = $AudioInput[0].Audio
-    #     Bitrate    = $AudioInput[0].Bitrate
-    #     Stream     = 0
-    # }
-    # $audio = Set-AudioPreference @audioParam1
-    # if ($null -ne $AudioInput[1]) {
-    #     Write-Host "** Audio Stream 2 **" @emphasisColors
-    #     $audioParam2 = @{
-    #         InputFile  = $InputFile
-    #         UserChoice = $AudioInput[1].Audio
-    #         Bitrate    = $AudioInput[1].Bitrate
-    #         Stream     = 1
-    #     }
-    #     $audio2 = Set-AudioPreference @audioParam2
-    #     $audio = $audio + $audio2
-    # }
-
     $audioParam1 = @{
         InputFile   = $InputFile
         UserChoice  = $AudioInput[0].Audio
@@ -164,7 +144,7 @@ function Invoke-TwoPassFFMpeg {
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
 
-    Write-Host "** 2 Pass Average Bitrate Selected **" @emphasisColors
+    Write-Host "** 2 Pass Rate Control Selected **" @emphasisColors
 
     if ($UHD) {
         if ($PSBoundParameters['TestFrames']) {
@@ -172,10 +152,10 @@ function Invoke-TwoPassFFMpeg {
             Write-Host "`n`nTest Run Enabled. Analyzing $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
-                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):bframes=$BFrames`:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1::level-idc=5.1:sao=0:rc-lookahead=48:subme=4:`
+                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:b-intra=1:frame-threads=2" `
                 -f null - 2>$Paths.LogPath
                 
             Start-Sleep -Seconds 1
@@ -184,10 +164,10 @@ function Invoke-TwoPassFFMpeg {
             Write-Host "`nTest Run Enabled. Encoding $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
-                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):bframes=$BFrames`:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1::level-idc=5.1:sao=0:rc-lookahead=48:subme=4:`
+                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:b-intra=1:frame-threads=2" `
                 $OutputPath 2>$Paths.LogPath
         }
         #Run a full 2 pass encode
@@ -195,10 +175,10 @@ function Invoke-TwoPassFFMpeg {
             Write-FirstBanner
             ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
-                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):bframes=$BFrames`:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1::level-idc=5.1:sao=0:rc-lookahead=48:subme=4:`
+                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:b-intra=1:frame-threads=2" `
                 -f null - 2>$Paths.LogPath
                 
             Start-Sleep -Seconds 1
@@ -206,10 +186,10 @@ function Invoke-TwoPassFFMpeg {
             Write-SecondBanner
             ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:level-idc=5.1:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:`
-                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):bframes=$BFrames`:`
+                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1::level-idc=5.1:sao=0:rc-lookahead=48:subme=4:`
+                chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:b-intra=1:frame-threads=2" `
                 $OutputPath 2>$Paths.logPath
         }
     }
@@ -220,9 +200,9 @@ function Invoke-TwoPassFFMpeg {
             Write-Host "`n`nTest Run Enabled. Analyzing $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):`
+                sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:frame-threads=2" `
                 -f null - 2>$Paths.LogPath
                 
             Start-Sleep -Seconds 1
@@ -231,19 +211,19 @@ function Invoke-TwoPassFFMpeg {
             Write-Host "`n`nTest Run Enabled. Encoding $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):`
+                sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:frame-threads=2" `
                 $OutputPath 2>$Paths.LogPath
         }
         #Run a full 2 pass encode
         else {
             Write-FirstBanner
             ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 -an -sn $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
+                -x265-params "pass=1:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):`
+                sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:frame-threads=2" `
                 -f null - 2>$Paths.LogPath
                 
             Start-Sleep -Seconds 1
@@ -251,9 +231,9 @@ function Invoke-TwoPassFFMpeg {
             Write-SecondBanner
             ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-inter=$NrInter`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:`
-                open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
-                merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                -x265-params "pass=2:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
+                aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):`
+                sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:frame-threads=2" `
                 $OutputPath 2>$Paths.logPath
         }
     }

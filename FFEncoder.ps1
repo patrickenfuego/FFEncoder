@@ -252,8 +252,8 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 2000)]
-    [Alias("NRTR")]
-    [int]$NrInter = 0,
+    [Alias("NR")]
+    [int[]]$NoiseReduction = @(0, 0),
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -276,12 +276,12 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [Alias("T", "Test")]
-    [int]$TestFrames,
+    [int]$TestFrames
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("Del", "RMFiles")]
-    [switch]$RemoveFiles
+    # [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    # [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    # [alias("Del", "RMFiles")]
+    # [switch]$RemoveFiles
 
 )
 
@@ -430,7 +430,7 @@ $ffmpegParams = @{
     AqStrength     = $AqStrength
     PsyRd          = $PsyRd
     PsyRdoq        = $PsyRdoq
-    NrInter        = $NrInter
+    NoiseReduction = $NoiseReduction
     Qcomp          = $QComp
     BFrames        = $BFrames
     OutputPath     = $OutputPath
@@ -448,16 +448,16 @@ if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
     Write-Host "Cleaning up..." -NoNewline
     Remove-Item -Path $OutputPath
     if ($?) { Write-Host "done!" @progressColors; Write-Host "`n" }
-    else { Write-Host ""; Write-Warning "Could not delete the original output file. It may be in use by another process" } 
+    else { Write-Host ""; Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors } 
 }
-if ($PSBoundParameters['RemoveFiles']) {
-    Write-Host "`nDeleting generated files..."
-    Get-Content -Path $Paths.LogPath -Tail 8
-}
-
-$Stopwatch.Stop()
+# if ($PSBoundParameters['RemoveFiles']) {
+#     Write-Host "`nDeleting generated files..."
+#     Get-Content -Path $Paths.LogPath -Tail 8
+# }
 
 #Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $Paths.LogPath -Tail 8
 Write-Host "`nEnd time: $((Get-Date).ToLocalTime())"
+$Stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f $Stopwatch.Elapsed
+Write-Host ""
