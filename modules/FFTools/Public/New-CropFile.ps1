@@ -1,9 +1,3 @@
-###################################################################
-#
-#   Written by: Patrick Kelly
-#   Last Modified: 12/31/2020
-#
-###################################################################
 <#
     .SYNOPSIS
         Module function that generates a crop file, which can be used for auto-cropping black borders in video files
