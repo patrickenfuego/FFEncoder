@@ -28,6 +28,14 @@ function New-CropFile {
         [int]$Count
     )
 
+    function Get-Duration {
+        $duration = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 `
+            -i $InputPath
+        $duration = $duration / 60
+        $duration
+        if ($duration) { return $duration } else { return $null }
+    }
+
     Import-Module -Name ".\modules\PoshRSJob"
 
     #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
@@ -38,23 +46,49 @@ function New-CropFile {
     else {
         Write-Host "Generating crop file...`n"
         #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspacepool for each item
-        Start-RSJob -Name "Crop Start" -ArgumentList $InputPath -ScriptBlock {
+        Start-RSJob -Name "Crop 00:01:30" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
             param($inFile)
-            $c1 = ffmpeg -ss 90 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c1 = ffmpeg -ss 90 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
             Write-Output -InputObject $c1
         } 
         
-        Start-RSJob -Name "Crop Mid" -ArgumentList $InputPath -ScriptBlock {
+        Start-RSJob -Name "Crop 00:20:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
             param($inFile)
-            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
             Write-Output -InputObject $c2
         } 
 
-        Start-RSJob -Name "Crop End" -ArgumentList $InputPath -ScriptBlock {
-            param($inFile)
-            $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -y -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-            Write-Output -InputObject $c3
-        } 
+        if ((Get-Duration) -gt 40) {
+            Start-RSJob -Name "Crop 00:40:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
+                param($inFile)
+                $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                Write-Output -InputObject $c3
+            } 
+        }
+
+        if ((Get-Duration) -gt 70) {
+            Start-RSJob -Name "Crop 01:00:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
+                param($inFile)
+                $c4 = ffmpeg -ss 01:00:00 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                Write-Output -InputObject $c4
+            }
+        }
+
+        if ((Get-Duration) -gt 85) {
+            Start-RSJob -Name "Crop 01:20:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
+                param($inFile)
+                $c5 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $inFile -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                Write-Output -InputObject $c5
+            }
+        }
+
+        if ((Get-Duration) -gt 95) {
+            Start-RSJob -Name "Crop 01:30:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
+                param($inFile)
+                $c6 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $inFile -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                Write-Output -InputObject $c6
+            }
+        }
 
         Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $CropFilePath -Append
     }
