@@ -81,7 +81,7 @@ FFEncoder can accept the following parameters from the command line:
 | **PsyRdoq**        | 1.00            | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info       |
 | **QComp**          | 0.60            | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                       |
 | **BFrames**        | 4               | False         | **B**                  | The number of B-frames to be used within a GOP. This is especially helpful for test encodes to determine the ideal number of B-frames to use              |
-| **NoiseReduction** | 0, 0            | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames. Useful for grainy sources                             |
+| **NoiseReduction** | 0, 0            | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources   |
 | **OutputPath**     | None            | True          | **O**                  | The path of the encoded output file                                                                                                                       |
 
 &nbsp;
