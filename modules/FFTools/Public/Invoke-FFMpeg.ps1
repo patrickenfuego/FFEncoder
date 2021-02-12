@@ -22,11 +22,6 @@
 function Invoke-FFMpeg {      
     [CmdletBinding()]
     param (
-        # The input file to be encoded
-        [Parameter(Mandatory = $true, Position = 0)]
-        [Alias("InFile", "I")]
-        [string]$InputFile,
-
         # Crop dimensions for the output file
         [Parameter(Mandatory = $true, Position = 1)]
         [Alias("Crop", "CropDim")]
@@ -89,11 +84,6 @@ function Invoke-FFMpeg {
         [Parameter(Mandatory = $false)]
         [int]$BFrames,
 
-        # Path to the output file
-        [Parameter(Mandatory = $true)]
-        [Alias("O")]
-        [string]$OutputPath,
-
         # Path to the log file
         [Parameter(Mandatory = $true)]
         [Alias("L")]
@@ -105,18 +95,17 @@ function Invoke-FFMpeg {
         [int]$TestFrames
     )
 
-    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $InputFile }
+    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $Paths.InputFile }
     else { $UHD = $false }
     
     #Building the audio argument array(s) based on user input
     $audioParam1 = @{
-        InputFile   = $InputFile
+        Paths       = $Paths
         UserChoice  = $AudioInput[0].Audio
         Bitrate     = $AudioInput[0].Bitrate
         Stream      = 0
         Stereo      = $AudioInput[0].Stereo
         RemuxStream = $false
-        OutputPath  = $Paths
     }
     $audio = Set-AudioPreference @audioParam1
     if ($null -ne $AudioInput[1]) {
@@ -125,33 +114,31 @@ function Invoke-FFMpeg {
             $copyOpt -contains $AudioInput[0].Audio -and 
             $copyOpt -notcontains $AudioInput[1].Audio) {
             $audioParam2 = @{
-                InputFile   = $InputFile
+                Paths       = $Paths
                 UserChoice  = $AudioInput[1].Audio
                 Bitrate     = $AudioInput[1].Bitrate
                 Stream      = 1
                 Stereo      = $AudioInput[1].Stereo
                 AudioFrames = $TestFrames
                 RemuxStream = $true
-                OutputPath  = $Paths
             }
         }
         else {
             $audioParam2 = @{
-                InputFile   = $InputFile
+                Paths       = $Paths
                 UserChoice  = $AudioInput[1].Audio
                 Bitrate     = $AudioInput[1].Bitrate
                 Stream      = 1
                 Stereo      = $AudioInput[1].Stereo
                 AudioFrames = $TestFrames
                 RemuxStream = $false
-                OutputPath  = $Paths
             } 
         }
         $audio2 = Set-AudioPreference @audioParam2
         if ($null -ne $audio2) { $audio = $audio + $audio2 }
     }
     #Builds the subtitle argument array based on user input
-    $subs = Set-SubtitlePreference -InputFile $InputFile -UserChoice $Subtitles
+    $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
     Write-Host "***** STARTING FFMPEG *****" @progressColors
     Write-Host "To view your progress, run " -NoNewline
@@ -162,42 +149,42 @@ function Invoke-FFMpeg {
     if ($UHD) {
         if ($PSBoundParameters['TestFrames']) {
             Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-            ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+            ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
                 -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1])`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 level-idc=5.1:keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
                 psy-rdoq=$PsyRdoq`:chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
-                $OutputPath 2>$Paths.LogPath
+                $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
-            ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+            ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
                 -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1])`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 level-idc=5.1:keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
                 psy-rdoq=$PsyRdoq`:chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
-                $OutputPath 2>$Paths.LogPath
+                $Paths.OutputFile 2>$Paths.LogPath
         }
     }
     #Encode SDR content (1080p and below)
     else {
         if ($PSBoundParameters['TestFrames']) {
             Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-            ffmpeg -probesize 100MB -ss 00:01:30 -i $InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+            ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
                 -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1])`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
                 psy-rdoq=$PsyRdoq`:open-gop=0:b-intra=1:frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
-                $OutputPath 2>$Paths.LogPath
+                $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
-            ffmpeg -probesize 100MB -i $InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+            ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
                 -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1])`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
                 psy-rdoq=$PsyRdoq`:open-gop=0:b-intra=1:frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
-                $OutputPath 2>$Paths.LogPath
+                $Paths.OutputFile 2>$Paths.LogPath
         }
     }
 }

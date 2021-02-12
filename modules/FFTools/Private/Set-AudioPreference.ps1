@@ -17,10 +17,6 @@
 function Set-AudioPreference {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true, Position = 0)]
-        [ValidateNotNullOrEmpty()]
-        [String]$InputFile,
-
         [Parameter(Mandatory = $true, Position = 1)]
         [ValidateNotNullOrEmpty()]
         [string]$UserChoice,
@@ -45,12 +41,12 @@ function Set-AudioPreference {
 
         # Parameter help description
         [Parameter()]
-        [hashtable]$OutputPath
+        [hashtable]$Paths
     )
 
     #Private inner function that returns the number of channels for the primary audio stream
     function Get-ChannelCount {
-        [int]$numOfChannels = ffprobe -i $InputFile -show_entries stream=channels `
+        [int]$numOfChannels = ffprobe -i $Paths.InputFile -show_entries stream=channels `
             -select_streams a:0 -of compact=p=0:nk=1 -v 0
         return $numOfChannels
     }
@@ -68,12 +64,11 @@ function Set-AudioPreference {
     $atmosWarning = "If you're copying a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL"
     #Params for downmixing to stereo. Passed to the Convert-ToStereo function
     $stereoParams = @{
-        InputFile   = $InputFile
+        Paths       = $Paths
         Codec       = $UserChoice
         Bitrate     = $Bitrate
         AudioFrames = $AudioFrames
         RemuxStream = $RemuxStream
-        OutputPath  = $OutputPath
     }
     if ($Stereo) {
         if ($RemuxStream) { 
@@ -108,7 +103,7 @@ function Set-AudioPreference {
         "dts" {
             Write-Host "** DTS AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
@@ -117,7 +112,7 @@ function Set-AudioPreference {
         "eac3" {
             Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k") }
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
@@ -146,7 +141,7 @@ function Set-AudioPreference {
         { @('ac3', 'dd') -contains $_ } {
             Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k") }
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $InputFile
+            $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }

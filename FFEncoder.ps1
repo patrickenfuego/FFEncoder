@@ -351,12 +351,14 @@ function Set-RootPath {
     Write-Host "<$cropPath>" @emphasisColors
 
     $pathObject = @{
+        InputFile  = $InputPath
         Root       = $root
         RemuxPath  = $remuxPath
         StereoPath = $stereoPath
         CropPath   = $cropPath
         LogPath    = $logPath
         X265Log    = $x265Log
+        OutputFile = $OutputPath
     }
     return $pathObject
 }
@@ -381,10 +383,14 @@ Write-Host "Start Time: $((Get-Date).ToLocalTime())`n"
 #Generating paths to various files
 $paths = Set-RootPath
 #if the output path already exists, prompt to delete the existing file or exit script
-if (Test-Path -Path $OutputPath) { Remove-FilePrompt -Path $OutputPath -Type "Primary" }
+if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
-#Creating the crop file
-New-CropFile -InputPath $InputPath -CropFilePath $paths.CropPath -Count 1
+if ($paths.InputFile) { 
+    #Creating the crop file
+    New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
+ }
+ else { throw "Input path could not be found" }
+
 #Calculating the crop values
 $cropDim = Measure-CropDimensions $paths.CropPath
 
@@ -417,9 +423,8 @@ if ($PSBoundParameters['Audio2']) {
 else { $audioHash2 = $null }
 $audioArray = @($audioHash1, $audioHash2)
 
-#Building parameters for Invoke-FFMpeg function
+#Building parameters for ffmpeg functions
 $ffmpegParams = @{
-    InputFile      = $InputPath
     CropDimensions = $cropDim
     AudioInput     = $audioArray
     Subtitles      = $Subtitles
@@ -433,7 +438,6 @@ $ffmpegParams = @{
     NoiseReduction = $NoiseReduction
     Qcomp          = $QComp
     BFrames        = $BFrames
-    OutputPath     = $OutputPath
     Paths          = $paths
     TestFrames     = $TestFrames
 }
@@ -446,7 +450,7 @@ if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
     Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
     ffmpeg -i $OutputPath -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $paths.RemuxPath
     Write-Host "Cleaning up..." -NoNewline
-    Remove-Item -Path $OutputPath
+    Remove-Item -Path $paths.OutputFile
     if ($?) { Write-Host "done!" @progressColors; Write-Host "`n" }
     else { Write-Host ""; Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors } 
 }
