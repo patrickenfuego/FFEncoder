@@ -3,7 +3,7 @@
         Module function that generates a crop file, which can be used for auto-cropping black borders in video files
     .DESCRIPTION
         This function generates a crop file that can be used for auto-cropping videos with ffmpeg. 
-        It uses multi-threading to analyze 3 separate segments of the input file simultaneously, 
+        It uses multi-threading to analyze up to 4 separate segments of the input file simultaneously, 
         which is then queued and written to the crop file.
     .INPUTS
         Path of the source file to be encoded
@@ -45,47 +45,41 @@ function New-CropFile {
     }
     else {
         Write-Host "Generating crop file...`n"
-        #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspacepool for each item
+        #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspace pool for each job
         Start-RSJob -Name "Crop 00:01:30" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-            param($inFile)
-            $c1 = ffmpeg -ss 90 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c1 = ffmpeg -ss 90 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
             Write-Output -InputObject $c1
         } 
         
         Start-RSJob -Name "Crop 00:20:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-            param($inFile)
-            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
             Write-Output -InputObject $c2
         } 
 
         if ((Get-Duration) -gt 40) {
             Start-RSJob -Name "Crop 00:40:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-                param($inFile)
-                $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c3
             } 
         }
 
         if ((Get-Duration) -gt 70) {
             Start-RSJob -Name "Crop 01:00:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-                param($inFile)
-                $c4 = ffmpeg -ss 01:00:00 -skip_frame nokey -hide_banner -i $inFile -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                $c4 = ffmpeg -ss 01:00:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c4
             }
         }
 
         if ((Get-Duration) -gt 85) {
             Start-RSJob -Name "Crop 01:20:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-                param($inFile)
-                $c5 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $inFile -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                $c5 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c5
             }
         }
 
         if ((Get-Duration) -gt 95) {
             Start-RSJob -Name "Crop 01:30:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-                param($inFile)
-                $c6 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $inFile -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                $c6 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c6
             }
         }
