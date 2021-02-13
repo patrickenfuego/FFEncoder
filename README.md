@@ -2,8 +2,10 @@
   - [About](#about)
   - [Auto-Cropping](#auto-cropping)
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
+  - [Rate Control Options](#rate-control-options)
   - [Script Parameters](#script-parameters)
   - [Hard Coded Parameters](#hard-coded-parameters)
+    - [Exclusive to 2-Pass ABR](#exclusive-to-2-pass-abr)
     - [Exclusive to 4K UHD Content](#exclusive-to-4k-uhd-content)
     - [Exclusive to SDR Content 1080p and Below](#exclusive-to-sdr-content-1080p-and-below)
   - [Audio Options](#audio-options)
@@ -25,13 +27,13 @@ FFEncoder is a cross-platform PowerShell script that is meant to make high defin
 
 ## About
 
-FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run. As much as I love ffmpeg/ffprobe, they can be complicated tools to use; the syntax is complex, and some of their commands are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
+FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is complex, and some of the commands are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
 
 &nbsp;
 
 ## Auto-Cropping
 
-FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze 3 separate 8 minute segments of the source simultaneously. The collected output of each instance is then saved to a crop file which is used to determine the cropping width and height for encoding.
+FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze up to 4 separate segments of the source simultaneously, and performs a more exhaustive search of the input file when compared to other solutions that provide the same functionality. The collected output of each cropping instance is then saved to a file, which is used to determine the ideal cropping width and height for encoding. 
 
 &nbsp;
 
@@ -52,6 +54,19 @@ Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as
 
 &nbsp;
 
+## Rate Control Options
+
+FFEncoder supports the following rate control options:
+
+- **Constant Rate Factor (CRF)** - CRF encoding targets a specific quality level throughout, and isn't concerned with file size. Lower CRF values will result in a higher perceived quality and bitrate
+  - Recommended values for 1080p content are between 16-22
+  - Recommended values for 2160p content are between 17-24
+- **Average Bitrate** - Average bitrate encoding targets a specific output file size, and isn't concerned with quality. Output size is determined by the formula: <img src="https://render.githubusercontent.com/render/math?math=(\frac{TotalBitrate}{VideoLength})"> . There are 2 varieties of ABR encoding that FFEncoder supports:
+  - **1-Pass** - This option uses a single pass, and isn't aware of the complexities of future frames and can only be scaled based on the past. This generally leads to lower overall quality, but is significantly faster than 2-pass
+  - **2-Pass** - 2-Pass encoding uses a first pass to calculate bitrate distribution, which is then used to allocate bits more accurately on the second pass. While it's more time consuming than a single pass encode, quality is generally improved significantly. This script uses a custom combination of parameters for the first pass to help strike a balance between speed and quality
+
+&nbsp;
+
 ## Script Parameters
 
 FFEncoder can accept the following parameters from the command line:
@@ -60,7 +75,7 @@ FFEncoder can accept the following parameters from the command line:
 
 | Parameter Name     | Default         | Mandatory     | Alias                  | Description                                                                                                                                               |
 | ------------------ | --------------- | ------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Test**           | False           | False         | **T**                  | Switch to enable a test run. Encodes only 1000 frames starting around the 1 minute mark                                                                   |
+| **TestFrames**     | 0 (off)         | False         | **T**                  | Integer value representing the number of test frames to encode. When enabled, encoding starts at 00:01:30 so that title screens are skipped               |
 | **Help**           | False           | <b>\*</b>True | **H**, **/?**, **?**   | Switch to display help information                                                                                                                        |
 | **InputPath**      | None            | True          | **I**                  | The path of the source file                                                                                                                               |
 | **Audio**          | copy (stream 0) | False         | **A**                  | Audio preference for the 1st audio stream in the output file. See [Audio Options](#audio-options)                                                         |
@@ -72,7 +87,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Subtitles**      | Default (first) | False         | **S**                  | Subtitle passthrough preference. See the [Subtitles](#subtitles) section                                                                                  |
 | **Preset**         | slow            | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                                                                          |
 | **CRF**            | None            | <b>\*</b>True | **C**                  | Constant rate factor rate control setting. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate                                 |
-| **VideoBitrate**   | None            | <b>\*</b>True | **Vbitrate**           | Constant bitrate rate control setting. This can be used as an alternative to CRF rate control, and will force the bitrate to the approximate value passed |
+| **VideoBitrate**   | None            | <b>\*</b>True | **VBitrate**           | Average bitrate rate control setting. This can be used as an alternative to CRF rate control, and will force the bitrate to the approximate value passed |
 | **Pass**           | 2               | false         | **P**                  | The number of passes the encoder will perform. Used with the `-VideoBitrate` parameter for ABR encodes. Default is 2-Pass                                 |
 | **Deblock**        | -2, -2          | False         | **DBF**                | Deblock filter. The first value controls the strength, and the second value controls the frequency of use                                                 |
 | **AqMode**         | 2               | False         | **AQM**                | x265 AQ mode setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                               |
@@ -88,19 +103,29 @@ FFEncoder can accept the following parameters from the command line:
 
 ## Hard Coded Parameters
 
-Video encoding is a subjective process, and I have my own personal preferences. The following parameters are hard coded, but can be changed easily:
+Video encoding is a subjective process, and I have my own personal preferences. The following parameters are hard coded (but can be changed easily):
 
 - `subme=4` - This is the default for the veryslow preset, and I find that it gives better high motion clarity without too much of a performance hit. I plan to add a parameter for this sometime soon
 - `no-sao` - I really hate the way sao looks, so it's disabled along with `selective-sao`. There's a reason it has earned the moniker "smooth all objects", and it makes everything look too waxy in my opinion
 - `rc-lookahead=48` - People are all over the board with this, but I have found 48 (2 \* 24 fps, or effectively, 2 \* fps) to be a number with good gains and no diminishing returns. This is recommended by many experienced folks at the [doom9 forum](https://forum.doom9.org/showthread.php?t=175993)
-- `keyint-120` - This is personal preference. I like to spend a few extra bits to insert more I-frames into a GOP, which helps with seeking (fast-forwarding, rewinding, random seeking) through the video
-- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 had closed GOPs by default. For more insight, listen to what [Ben Waggoner](https://streaminglearningcenter.com/articles/open-and-closed-gops-all-you-need-to-know.html) has to say on the topic
-- `b-intra` - I recently turned this on for testing, and have been happy enough with it to leave it on. Has a very mild impact on performance
+- `keyint-120` - This is personal preference. I like to spend a few extra bits to insert more I-frames into a GOP, which helps with random seeking throughout the video. The bitrate increase is generally trivial
+- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 had closed GOPs by default. For more insight, listen to [Ben Waggoner](https://streaminglearningcenter.com/articles/open-and-closed-gops-all-you-need-to-know.html) has to say on the topic
+- `b-intra` - I recently turned this on for testing, and have been happy enough with it to leave it on. Has a very mild impact on performance. I will add a parameter for this soon
 - `frame-threads=2` - It is known that more frame threads degrade overall quality (additional reading can be found [here](https://forum.doom9.org/showthread.php?t=176197&page=3)). 2 frame threads is a nice compromise for most systems
+
+### Exclusive to 2-Pass ABR
+
+x265 offers a `--slow-firstpass` option to speed up the first pass of a 2-Pass ABR encode, but it disables or lowers some very important quality related parameters like `--rd` and `--ref`. Because of this, I have come up with my own custom first pass parameters to help strike a balance between speed and quality. The following parameters are disabled or reduced during pass 1, regardless of the preset selected:
+
+- `rect=0` - Rect is known to eat up CPU cycles for dinner, and so it is disabled for the first pass regardless of the preset used. This is also used by `--slow-firstpass`
+- `max-merge=2` - This is the default value for presets ultrafast - medium, and is meant to increase first pass speeds for presets slow - veryslow. `--slow-firstpass` lowers this to 1, which is too low in my opinion
+- `subme=2` - This is one of the settings enabled/reduced by `--slow-firstpass`
+- `b-intra=0` - Disabled, regardless if it is enabled via parameter or not
+- `frame-threads=MAX(2, --frame-threads)` - If your CPU supports more than 2 frame threads, they will be used for the first pass only
 
 ### Exclusive to 4K UHD Content
 
-- `level-idc=5.1`, `high tier=1` - I have found this to be ideal for 4K content as `Main 10@L5@Main` only allows for a maximum bitrate of 25 mb/s (and 4K content sometimes exceeds this, especially if there is a lot of grain)
+- `level-idc=5.1`, `high tier=1` - I have found this to be ideal for 4K content as `Main 10@L5@Main` only allows for a maximum bitrate of 25 mb/s (and 4K content sometimes exceeds this, especially if there is a lot of grain). I will add a parameter for this soon
 
 ### Exclusive to SDR Content 1080p and Below
 
@@ -110,7 +135,7 @@ Video encoding is a subjective process, and I have my own personal preferences. 
 
 ## Audio Options
 
-FFEncoder supports the mapping/transcoding of 2 distinct audio streams to the output file. For audio that is transcoded, the primary audio stream is used as it's generally lossless (TrueHD, DTS-HD MA, LPCM, etc.). **It is never recommended to transcode from one lossy codec to another**.
+FFEncoder supports the mapping/transcoding of 2 distinct audio streams to the output file. For audio that is transcoded, the primary audio stream is used as it's generally lossless (TrueHD, DTS-HD MA, LPCM, etc.). **It is never recommended to transcode from one lossy codec to another**; if the primary audio stream is lossy compressed, it is best to copy it instead of forcing a transcode. 
 
 FFEncoder currently supports the following audio options wih the `-Audio`/`-Audio2` parameters. When selecting a named codec (like EAC3, AC3, etc.) the script will go through the following checks:
 
@@ -145,7 +170,7 @@ One of the benefits of the FDK encoder is that it supports variable bitrate (VBR
 
 With FFEncoder, you can downmix either of the two output streams to stereo using the `-Stereo`/`-Stereo2` parameters. The process uses an audio filter that retains the LFE (bass) track in the final mix, which is discarded when using `-ac 2` in ffmpeg directly.
 
-When using any combination of `copy`/`c`/`copyall`/`ca` and `-Stereo`/`-Stereo2`, the script will multiplex the primary audio out of the container and encode it separately; this is because ffmpeg cannot stream copy and filter at the same time. See [here](https://stackoverflow.com/questions/53518589/how-to-use-filtering-and-stream-copy-together-with-ffmpeg) for a nice explanation. Once the primary encode finishes, the multiplexed audio file (now converted to stereo) is multiplexed back into the primary container with the other streams selected.
+When using any combination of `copy`/`c`/`copyall`/`ca` and `-Stereo`/`-Stereo2`, the script will multiplex the primary audio stream out of the container and encode it separately; this is because ffmpeg cannot stream copy and filter at the same time. See [here](https://stackoverflow.com/questions/53518589/how-to-use-filtering-and-stream-copy-together-with-ffmpeg) for a nice explanation. Once the primary encode finishes, the external audio file (now converted to stereo) is multiplexed back into the primary container with the other streams selected.
 
 &nbsp;
 
