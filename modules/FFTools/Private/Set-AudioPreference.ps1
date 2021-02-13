@@ -56,6 +56,7 @@ function Set-AudioPreference {
         if (@("eac3", "dts", "ac3", "dd") -contains $UserChoice) {
             Write-Host "7.1 channel layout will be downmixed to 5.1" @warnColors
         }
+        elseif (1..5 -contains $Bitrate) { return }
         Write-Host "Bitrate per channel: ~ $bitsPerChannel`n"
     }
 
@@ -95,12 +96,12 @@ function Set-AudioPreference {
             Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a', '-c:a', 'copy')
         }
-        "aac" {
+        "^aac$" {
             Write-Host "** AAC AUDIO SELECTED **" @progressColors
             if (!$Bitrate) { $Bitrate = 512 }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k") }
         }
-        "dts" {
+        "^dts$" {
             Write-Host "** DTS AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
@@ -109,7 +110,7 @@ function Set-AudioPreference {
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
         }
-        "eac3" {
+        "^eac3$" {
             Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k") }
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
@@ -117,25 +118,23 @@ function Set-AudioPreference {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
-
         }
-        "^f[lac]*" {
-            Write-Host "** FLAC AUDIO SELECTED **" @progressColors
-            @('-map', '0:a:0', "-c:a:$Stream", 'flac')
-        }
-        { @("fdkaac", "faac") -contains $_ } {
+        "f[dk]*aac$" {
             Write-Host "** FDK AAC AUDIO SELECTED **" @progressColors
             if (!$Bitrate) { 
                 Write-Host "No bitrate specified. Using VBR 3" @warnColors
-                @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3) 
+                @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3)
+                break
             }
             elseif (1..5 -contains $Bitrate) { 
                 Write-Host "VBR selected. Quality value: $Bitrate`n"
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
+                break
             }
             else {
                 Write-Host "CBR Selected. Bitrate: $Bitrate`k"
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-b:a', "$Bitrate`k")
+                break
             }
         }
         { @('ac3', 'dd') -contains $_ } {
@@ -152,6 +151,10 @@ function Set-AudioPreference {
             Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in output"
             @('-map', "0:a:$UserChoice`?", "-c:a:$Stream", 'copy')
         }
+        "^f[lac]*" {
+            Write-Host "** FLAC AUDIO SELECTED **" @progressColors
+            @('-map', '0:a:0', "-c:a:$Stream", 'flac')
+        }
         "^n[one]?" {
             Write-Host "** NO AUDIO SELECTED **" @progressColors
             Write-Host "All audio streams will be excluded from the output file`n"
@@ -160,7 +163,7 @@ function Set-AudioPreference {
         default { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
     } 
 
-    if (@('copy', 'c', 'copyall', 'ca', 'none', 'n') -contains $UserChoice) {  } #do nothing
+    if (@('copy', 'c', 'copyall', 'ca', 'none', 'n', 'flac', 'f') -contains $UserChoice) {  } #do nothing
     elseif (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
         $channels = Get-ChannelCount
         $bitsPerChannel = "$($Bitrate / 6) kb/s"
