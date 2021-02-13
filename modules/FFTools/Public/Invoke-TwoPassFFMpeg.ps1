@@ -77,6 +77,9 @@ function Invoke-TwoPassFFMpeg {
     function Write-FirstBanner {
         Write-Host "***** STARTING FFMPEG PASS 1 *****" @progressColors
         Write-Host "Generating 1st pass encoder metrics..."
+        Write-Host "To view your progress, run " -NoNewline
+        Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
+        Write-Host " in a different PowerShell session`n"
     }
 
     function Write-SecondBanner {
