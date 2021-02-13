@@ -13,7 +13,7 @@ function Convert-ToStereo {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [string]$InputFile,
+        [hashtable]$Paths,
 
         [Parameter()]
         [string]$Codec,
@@ -25,10 +25,7 @@ function Convert-ToStereo {
         [int]$AudioFrames,
 
         [Parameter()]
-        [bool]$RemuxStream,
-
-        [Parameter()]
-        [hashtable]$OutputPath
+        [bool]$RemuxStream
     )
     #Assign the audio parameter array based on codec
     $audioArgs = switch ($Codec) {
@@ -69,7 +66,7 @@ function Convert-ToStereo {
     }
     
     $stereoArgs = $audioArgs + @('-af', 'pan=stereo|FL=0.5*FC+0.707*FL+0.707*BL+0.5*LFE|FR=0.5*FC+0.707*FR+0.707*BR+0.5*LFE')
-    [string]$muxedStreamPath = Join-Path -Path $OutputPath.Root -ChildPath "muxed.mkv"
+    [string]$muxedStreamPath = Join-Path -Path $Paths.Root -ChildPath "muxed.mkv"
 
     if ($RemuxStream) {
         Write-Host "Copy stream and audio filtering cannot be used simultaneously. " @warnColors -NoNewline
@@ -78,16 +75,15 @@ function Convert-ToStereo {
             Write-Host "Multiplexed audio file found. Skipping creation..." @warnColors
         }
         else { 
-            ffmpeg -hide_banner -i $InputFile -loglevel error -map 0:a:0 -c:a copy -map -0:t? -map_chapters -1 `
+            ffmpeg -hide_banner -i $Paths.InputFile -loglevel error -map 0:a:0 -c:a copy -map -0:t? -map_chapters -1 `
                 -vn -sn $muxedStreamPath
         }
         Write-Host "Downmixing multi-channel audio file to stereo...`n" @progressColors
         if ($PSBoundParameters['AudioFrames']) {
-            $AudioFrames = $AudioFrames * 1.5
-            ffmpeg -ss 00:01:30 -i $muxedStreamPath -loglevel error -frames:a $AudioFrames $stereoArgs -y $OutputPath.StereoPath
+            ffmpeg -ss 00:01:30 -i $muxedStreamPath -loglevel error -frames:a $AudioFrames $stereoArgs -y $Paths.StereoPath
         }
         else {
-            ffmpeg -i $muxedStreamPath -loglevel error $stereoArgs -y $OutputPath.StereoPath
+            ffmpeg -i $muxedStreamPath -loglevel error $stereoArgs -y $Paths.StereoPath
             Start-Sleep -Seconds 1
         }
 
