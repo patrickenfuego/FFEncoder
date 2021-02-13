@@ -159,7 +159,7 @@ function Invoke-TwoPassFFMpeg {
                 aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):bframes=$BFrames`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:level-idc=5.1:sao=0:rc-lookahead=48:subme=4:`
                 chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:b-intra=1:frame-threads=2" `
-                $Paths.OutputFile 2>$Paths.LogPath
+                $Paths.OutputFile 2>>$Paths.LogPath
         }
         #Run a full 2 pass encode
         else {
@@ -182,7 +182,7 @@ function Invoke-TwoPassFFMpeg {
                 aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):bframes=$BFrames`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:level-idc=5.1:sao=0:rc-lookahead=48:subme=4:`
                 chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:b-intra=1:frame-threads=2" `
-                $Paths.OutputFile 2>$Paths.LogPath
+                $Paths.OutputFile 2>>$Paths.LogPath
         }
     }
     #Encode SDR content (1080p and below)
@@ -207,7 +207,7 @@ function Invoke-TwoPassFFMpeg {
                 -x265-params "pass=2:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
                 aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):`
                 sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:frame-threads=2" `
-                $Paths.OutputFile 2>$Paths.LogPath
+                $Paths.OutputFile 2>>$Paths.LogPath
         }
         #Run a full 2 pass encode
         else {
@@ -228,7 +228,7 @@ function Invoke-TwoPassFFMpeg {
                 -x265-params "pass=2:stats='$($Paths.X265Log)':nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:`
                 aq-strength=$AqStrength`:psy-rd=$PsyRd`:psy-rdoq=$PsyRdoq`:open-gop=0:qcomp=$QComp`:keyint=120:deblock=$($Deblock[0]),$($Deblock[1]):`
                 sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:frame-threads=2" `
-                $Paths.OutputFile 2>$Paths.LogPath
+                $Paths.OutputFile 2>>$Paths.LogPath
         }
     }
 }
