@@ -372,6 +372,8 @@ if (!(Test-Path -Path $InputPath)) { throw "Input path does not exist. Check the
 
 Import-Module -Name ".\modules\FFTools" -Force
 
+$startTime = (Get-Date).ToLocalTime()
+
 Write-Host
 Write-Host "|<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" -ForegroundColor Magenta -BackgroundColor Black -NoNewline
 Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
@@ -381,7 +383,7 @@ Write-Host
 $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 Write-Host "Start Time: $((Get-Date).ToLocalTime())`n"
 #Generating paths to various files
-$paths = Set-RootPath
+$paths = Set-ScriptPaths
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
@@ -461,7 +463,10 @@ if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
 
 #Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $Paths.LogPath -Tail 8
-Write-Host "`nEnd time: $((Get-Date).ToLocalTime())"
+$endTime = (Get-Date).ToLocalTime()
+Write-Host "`nEnd time: $endTime"
 $Stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f $Stopwatch.Elapsed
 Write-Host ""
+#Generate the report file
+Write-Report -DateTimes @($startTime, $endTime) -TotalEncodeTime $Stopwatch -Paths $paths
