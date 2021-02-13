@@ -393,7 +393,7 @@ Write-Host ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -Back
 Write-Host
 
 $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-Write-Host "Start Time: $((Get-Date).ToLocalTime())`n"
+Write-Host "Start Time: $startTime`n"
 #Generating paths to various files
 $paths = Set-ScriptPaths
 #if the output path already exists, prompt to delete the existing file or exit script
