@@ -287,7 +287,7 @@ param (
 
 ## Global Variables ##
 
-#Change these to modify the default path for crop files when a regex match cannot be made
+#Change these to modify the default path for generated files when a regex match cannot be made
 $macDefaultPath = '~/Movies'
 $linuxDefaultPath = '~/Videos'
 $windowsDefaultPath = "C:\Users\$env:USERNAME\Videos"
@@ -322,29 +322,40 @@ function Get-OperatingSystem {
 }
 
 #Returns an object containing the paths to the crop file and log file relative to the input path
-function Set-RootPath {
+function Set-ScriptPaths {
     if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.(?<ext>[a-z 2 4]+)") {
         $root = $Matches.root
         $title = $Matches.title
         $ext = $Matches.ext
-        $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
-        $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
-        $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
-        $stereoPath = Join-Path -Path $root -ChildPath "$title`_stereo.$ext"
         if ($OutputPath -match "(?<oRoot>.*(?:\\|\/)+)(?<oTitle>.*)\.(?<oExt>[a-z 2 4]+)") {
-            $remuxPath = Join-Path -Path $Matches.oRoot -ChildPath "$($Matches.oTitle)`_stereo-remux.$($Matches.oExt)"
+            $oRoot = $Matches.oRoot
+            $oTitle = $Matches.oTitle
+            $oExt = $Matches.oExt
         }
-        else { $remuxPath = Join-Path -Path $root -ChildPath "$title`_stereo-remux.$ext" }
+        #If regex match can't be made on the output path, use input matches instead
+        else {
+            $oRoot = $root
+            $oTitle = $title
+            $oExt = $ext
+        }
+        #Creating path strings used throughout the script
+        $cropPath = Join-Path -Path $root -ChildPath "$oTitle`_crop.txt"
+        $logPath = Join-Path -Path $root -ChildPath "$oTitle`_encode.log"
+        $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
+        $stereoPath = Join-Path -Path $root -ChildPath "$oTitle`_stereo.$oExt"
+        $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle`_stereo-remux.$oExt"
     }
+    #Regex match could not be made on the folder pattern
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
         $os = Get-OperatingSystem
         Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
+        #Creating path strings used throughout the script
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
         $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
         $stereoPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo.mkv"
-        $RemuxPath = Join-Path -Path $os.DefaultPath -ChildPath "$title`_stereo-remux.mkv"
+        $RemuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
@@ -359,6 +370,7 @@ function Set-RootPath {
         LogPath    = $logPath
         X265Log    = $x265Log
         OutputFile = $OutputPath
+        Title      = $oTitle
     }
     return $pathObject
 }
