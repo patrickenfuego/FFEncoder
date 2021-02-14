@@ -267,6 +267,17 @@ param (
     [Alias("B")]
     [int]$BFrames = 4,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Alias("BINT")]
+    [switch]$BIntra,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(0, 7)]
+    [Alias("SM", "SPM")]
+    [int]$Subme,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
@@ -455,6 +466,8 @@ $ffmpegParams = @{
     NoiseReduction = $NoiseReduction
     Qcomp          = $QComp
     BFrames        = $BFrames
+    BIntra         = $BIntra
+    Subme          = $Subme 
     Paths          = $paths
     TestFrames     = $TestFrames
 }

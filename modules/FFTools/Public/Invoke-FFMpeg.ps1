@@ -84,6 +84,14 @@ function Invoke-FFMpeg {
         [Parameter(Mandatory = $false)]
         [int]$BFrames,
 
+        # Enables the evaluation of intra modes in B slices
+        [Parameter(Mandatory = $false)]
+        [switch]$BIntra,
+
+        # Subpel motion refinement
+        [Parameter(Mandatory = $false)]
+        [int]$Subme,
+
         # Path to the log file
         [Parameter(Mandatory = $true)]
         [Alias("L")]
@@ -137,6 +145,9 @@ function Invoke-FFMpeg {
         $audio2 = Set-AudioPreference @audioParam2
         if ($null -ne $audio2) { $audio = $audio + $audio2 }
     }
+    #Set args to preset default if not modified by the user via parameters
+    $presetArgs = @{ Subme = $subme; BIntra = $BIntra; BFrames = $BFrames }
+    $p = Set-Parameters -ScriptParams $presetArgs -Preset $Preset
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
@@ -151,19 +162,21 @@ function Invoke-FFMpeg {
             Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1])`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                level-idc=5.1:keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                level-idc=5.1:keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$BFrames`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
-                psy-rdoq=$PsyRdoq`:chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                psy-rdoq=$PsyRdoq`:chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:`
+                b-intra=$($p.BIntra)" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
             ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                level-idc=5.1:keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:bframes=$BFrames`:b-intra=1:`
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                level-idc=5.1:keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$BFrames`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
-                psy-rdoq=$PsyRdoq`:chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1" `
+                psy-rdoq=$PsyRdoq`:chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:`
+                b-intra=$($p.BIntra)" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
     }
@@ -173,17 +186,17 @@ function Invoke-FFMpeg {
             Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
-                psy-rdoq=$PsyRdoq`:open-gop=0:b-intra=1:frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$BFrames`:psy-rdoq=$PsyRdoq`:`
+                open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
             ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0])`:nr-inter=$($NoiseReduction[1])`:aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                keyint=120:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=4:strong-intra-smoothing=0:bframes=$BFrames`:`
-                psy-rdoq=$PsyRdoq`:open-gop=0:b-intra=1:frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$BFrames`:psy-rdoq=$PsyRdoq`:`
+                open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
     }
