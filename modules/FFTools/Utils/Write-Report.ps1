@@ -41,7 +41,7 @@ function Write-Report {
     "" >> $outPath
     "-------------- INPUT PARAMETERS --------------" >> $outPath
     #Loop through the log file and append relevant lines of data to the report
-    for ($i = 300; $i -lt $log.Length; $i++) {
+    for ($i = 150; $i -lt $log.Length; $i++) {
         if ($log[$i] -match "x265 \[info\]\:.*") { 
             if ($log[$i - 1] -match "video") {
                 "" >> $outPath
