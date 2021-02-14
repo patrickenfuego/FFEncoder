@@ -56,7 +56,7 @@ function Set-AudioPreference {
         if (@("eac3", "dts", "ac3", "dd") -contains $UserChoice) {
             Write-Host "7.1 channel layout will be downmixed to 5.1" @warnColors
         }
-        elseif (1..5 -contains $Bitrate) { return }
+        elseif (1..5 -contains $Bitrate) { Write-Host "`n"; return }
         Write-Host "Bitrate per channel: ~ $bitsPerChannel`n"
     }
 
@@ -83,7 +83,7 @@ function Set-AudioPreference {
             else { return $null }
         }
     }
-    #Set the audio arg array based on user selection and return it to the caller function
+    #Set the audio args array based on user selection and return it to the caller function
     $audioArgs = switch -Regex ($UserChoice) {
         "^c[opy]*$" {
             Write-Host "** COPY AUDIO SELECTED **" @progressColors
@@ -132,7 +132,7 @@ function Set-AudioPreference {
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3)
             }
             elseif (1..5 -contains $Bitrate) { 
-                Write-Host "VBR selected. Quality value: $Bitrate`n"
+                Write-Host "VBR selected. Quality value: $Bitrate"
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
             }
             else {
@@ -169,7 +169,7 @@ function Set-AudioPreference {
         }
         default { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
     } 
-
+    #Print relevant info to console based on user choice 
     if (@('copy', 'c', 'copyall', 'ca', 'none', 'n', 'flac', 'f') -contains $UserChoice) {  } #do nothing
     elseif (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
         $channels = Get-ChannelCount
