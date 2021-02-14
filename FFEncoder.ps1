@@ -265,7 +265,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 16)]
     [Alias("B")]
-    [int]$BFrames = 4,
+    [int]$BFrames,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -398,6 +398,7 @@ if (!(Test-Path -Path $InputPath)) { throw "Input path does not exist. Check the
 
 Import-Module -Name ".\modules\FFTools" -Force
 
+$stopwatch = [System.Diagnostics.stopwatch]::StartNew()
 $startTime = (Get-Date).ToLocalTime()
 
 Write-Host
@@ -406,7 +407,6 @@ Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
 Write-Host ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
 Write-Host
 
-$stopwatch = [System.Diagnostics.stopwatch]::StartNew()
 Write-Host "Start Time: $startTime`n"
 #Generating paths to various files
 $paths = Set-ScriptPaths
@@ -472,7 +472,6 @@ $ffmpegParams = @{
     TestFrames     = $TestFrames
 }
 
-#Setting which FFMpeg function to call
 if ($rcTwoPass) { Invoke-TwoPassFFMpeg @ffmpegParams }
 else { Invoke-FFMpeg @ffmpegParams }
 
@@ -484,15 +483,17 @@ if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
     if ($?) { Write-Host "done!" @progressColors; Write-Host "`n" }
     else { Write-Host ""; Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors } 
 }
-# if ($PSBoundParameters['RemoveFiles']) {
-#     Write-Host "`nDeleting generated files..."
-#     Get-Content -Path $Paths.LogPath -Tail 8
-# }
 
 #Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $Paths.LogPath -Tail 8
 $endTime = (Get-Date).ToLocalTime()
 Write-Host "`nEnd time: $endTime"
+
+# if ($PSBoundParameters['RemoveFiles']) {
+#     Write-Host "`nDeleting generated files..."
+#     Get-Content -Path $Paths.LogPath -Tail 8
+# }
+
 $stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f $stopwatch.Elapsed
 Write-Host ""
