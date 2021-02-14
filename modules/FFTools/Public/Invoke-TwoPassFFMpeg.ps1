@@ -145,7 +145,7 @@ function Invoke-TwoPassFFMpeg {
     #Build the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
-    Write-Host "** 2 Pass Rate Control Selected **" @emphasisColors
+    Write-Host "** 2 Pass ABR Rate Control Selected @ $($RateControl[1])b/s **" @emphasisColors
 
     if ($UHD) {
         if ($PSBoundParameters['TestFrames']) {

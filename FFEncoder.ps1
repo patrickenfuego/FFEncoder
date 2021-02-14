@@ -432,7 +432,7 @@ elseif ($PSBoundParameters['VideoBitrate']) {
     if ($Pass -eq 2) { $rcTwoPass = $true }
 }
 else {
-    Write-Warning "There was an error verifying the video quality parameter. This statement should be unreachable. CRF 18.0 will be used"
+    Write-Warning "There was an error verifying rate control. This statement should be unreachable. CRF 18.0 will be used"
     $rateControl = @('-crf', 18.0) 
 }
 #Condensing audio parameters
