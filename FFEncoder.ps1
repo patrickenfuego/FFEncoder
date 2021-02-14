@@ -339,11 +339,12 @@ function Set-ScriptPaths {
             $oExt = $ext
         }
         #Creating path strings used throughout the script
-        $cropPath = Join-Path -Path $root -ChildPath "$oTitle`_crop.txt"
-        $logPath = Join-Path -Path $root -ChildPath "$oTitle`_encode.log"
+        $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
+        $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
         $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
         $stereoPath = Join-Path -Path $root -ChildPath "$oTitle`_stereo.$oExt"
         $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle`_stereo-remux.$oExt"
+        $reportPath = Join-Path -Path $root -ChildPath "$oTitle.report"
     }
     #Regex match could not be made on the folder pattern
     else {
@@ -355,7 +356,8 @@ function Set-ScriptPaths {
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
         $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
         $stereoPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo.mkv"
-        $RemuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
+        $remuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
+        $reportPath = Join-Path -Path $os.DefaultPath -ChildPath "report.report"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
@@ -371,6 +373,7 @@ function Set-ScriptPaths {
         X265Log    = $x265Log
         OutputFile = $OutputPath
         Title      = $oTitle
+        ReportPath = $reportPath
     }
     return $pathObject
 }
@@ -392,7 +395,7 @@ Write-Host " Firing up FFEncoder " @emphasisColors -NoNewline
 Write-Host ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>|" -ForegroundColor Magenta -BackgroundColor Black
 Write-Host
 
-$Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+$stopwatch = [System.Diagnostics.stopwatch]::StartNew()
 Write-Host "Start Time: $startTime`n"
 #Generating paths to various files
 $paths = Set-ScriptPaths
@@ -477,8 +480,8 @@ if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
 Get-Content -Path $Paths.LogPath -Tail 8
 $endTime = (Get-Date).ToLocalTime()
 Write-Host "`nEnd time: $endTime"
-$Stopwatch.Stop()
-"Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f $Stopwatch.Elapsed
+$stopwatch.Stop()
+"Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f $stopwatch.Elapsed
 Write-Host ""
 #Generate the report file
-Write-Report -DateTimes @($startTime, $endTime) -TotalEncodeTime $Stopwatch -Paths $paths
+Write-Report -DateTimes @($startTime, $endTime) -TotalEncodeTime $stopwatch -Paths $paths
