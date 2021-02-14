@@ -39,7 +39,7 @@ function Get-HDRMetadata {
         Select-Object -First 1
 
     if (!$metadata) {
-        throw "yuv420p10le pixel format could not be found within the first 5 frames. Make sure the input file supports HDR."
+        throw "10-bit pixel format could not be found within the first 5 frames. Make sure the input file supports HDR."
     }
 
     [string]$pixelFmt = $metadata.pix_fmt
