@@ -72,6 +72,7 @@ function Set-AudioPreference {
         RemuxStream = $RemuxStream
     }
     if ($Stereo) {
+        #If the RemuxStream flag is set (stream copy + filtering selected)
         if ($RemuxStream) { 
             $temp = Convert-ToStereo @stereoParams 
             return $temp
@@ -82,24 +83,27 @@ function Set-AudioPreference {
             else { return $null }
         }
     }
-
+    #Set the audio arg array based on user selection and return it to the caller function
     $audioArgs = switch -Regex ($UserChoice) {
         "^c[opy]*$" {
             Write-Host "** COPY AUDIO SELECTED **" @progressColors
             Write-Host "Audio stream 0 will be copied. " -NoNewline  
             Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a:0', '-c:a:0', 'copy')
+            break
         }
         "c[opy]*a[ll]*" {
             Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
             Write-Host "All audio streams will be copied. " -NoNewline
             Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a', '-c:a', 'copy')
+            break
         }
         "^aac$" {
             Write-Host "** AAC AUDIO SELECTED **" @progressColors
             if (!$Bitrate) { $Bitrate = 512 }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k") }
+            break
         }
         "^dts$" {
             Write-Host "** DTS AUDIO SELECTED **" @progressColors
@@ -109,6 +113,7 @@ function Set-AudioPreference {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
+            break
         }
         "^eac3$" {
             Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
@@ -118,24 +123,23 @@ function Set-AudioPreference {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
+            break
         }
         "f[dk]*aac$" {
             Write-Host "** FDK AAC AUDIO SELECTED **" @progressColors
             if (!$Bitrate) { 
                 Write-Host "No bitrate specified. Using VBR 3" @warnColors
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3)
-                break
             }
             elseif (1..5 -contains $Bitrate) { 
                 Write-Host "VBR selected. Quality value: $Bitrate`n"
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', $Bitrate)
-                break
             }
             else {
                 Write-Host "CBR Selected. Bitrate: $Bitrate`k"
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-b:a', "$Bitrate`k")
-                break
             }
+            break
         }
         { @('ac3', 'dd') -contains $_ } {
             Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
@@ -145,15 +149,18 @@ function Set-AudioPreference {
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
+            break
         }
         { 0..5 -contains $_ } { 
             Write-Host "AUDIO STREAM $UserChoice SELECTED" @progressColors
             Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in output"
             @('-map', "0:a:$UserChoice`?", "-c:a:$Stream", 'copy')
+            break
         }
         "^f[lac]*" {
             Write-Host "** FLAC AUDIO SELECTED **" @progressColors
             @('-map', '0:a:0', "-c:a:$Stream", 'flac')
+            break
         }
         "^n[one]?" {
             Write-Host "** NO AUDIO SELECTED **" @progressColors
