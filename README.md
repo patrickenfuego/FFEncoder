@@ -5,13 +5,13 @@
   - [Rate Control Options](#rate-control-options)
   - [Script Parameters](#script-parameters)
   - [Hard Coded Parameters](#hard-coded-parameters)
-    - [Exclusive to 2-Pass ABR](#exclusive-to-2-pass-abr)
+    - [Exclusive to First Pass ABR](#exclusive-to-first-pass-abr)
     - [Exclusive to 4K UHD Content](#exclusive-to-4k-uhd-content)
     - [Exclusive to SDR Content 1080p and Below](#exclusive-to-sdr-content-1080p-and-below)
   - [Audio Options](#audio-options)
     - [Using the libfdk_aac Encoder](#using-the-libfdk_aac-encoder)
     - [Downmixing Multi-Channel Audio to Stereo](#downmixing-multi-channel-audio-to-stereo)
-  - [Subtitles](#subtitles)
+  - [Subtitle Options](#subtitle-options)
   - [Requirements](#requirements)
     - [Windows](#windows)
     - [Linux](#linux)
@@ -77,25 +77,25 @@ FFEncoder can accept the following parameters from the command line:
 | ------------------ | ------- | ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **TestFrames**     | 0 (off) | False         | **T**                  | Integer value representing the number of test frames to encode. When enabled, encoding starts at 00:01:30 so that title screens are skipped              |
 | **Help**           | False   | <b>\*</b>True | **H**, **/?**, **?**   | Switch to display help information                                                                                                                       |
-| **InputPath**      | N/A     | True          | **I**                  | The path to the source file                                                                                                                              |
-| **Audio**          | Copy    | False         | **A**                  | Audio preference for the 1st audio stream in the output file. See [Audio Options](#audio-options)                                                        |
-| **AudioBitrate**   | None    | False         | **AB**, **ABitrate**   | Parameter to specify bitrate for the chosen audio codec (primary stream). Compatible with AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)   |
+| **InputPath**      | N/A     | True          | **I**                  | The path to the source file (to be encoded)                                                                                                              |
+| **Audio**          | Copy    | False         | **A**                  | Audio preference for the primary stream. See [Audio Options](#audio-options) for more info                                                               |
+| **AudioBitrate**   | None    | False         | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
 | **Stereo**         | False   | False         | **2CH**, **ST**        | Switch to downmix the first audio track to stereo. See [Audio Options](#audio-options)                                                                   |
-| **Audio2**         | None    | False         | **A2**                 | Audio preference for a 2nd audio stream in the output file. See [Audio Options](#audio-options)                                                          |
-| **AudioBitrate2**  | None    | False         | **AB2**, **ABitrate2** | Parameter to specify bitrate for the chosen audio codec (2nd stream). Compatible with AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)       |
+| **Audio2**         | None    | False         | **A2**                 | Audio preference for the secondary stream. See [Audio Options](#audio-options) for more info                                                             |
+| **AudioBitrate2**  | None    | False         | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
 | **Stereo2**        | False   | False         | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo. See [Audio Options](#audio-options)                                                                  |
-| **Subtitles**      | Default | False         | **S**                  | Subtitle passthrough preference. See the [Subtitles](#subtitles) section                                                                                 |
-| **Preset**         | Slow    | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest)                                                                         |
-| **CRF**            | N/A     | <b>\*</b>True | **C**                  | Constant rate factor rate control setting. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate                                |
-| **VideoBitrate**   | N/A     | <b>\*</b>True | **VBitrate**           | Average bitrate rate control setting. This can be used as an alternative to CRF rate control, and will force the bitrate to the approximate value passed |
-| **Pass**           | 2       | False         | **P**                  | The number of passes the encoder will perform. Used with the `-VideoBitrate` parameter for ABR encodes. Default is 2-Pass                                |
-| **Deblock**        | -2, -2  | False         | **DBF**                | Deblock filter. The first value controls the strength, and the second value controls the frequency of use                                                |
-| **AqMode**         | 2       | False         | **AQM**                | x265 AQ mode setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                              |
+| **Subtitles**      | Default | False         | **S**                  | Subtitle passthrough preference. See the [Subtitle Options](#subtitle-options) section for more info                                                     |
+| **Preset**         | Slow    | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset parameters              |
+| **CRF**            | N/A     | <b>\*</b>True | **C**                  | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate             |
+| **VideoBitrate**   | N/A     | <b>\*</b>True | **VBitrate**           | Rate control parameter that targets a specific file size. Can be used as an alternative to CRF rate control when output size is a priority               |
+| **Pass**           | 2       | False         | **P**                  | The number of passes the encoder will perform for ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                |
+| **Deblock**        | -2, -2  | False         | **DBF**                | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                    |
+| **AqMode**         | 2       | False         | **AQM**                | x265 Adaptive Quantization setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                |
 | **AqStrength**     | 1.00    | False         | **AQS**                | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates |
 | **PsyRd**          | 2.00    | False         | **PRD**                | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                          |
 | **PsyRdoq**        | 1.00    | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
 | **QComp**          | 0.60    | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
-| **BFrames**        | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use             |
+| **BFrames**        | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
 | **BIntra**         | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
 | **Subme**          | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
 | **NoiseReduction** | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
@@ -107,20 +107,20 @@ FFEncoder can accept the following parameters from the command line:
 
 Video encoding is a subjective process, and I have my own personal preferences. The following parameters are hard coded (but can be changed easily):
 
-- `no-sao` - I really hate the way sao looks, so it's disabled along with `selective-sao`. There's a reason it has earned the moniker "smooth all objects", and it makes everything look too waxy in my opinion
-- `rc-lookahead=48` - People are all over the board with this, but I have found 48 (2 \* 24 fps, or effectively, 2 \* fps) to be a number with good gains and no diminishing returns. This is recommended by many experienced folks at the [doom9 forum](https://forum.doom9.org/showthread.php?t=175993)
+- `no-sao` - I really hate the way sao looks, so it's disabled along with `selective-sao`. There's a reason it's earned the moniker "smooth all objects", and it makes everything look too waxy in my opinion
+- `rc-lookahead=48` - I have found 48 (2 \* 24 fps) to be a number with good gains and no diminishing returns. This is recommended by many at the [doom9 forums](https://forum.doom9.org/showthread.php?t=175993)
 - `keyint-192` - This is personal preference. I like to spend a few extra bits to insert more I-frames into a GOP, which helps with random seeking throughout the video. The bitrate increase is trivial
-- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 had closed GOPs by default. For more insight, listen to [Ben Waggoner](https://streaminglearningcenter.com/articles/open-and-closed-gops-all-you-need-to-know.html) has to say on the topic
-- `frame-threads=2` - It is known that more frame threads degrade overall quality (additional reading can be found [here](https://forum.doom9.org/showthread.php?t=176197&page=3)). 2 frame threads is a nice compromise for most systems
+- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 uses closed GOPs by default. For more insight, listen to [Ben Waggoner](https://streaminglearningcenter.com/articles/open-and-closed-gops-all-you-need-to-know.html) has to say on the topic
+- `frame-threads=2` - It's known that more frame threads degrade overall quality (additional reading can be found [here](https://forum.doom9.org/showthread.php?t=176197&page=3)). 2 frame threads is a nice compromise for most systems
 
-### Exclusive to 2-Pass ABR
+### Exclusive to First Pass ABR
 
-x265 offers a `--slow-firstpass` option to speed up the first pass of a 2-Pass ABR encode, but it disables or lowers some very important quality related parameters like `--rd` and `--ref`. Because of this, I have come up with my own custom first pass parameters to help strike a balance between speed and quality. The following parameters are disabled or reduced during pass 1, regardless of the preset selected:
+x265 offers a `--no-slow-firstpass` option to speed up the first pass of a 2-Pass ABR encode, but it disables or lowers some very important quality related parameters like `--rd` and `--ref`. Because of this, I have come up with my own custom first pass parameters to help strike a balance between speed and quality. The following parameters are disabled or reduced during pass 1, regardless of the preset selected:
 
-- `rect=0` - Rect is known to eat up CPU cycles for dinner, and so it is disabled. This is also used by `--slow-firstpass`
-- `max-merge=2` - This is the default value for presets ultrafast - medium, and is meant to increase first pass speeds for presets slow - veryslow. `--slow-firstpass` lowers this to 1
-- `subme=2` - This is one of the settings enabled/reduced by `--slow-firstpass`
-- `b-intra=0` - Disabled, regardless if it is enabled via parameter or not
+- `rect=0` - Rect is known to eat up CPU cycles for dinner, and so it's disabled. This is also used by `--no-slow-firstpass`
+- `max-merge=2` - This is the default value for presets ultrafast - medium, and is meant to increase first pass speeds for presets slow - veryslow. `--no-slow-firstpass` lowers this to 1
+- `subme=2` - This is one of the settings set by `--no-slow-firstpass`
+- `b-intra=0` - Disabled, regardless if it's enabled via parameter or not
 - `frame-threads=MAX(2, --frame-threads)` - If your CPU supports more than 2 frame threads, they will be used for the first pass only
 
 ### Exclusive to 4K UHD Content
@@ -143,7 +143,7 @@ FFEncoder currently supports the following audio options wih the `-Audio`/`-Audi
 2.  If the `-AudioBitrate` parameters are not present, the script will search the input file for a matching stream and stream copy it to the output file if found
 3.  If no bitrate is specified and no existing stream is found, then the script will transcode to the selected codec at the default bitrates listed below:
 
-**NOTE:** To copy Dolby Atmos streams, you **must** be using the latest ffmpeg build **or the script will fail**
+> To copy Dolby Atmos streams, you **must** be using the latest ffmpeg build **or the script will fail**
 
 | Type         | Values           | Default        | Description                                                                                                                            |
 | ------------ | ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -162,7 +162,7 @@ FFEncoder currently supports the following audio options wih the `-Audio`/`-Audi
 
 ### Using the libfdk_aac Encoder
 
-FFEncoder includes support for Fraunhofer's libfdk_aac, even though it is not included in a standard ffmpeg executable. Due to a conflict with ffmpeg's LGPL, libfdk_aac cannot be distributed with any official ffmpeg binaries, but it can be included when compiling ffmpeg manually from source. For more information on compiling from source, see [Requirements](#requirements).
+FFEncoder includes support for Fraunhofer's libfdk_aac, even though it is not included in a standard ffmpeg executable. Due to a conflict with ffmpeg's GPL, libfdk_aac cannot be distributed with any official ffmpeg binaries, but it can be included when compiling ffmpeg manually from source. For more information on compiling from source, see [Requirements](#requirements).
 
 One of the benefits of the FDK encoder is that it supports variable bitrate (VBR). When using the `-AudioBitrate`/`-AudioBitrate2` parameters with `fdkaac`, **values 1-5 are used to signal VBR**. 1 = lowest quality and 5 = highest quality.
 
@@ -174,7 +174,7 @@ When using any combination of `copy`/`c`/`copyall`/`ca` and `-Stereo`/`-Stereo2`
 
 &nbsp;
 
-## Subtitles
+## Subtitle Options
 
 FFEncoder can copy subtitle streams from the input file to the output file using the `-Subtitles` / `s` parameter. I have not added subtitle transcoding because, frankly, ffmpeg is not the best option for this. If you need to convert subtitles from one format to the other, I recommend using [Subtitle Edit](https://www.nikse.dk/SubtitleEdit/) (Windows only).
 
@@ -183,21 +183,24 @@ The different parameter options are:
 - `default` / `d` - Copies the default (primary) subtitle stream from the input file
 - `all` / `a` - Copies all subtitle streams from the input file
 - `none` / `n` - Excludes subtitles from the output entirely
-- **Language** - You can also specify a language to copy, and FFEncoder will search the input for all corresponding subtitles. If the specified language isn't found, no subtitle streams will be copied. The following languages are supported (use the language code on the right):
-  - English - `eng`
-  - French - `fre`
-  - German - `ger`
-  - Spanish - `spa`
-  - Dutch - `dut`
-  - Danish - `dan`
-  - Finnish - `fin`
-  - Norwegian - `nor`
-  - Czech - `cze`
-  - Polish - `pol`
-  - Chinese - `chi`
-  - Korean - `kor`
-  - Greek - `gre`
-  - Romanian - `rum`
+- **Language** - You can also specify a language to copy, and FFEncoder will search the input for all subtitles matching that language. If the specified language isn't found, no subtitles will be copied. The following languages are supported using the language code on the right:
+
+  | Language  | Code  |
+  | --------- | ----- |
+  | Chinese   | `chi` |
+  | Czech     | `cze` |
+  | Danish    | `dan` |
+  | Dutch     | `dut` |
+  | English   | `eng` |
+  | Finnish   | `fin` |
+  | French    | `fre` |
+  | German    | `ger` |
+  | Greek     | `gre` |
+  | Korean    | `kor` |
+  | Norwegian | `nor` |
+  | Polish    | `pol` |
+  | Romanian  | `rum` |
+  | Spanish   | `spa` |
 
 &nbsp;
 
@@ -206,7 +209,7 @@ The different parameter options are:
 - ffmpeg / ffprobe
 - PowerShell Core (MacOS/Linux users only)
 
-**NOTE:** You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (such as Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
+> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
 
 ### Windows
 
