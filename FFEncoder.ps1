@@ -301,7 +301,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("D", "RM")]
+    [alias("Del", "RM")]
     [switch]$RemoveFiles
 )
 
