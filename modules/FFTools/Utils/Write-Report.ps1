@@ -14,7 +14,7 @@
         The report name is the same as the output file name
     .PARAMETER DateTimes
         Array containing the startTime, endTime objects
-    .PARAMETER TotalEncodeTime
+    .PARAMETER Duration
         Stopwatch object which contains the duration of the encode
     .PARAMETER Paths
         Object containing various paths used throughout the script
@@ -26,14 +26,14 @@ function Write-Report {
         [datetime[]]$DateTimes,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [system.object]$TotalEncodeTime,
+        [system.object]$Duration,
 
         [Parameter(Mandatory = $true, Position = 2)]
         [hashtable]$Paths
     )
 
     $log = Get-Content $Paths.LogPath
-    $outPath = Join-Path -Path $Paths.Root -ChildPath "$($Paths.Title).report"
+    $outPath = $Paths.ReportPath
 
     #Write contents to the report file
     "*-------------- ENCODING REPORT FOR: $(($Paths.Title).toUpper()) --------------*`n" > $outPath
@@ -41,7 +41,7 @@ function Write-Report {
     "" >> $outPath
     "-------------- INPUT PARAMETERS --------------" >> $outPath
     #Loop through the log file and append relevant lines of data to the report
-    for ($i = 150; $i -lt $log.Length; $i++) {
+    for ($i = 100; $i -lt $log.Length; $i++) {
         if ($log[$i] -match "x265 \[info\]\:.*") { 
             if ($log[$i - 1] -match "video") {
                 "" >> $outPath
@@ -55,7 +55,7 @@ function Write-Report {
     "" >> $outPath
     "End Time: " + $DateTimes[1] >> $outPath
     "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f `
-        $TotalEncodeTime.Elapsed >> $outPath
+        $Duration.Elapsed >> $outPath
 
 }
 
