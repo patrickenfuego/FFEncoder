@@ -55,38 +55,40 @@
     .PARAMETER InputPath
         Location of the file to be encoded
     .PARAMETER Audio
-        Audio encoding option. FFEncoder has 5 audio options:
+        Audio selection options. FFEncoder has 5 audio options:
             1. copy/c       - Pass through the primary audio stream without re-encoding
             2. copyall/ca   - Pass through all audio streams without re-encoding
-            2. none/n       - No audio will be copied. This is useful for Dolby Atmos tracks
-            3. aac          - Convert primary audio stream to AAC. Default setting is 64 kb/s per channel. Use the -AacBitrate parameter to specify a custom value
-            4. dts          - If there is an existing DTS Audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to DTS 
-                              (This feature is EXPERIMENTAL. Only transcode to DTS for compatibility purposes)
-            5. ac3          - Dolby Digital. If there is an existing AC3 audio stream, it will be copied instead of the primary stream. Otherwise, the primary stream will be transcoded to AC3
-            6. flac/f       - Convert the primary audio stream to FLAC lossless audio 
+            3. none/n       - No audio will be copied
+            4. aac          - Convert primary audio stream to AAC. Default setting is 512 kb/s for multi-channel, and 128 kb/s for stereo
+            5. fdkaac/faac  - Convert primary audio stream to AAC using FDK AAC. Default setting is -vbr 3
+            6. dts          - Convert/copy DTS to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing DTS stream will be copied
+            7. ac3          - Convert/copy AC3 to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing AC3 stream will be copied
+            8. eac3         - Convert/copy E-AC3 to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing E-AC3 stream will be copied
+            9. flac/f       - Convert the primary audio stream to FLAC lossless audio
+            10. Stream #    - Copy an audio stream by its identifier in ffmpeg 
     .PARAMETER AudioBitrate
-        Constant bitrate value for supported codec streams. It is advised that you consult the chosen codec's documentation for the recommended bitrate per channel before setting this parameter.
-        Codecs that support the use of this parameter (so far) are AAC, EAC3, DTS, and AAC. Unit is always kb/s, and the 'k' should be excluded from the passed value 
+        Specifies the bitrate for the chosen codec (in kb/s). Values 1-5 are used to signal -vbr with libfdk_aac
+    .PARAMETER Stereo
+        Switch to downmix the paired audio stream to stereo
     .PARAMETER Subtitles
         Supports passthrough of embedded subtitles with the following options and languages:
-
-        - All               - "all"  / "a"
-        - None              - "none" / "n"
-        - Default (first)   - "default" / "d"
-        - English           - "eng"
-        - French            - "fra"
-        - German            - "ger"
-        - Spanish           - "spa"
-        - Dutch             - "dut"
-        - Danish            - "dan"
-        - Finnish           - "fin"
-        - Norwegian         - "nor"
-        - Czech             - "cze"
-        - Polish            - "pol"
-        - Chinese           - "chi"
-        - Korean            - "kor"
-        - Greek             - "gre"
-        - Romanian          - "rum"
+            - All               - "all"  / "a"
+            - None              - "none" / "n"
+            - Default (first)   - "default" / "d"
+            - English           - "eng"
+            - French            - "fra"
+            - German            - "ger"
+            - Spanish           - "spa"
+            - Dutch             - "dut"
+            - Danish            - "dan"
+            - Finnish           - "fin"
+            - Norwegian         - "nor"
+            - Czech             - "cze"
+            - Polish            - "pol"
+            - Chinese           - "chi"
+            - Korean            - "kor"
+            - Greek             - "gre"
+            - Romanian          - "rum"
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest). Slower presets improve quality by enabling additional, more expensive, x265 parameters at the expensive of encoding time.
         Recommended presets (depending on source and purpose) are slow, medium, or fast. 
