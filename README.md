@@ -27,7 +27,7 @@ FFEncoder is a cross-platform PowerShell script that is meant to make high defin
 
 ## About
 
-FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify things manually for each run. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is complex, and some of the commands are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
+FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify complicated CLI arguments for each source. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is extensive, and many of the arguments are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
 
 &nbsp;
 
@@ -79,10 +79,10 @@ FFEncoder can accept the following parameters from the command line:
 | **Help**           | False   | <b>\*</b>True | **H**, **/?**, **?**   | Switch to display help information                                                                                                                       |
 | **InputPath**      | N/A     | True          | **I**                  | The path to the source file (to be encoded)                                                                                                              |
 | **Audio**          | Copy    | False         | **A**                  | Audio preference for the primary stream. See [Audio Options](#audio-options) for more info                                                               |
-| **AudioBitrate**   | None    | False         | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
+| **AudioBitrate**   | Codec   | False         | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
 | **Stereo**         | False   | False         | **2CH**, **ST**        | Switch to downmix the first audio track to stereo. See [Audio Options](#audio-options)                                                                   |
 | **Audio2**         | None    | False         | **A2**                 | Audio preference for the secondary stream. See [Audio Options](#audio-options) for more info                                                             |
-| **AudioBitrate2**  | None    | False         | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
+| **AudioBitrate2**  | Codec   | False         | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
 | **Stereo2**        | False   | False         | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo. See [Audio Options](#audio-options)                                                                  |
 | **Subtitles**      | Default | False         | **S**                  | Subtitle passthrough preference. See the [Subtitle Options](#subtitle-options) section for more info                                                     |
 | **Preset**         | Slow    | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset parameters              |
@@ -93,7 +93,7 @@ FFEncoder can accept the following parameters from the command line:
 | **AqMode**         | 2       | False         | **AQM**                | x265 Adaptive Quantization setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                |
 | **AqStrength**     | 1.00    | False         | **AQS**                | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates |
 | **PsyRd**          | 2.00    | False         | **PRD**                | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                          |
-| **PsyRdoq**        | 1.00    | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
+| **PsyRdoq**        | Preset  | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
 | **QComp**          | 0.60    | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
 | **BFrames**        | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
 | **BIntra**         | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
@@ -119,9 +119,9 @@ Video encoding is a subjective process, and I have my own personal preferences. 
 x265 offers a `--no-slow-firstpass` option to speed up the first pass of a 2-Pass ABR encode, but it disables or lowers some very important quality related parameters like `--rd` and `--ref`. Because of this, I have come up with my own custom first pass parameters to help strike a balance between speed and quality. The following parameters are disabled or reduced during pass 1, regardless of the preset selected:
 
 - `rect=0` - Rect is known to eat up CPU cycles for dinner, and so it's disabled. This is also used by `--no-slow-firstpass`
-- `max-merge=2` - This is the default value for presets ultrafast - medium, and is meant to increase first pass speeds for presets slow - veryslow. `--no-slow-firstpass` lowers this to 1
+- `max-merge=2` - This is the default value for presets ultrafast - medium, and is meant to increase first pass speeds for presets slow - placebo. `--no-slow-firstpass` lowers this to 1
 - `subme=2` - This is one of the settings set by `--no-slow-firstpass`
-- `b-intra=0` - Disabled, regardless if it's enabled via parameter or not
+- `b-intra=0` - Disabled, regardless if it's enabled via parameter or preset
 - `frame-threads=MAX(2, --frame-threads)` - If your CPU supports more than 2 frame threads, they will be used for the first pass only
 
 ### Exclusive to 4K UHD Content
@@ -146,18 +146,18 @@ FFEncoder currently supports the following audio options wih the `-Audio`/`-Audi
 
 > To copy Dolby Atmos streams, you **must** be using the latest ffmpeg build **or the script will fail**
 
-| Type         | Values           | Default        | Description                                                                                                                            |
-| ------------ | ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Copy**     | `copy`, `c`      | N/A            | Passes through the primary audio stream without re-encoding                                                                            |
-| **Copy All** | `copyall`, `ca`  | N/A            | Passes through all audio streams from the input to the output without re-encoding                                                      |
-| **AAC**      | `aac`            | 512 kb/s       | Converts the primary audio stream to AAC using ffmpeg's native CBR encoder. Compatible with the `-AudioBitrate` parameter              |
-| **FDK AAC**  | `fdkaac`, `faac` | Variable (VBR) | Converts the primary audio stream to AAC using libfdk_aac. Compatible with the `-AudioBitrate` parameter. See note below for more info |
-| **AC3**      | `ac3`, `dd`      | 640 kb/s       | Dolby Digital. Compatible with the `-AudioBitrate` parameter                                                                           |
-| **E-AC3**    | `eac3`           | 448 kb/s       | Dolby Digital Plus. Compatible with the `-AudioBitrate` parameter                                                                      |
-| **DTS**      | `dts`            | Variable (VBR) | DTS Core audio. **Warning**: ffmpeg's DTS encoder is "experimental". Compatible with the `-AudioBitrate` parameter                     |
-| **FLAC**     | `flac`, `f`      | Variable (VBR) | Converts the primary audio stream to FLAC lossless audio using ffmpeg's native FLAC encoder                                            |
-| **Stream #** | `0-5`            | N/A            | Select an audio stream using its stream identifier in ffmpeg/ffprobe. Not compatible with the `-Stereo` parameters                     |
-| **None**     | `none`, `n`      | N/A            | Removes all audio streams from the output. This is ideal for object based streams like Dolby Atmos, as it cannot currently be decoded  |
+| Type         | Values           | Default        | Description                                                                                                                             |
+| ------------ | ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Copy**     | `copy`, `c`      | N/A            | Passes through the primary audio stream without re-encoding                                                                             |
+| **Copy All** | `copyall`, `ca`  | N/A            | Passes through all audio streams from the input to the output without re-encoding                                                       |
+| **AAC**      | `aac`            | 512 kb/s       | Converts the primary audio stream to AAC using ffmpeg's native CBR encoder. Compatible with the `-AudioBitrate` parameters              |
+| **FDK AAC**  | `fdkaac`, `faac` | Variable (VBR) | Converts the primary audio stream to AAC using libfdk_aac. Compatible with the `-AudioBitrate` parameters. See note below for more info |
+| **AC3**      | `ac3`, `dd`      | 640 kb/s       | Dolby Digital. Compatible with the `-AudioBitrate` parameters                                                                           |
+| **E-AC3**    | `eac3`           | 448 kb/s       | Dolby Digital Plus. Compatible with the `-AudioBitrate` parameters                                                                      |
+| **DTS**      | `dts`            | Variable (VBR) | DTS Core audio. **Warning**: ffmpeg's DTS encoder is "experimental". Compatible with the `-AudioBitrate` parameters                     |
+| **FLAC**     | `flac`, `f`      | Variable (VBR) | Converts the primary audio stream to FLAC lossless audio using ffmpeg's native FLAC encoder                                             |
+| **Stream #** | `0-5`            | N/A            | Select an audio stream using its stream identifier in ffmpeg/ffprobe. Not compatible with the `-Stereo` parameters                      |
+| **None**     | `none`, `n`      | N/A            | Removes all audio streams from the output. This is ideal for object based streams like Dolby Atmos, as it cannot currently be decoded   |
 
 &nbsp;
 
