@@ -32,11 +32,11 @@ function New-CropFile {
         $duration = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 `
             -i $InputPath
         $duration = $duration / 60
-        $duration
         if ($duration) { return $duration } else { return $null }
     }
 
     Import-Module -Name ".\modules\PoshRSJob"
+    $duration = Get-Duration
 
     #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
     if (Test-Path -Path $CropFilePath) { 
@@ -56,28 +56,28 @@ function New-CropFile {
             Write-Output -InputObject $c2
         } 
 
-        if ((Get-Duration) -gt 40) {
+        if ($duration -gt 40) {
             Start-RSJob -Name "Crop 00:40:00" -Throttle 4 -ScriptBlock {
                 $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c3
             } 
         }
 
-        if ((Get-Duration) -gt 70) {
+        if ($duration -gt 70) {
             Start-RSJob -Name "Crop 01:00:00" -Throttle 4 -ScriptBlock {
                 $c4 = ffmpeg -ss 01:00:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c4
             }
         }
 
-        if ((Get-Duration) -gt 85) {
+        if ($duration -gt 85) {
             Start-RSJob -Name "Crop 01:20:00" -Throttle 4 -ScriptBlock {
                 $c5 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c5
             }
         }
 
-        if ((Get-Duration) -gt 95) {
+        if ($duration -gt 95) {
             Start-RSJob -Name "Crop 01:30:00" -Throttle 4 -ScriptBlock {
                 $c6 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c6
