@@ -104,11 +104,20 @@ v. 1.6.5
 
 - Added support for Fraunhofer AAC (libfdk_aac). When values 1-5 are used with -AudioBitrate parameter, variable bitrate (vbr) mode will be used instead at the corresponding input level
 - Added -QComp parameter. Default is 0.6 (all presets)
+- Added switch parameter for -BIntra. Default is defined by the preset used
+- Added -BFrames parameter. Default is defined by the preset used
 - Changed -Deblock default to -2,-2
-- Added -BFrames parameter. Default is 4
-- Added BIntra switch parameter. This turns on b-intra during encodes, which allows for the evaluation of intra modes in B frame slices
+- Added BIntra switch parameter. This turns on b-intra during encodes, which allows for the evaluation of intra modes in B frame slices. Default is defined by the preset used
 - Added support for source resolutions of 1080p and lower. Source dimensions are determined by the Measure-CropDimensions function. All 8 bit sources are encoded using profile main10 to help with banding
     - Currently no support for 1080p HDR. I plan to add this down the line
-- Added aud and hrd parameters for HDR metadata (it was fine without them, but they are "recommended")
+- Added aud and hrd parameters for UHD compliant encodes
 - Added the option to include a second audio stream, which is compatible with all audio options
-- Added option to downmix audio stream to stereo, while still retaining the LFE track
+- Added support for stream copying based on stream number in ffmpeg/ffprobe
+- Added option to downmix audio streams to stereo, while still retaining the LFE track
+    - Added additional logic to allow for stream copying and filtering simultaneously (ffmpeg cannot do both at the same time)
+- Improvements to 2-pass encoding. The script now checks for an existing x265 log file (larger than 9 MB) and will skip the first pass if found
+- Added utility function Write-Report to write important encoding information to a file named "<Title>.report". This acts as a "quick-view" for relevant encoder metrics, and is easier to digest than the full log file
+- Added utility function to show a file deletion prompt when necessary
+- Added Set-Parameters utility function, which assigns default preset values to parameters when they aren't passed by the user (subme, b-intra, bframes, etc.)
+- Added -RemoveFiles parameter that deletes extra files generated while the script is running (excluding input, output, and report file)
+
