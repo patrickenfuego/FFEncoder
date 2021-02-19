@@ -142,7 +142,7 @@ param (
 
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "Pass")]
-    [ValidateNotNullOrEmpty()]
+    [ValidateScript( { if (Test-Path $_) { $true } else { throw 'Input path does not exist' } } )]
     [Alias("I")]
     [string]$InputPath,
 
@@ -344,7 +344,7 @@ function Get-OperatingSystem {
     return $osInfo
 }
 
-#Returns an object containing the paths to the crop file and log file relative to the input path
+#Returns an object containing the paths needed throughout the script
 function Set-ScriptPaths {
     if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.(?<ext>[a-z 2 4]+)") {
         $root = $Matches.root
@@ -406,7 +406,6 @@ function Set-ScriptPaths {
 ######################################## Main Script Logic ########################################
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
-if (!(Test-Path -Path $InputPath)) { throw "Input path does not exist. Check the path and try again" }
 
 Import-Module -Name ".\modules\FFTools" -Force
 
@@ -425,12 +424,8 @@ $paths = Set-ScriptPaths
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
-if ($paths.InputFile) { 
-    #Creating the crop file
-    New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
- }
- else { throw "Input path could not be found" }
-
+#Creating the crop file
+New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
 #Calculating the crop values
 $cropDim = Measure-CropDimensions $paths.CropPath
 
