@@ -116,7 +116,7 @@
     .PARAMETER BFrames
         The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use
     .PARAMETER BIntra 
-        Enables the evaluation of intra modes in B slices. Has a minor impact on performance 
+        Enables the evaluation of intra modes in B slices. Accepted values are 0 (off) or 1 (on). Has a minor impact on performance 
     .PARAMETER Subme
         The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a large performance impact 
     .PARAMETER QComp
@@ -281,8 +281,9 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(0, 1)]
     [Alias("BINT")]
-    [switch]$BIntra,
+    [int]$BIntra,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]

@@ -65,7 +65,7 @@ function Invoke-TwoPassFFMpeg {
 
         # Enables the evaluation of intra modes in B slices
         [Parameter(Mandatory = $false)]
-        [switch]$BIntra,
+        [int]$BIntra,
 
         # Subpel motion refinement
         [Parameter(Mandatory = $false)]
