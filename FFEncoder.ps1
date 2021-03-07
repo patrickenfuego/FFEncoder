@@ -507,3 +507,5 @@ if ($PSBoundParameters['RemoveFiles']) {
         Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv"
     }
 }
+#Remove variable from memory to prevent leaking into another encode
+Remove-Variable paths
