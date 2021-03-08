@@ -141,6 +141,22 @@ function Set-AudioPreference {
             }
             break
         }
+        { @('aac_at', 'ataac', "aacat") -contains $_  } {
+            Write-Host "** AAC_AT AUDIO SELECTED **" @progressColors
+            if (!$Bitrate) { 
+                Write-Host "No mode specified. Using auto VBR" @warnColors
+                @('-map', '0:a:0', "-c:a:$Stream", 'aac_at')
+            }
+            elseif (0..3 -contains $Bitrate) { 
+                Write-Host "VBR selected. Quality value: $Bitrate"
+                @('-map', '0:a:0', "-c:a:$Stream", 'aac_at', '-aac_at_mode', $Bitrate)
+            }
+            else {
+                Write-Host "Invalid mode selection for aac_at. Using auto VBR" @warnColors
+                @('-map', '0:a:0', "-c:a:$Stream", 'aac_at')
+            }
+            break
+        }
         { @('ac3', 'dd') -contains $_ } {
             Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k") }
