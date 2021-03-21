@@ -149,7 +149,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", 1, 2, 3, 4, 5)]
+        "fdkaac", "faac", "aacat", "ataac", "aac_at", 1, 2, 3, 4, 5)]
     [Alias("A")]
     [string]$Audio = "copy",
 
@@ -167,7 +167,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", 1, 2, 3, 4, 5)]
+        "fdkaac", "faac", "aacat", "ataac", "aac_at", 1, 2, 3, 4, 5)]
     [Alias("A2")]
     [string]$Audio2 = "none",
 
