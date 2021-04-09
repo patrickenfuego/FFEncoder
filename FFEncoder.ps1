@@ -305,7 +305,12 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [alias("Del", "RM")]
-    [switch]$RemoveFiles
+    [switch]$RemoveFiles,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("DI")]
+    [switch]$Deinterlace
 )
 
 ## Global Variables ##
@@ -466,6 +471,7 @@ $ffmpegParams = @{
     Preset         = $Preset
     RateControl    = $rateControl
     Deblock        = $Deblock
+    Deinterlace    = $Deinterlace
     AqMode         = $AqMode
     AqStrength     = $AqStrength
     PsyRd          = $PsyRd

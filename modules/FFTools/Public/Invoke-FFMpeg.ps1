@@ -186,6 +186,26 @@ function Invoke-FFMpeg {
                 $Paths.OutputFile 2>$Paths.LogPath
         }
     }
+    #Deinterlace content
+    elseif ($Deinterlace) {
+        if ($PSBoundParameters['TestFrames']) {
+            Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
+            ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "yadif, crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
+                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                $Paths.OutputFile 2>$Paths.LogPath
+        }
+        else {
+            ffmpeg -probesize 100MB -i $Paths.InputFile -vf "yadif, crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
+                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
+                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                $Paths.OutputFile 2>$Paths.LogPath
+        }
+    }
     #Encode SDR content (1080p and below)
     else {
         if ($PSBoundParameters['TestFrames']) {
