@@ -2,7 +2,7 @@
     .SYNOPSIS
         Script for encoding 4K HDR video content using ffmpeg and x265
     .DESCRIPTION
-        This script is meant to make video encoding easier with ffmpeg. Instead of manually changing
+        This script that is meant to make video encoding easier with ffmpeg. Instead of manually changing
         the script parameters for each encode, you can pass dynamic parameters to this script and it  
         will use the arguments as needed. Supports 2160p HDR encoding with automatic fetching of HDR 
         metadata, automatic cropping, and multiple audio & subtitle options.   
@@ -118,6 +118,8 @@
         Enables the evaluation of intra modes in B slices. Accepted values are 0 (off) or 1 (on). Has a minor impact on performance 
     .PARAMETER Subme
         The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a large performance impact 
+    .PARAMETER IntraSmoothing
+        Enables/disables strong-intra-smoothing. Default enabled
     .PARAMETER QComp
         Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode
     .PARAMETER OutputPath
@@ -291,6 +293,12 @@ param (
     [ValidateRange(0, 7)]
     [Alias("SM", "SPM")]
     [int]$Subme,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(0, 1)]
+    [Alias("SIS")]
+    [int]$IntraSmoothing = 1,
 
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
@@ -470,6 +478,7 @@ $ffmpegParams = @{
     AudioInput     = $audioArray
     Subtitles      = $Subtitles
     Preset         = $Preset
+    Tune           = $Tune
     RateControl    = $rateControl
     Deblock        = $Deblock
     Deinterlace    = $Deinterlace
@@ -482,6 +491,7 @@ $ffmpegParams = @{
     BFrames        = $BFrames
     BIntra         = $BIntra
     Subme          = $Subme 
+    IntraSmoothing = $IntraSmoothing
     Paths          = $paths
     TestFrames     = $TestFrames
 }

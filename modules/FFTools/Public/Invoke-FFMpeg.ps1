@@ -92,6 +92,11 @@ function Invoke-FFMpeg {
         [Parameter(Mandatory = $false)]
         [int]$Subme,
 
+        # Enable/disable strong-intra-smoothing
+        [Parameter(Mandatory = $false)]
+        [Alias("SIS")]
+        [int]$IntraSmoothing,
+
         # Path to the log file
         [Parameter(Mandatory = $true)]
         [Alias("L")]
@@ -100,7 +105,11 @@ function Invoke-FFMpeg {
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
         [Alias("T")]
-        [int]$TestFrames
+        [int]$TestFrames,
+
+        [Parameter(Mandatory = $false)]
+        [Alias("DI")]
+        [switch]$Deinterlace
     )
 
     #Determine the resolution and fetch metadata if 4K
@@ -148,7 +157,13 @@ function Invoke-FFMpeg {
     }
     
     #Set args to preset default if not modified by the user via parameters
-    $presetArgs = @{ Subme = $subme; BIntra = $BIntra; BFrames = $BFrames; PsyRdoq = $PsyRdoq }
+    $presetArgs = @{ 
+        Subme   = $subme 
+        BIntra  = $BIntra 
+        BFrames = $BFrames 
+        PsyRdoq = $PsyRdoq 
+        AqMode  = $AqMode 
+    }
     $p = Set-Parameters -ScriptParams $presetArgs -Preset $Preset
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
@@ -168,21 +183,21 @@ function Invoke-FFMpeg {
             Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 level-idc=5.1:keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
                 psy-rdoq=$($p.PsyRdoq):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:`
-                b-intra=$($p.BIntra)" `
+                b-intra=$($p.BIntra):strong-intra-smoothing=$IntraSmoothing" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
             ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 level-idc=5.1:keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
                 colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
                 psy-rdoq=$($p.PsyRdoq):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:`
-                b-intra=$($p.BIntra)" `
+                b-intra=$($p.BIntra):strong-intra-smoothing=$IntraSmoothing" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
     }
@@ -194,7 +209,8 @@ function Invoke-FFMpeg {
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
                 -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
+                strong-intra-smoothing=$IntraSmoothing" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
@@ -202,7 +218,8 @@ function Invoke-FFMpeg {
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
                 -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
+                strong-intra-smoothing=$IntraSmoothing" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
     }
@@ -212,17 +229,19 @@ function Invoke-FFMpeg {
             Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
             ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
+                strong-intra-smoothing=$IntraSmoothing" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
             ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
                 -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$AqMode`:aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
+                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
                 keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709" `
+                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
+                strong-intra-smoothing=$IntraSmoothing" `
                 $Paths.OutputFile 2>$Paths.LogPath
         }
     }
