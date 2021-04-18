@@ -4,7 +4,7 @@
     .DESCRIPTION
         The standard log produced by this script has a lot of filler content,
         so this function is designed to pull the meaningful information from 
-        the log and write it to a separate .report file for reviewing or
+        the log and write it to a separate .rep file for reviewing or
         storing. Shows the following info:
 
         1. Start & end date and time

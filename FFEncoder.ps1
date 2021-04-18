@@ -319,7 +319,12 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [alias("DI")]
-    [switch]$Deinterlace
+    [switch]$Deinterlace,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("Report")]
+    [switch]$GenerateReport
 )
 
 ## Global Variables ##
@@ -513,8 +518,10 @@ $endTime = (Get-Date).ToLocalTime()
 Write-Host "`nEnd time: $endTime"
 $stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds`n" -f $stopwatch.Elapsed
-#Generate the report file
-Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths
+#Generate the report file if parameter is present
+if ($PSBoundParameters['GenerateReport']) {
+    Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths
+}
 #Delete extraneous files if switch is present
 if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
