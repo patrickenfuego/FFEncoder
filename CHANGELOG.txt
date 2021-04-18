@@ -1,24 +1,30 @@
 v 1.0.0
-    - Initial release. Supports Windows and 4K HDR resolution. 
+    - Initial release. Supports Windows and 4K HDR resolution
+    
 v 1.1.0
     - Added support for MacOS and Linux
         -Tested on MacOS 11.0.1 "Big Sur"
         -Tested on Ubuntu 20.04 LTS
     - Updated help based comments for script functions
+
 v 1.1.1
     - Completely overhauled help based comments to be more organized and...helpful
     - Added -Help parameter to easily view new help comments and examples
+
 v 1.1.2
     - Changed min-keyint value to preset default
     - Lowered keyint value from 250 to 120 (seeks every 4 frames). This was an error on my part and was not meant to be that high
+
 v1.2.2
     - Changed output to a log file instead of the console. On Windows, ffmpeg creates a new line for each frame and the buffer cannot store the entire history
     - Created new function Set-RootPath, which sets the path for the crop file and log file. Logic partially removed from New-CropFile function
     - Changed test encodes to start at the 10 minute mark. It still only encodes 1000 frames, but it will be better test material than the intro screens/logos
+
 v 1.2.3
     - Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
       which was causing it to become empty. Set-RootPath now returns an object containing the crop and log paths.
     - Changed test runs to begin at approximately 1 minute into the video. This gives a more accurate representation of what to expect when a full encode is performed
+
 v 1.3.3
     - Added multi-threading support while generating a crop file. 3 independent segments will be analyzed simultaneously, giving a nice performance boost
     - Added PoshRSJobs module to further improve multi-threading performance
@@ -102,22 +108,27 @@ v. 1.5.5
 
 v. 1.6.5
 
-- Added support for Fraunhofer AAC (libfdk_aac). When values 1-5 are used with -AudioBitrate parameter, variable bitrate (vbr) mode will be used instead at the corresponding input level
+- Added support for Fraunhofer AAC (libfdk_aac)
+- Added support for aac_at audio. This codec is only available on MacOS
 - Added -QComp parameter. Default is 0.6 (all presets)
 - Added switch parameter for -BIntra. Default is defined by the preset used
 - Added -BFrames parameter. Default is defined by the preset used
 - Changed -Deblock default to -2,-2
-- Added BIntra switch parameter. This turns on b-intra during encodes, which allows for the evaluation of intra modes in B frame slices. Default is defined by the preset used
-- Added support for source resolutions of 1080p and lower. Source dimensions are determined by the Measure-CropDimensions function. All 8 bit sources are encoded using profile main10 to help with banding
+- Added support for source resolutions of 1080p and lower 
+    - Source dimensions are determined by the Measure-CropDimensions function 
+    - All 8 bit sources are encoded using profile main10 to help with banding
     - Currently no support for 1080p HDR. I plan to add this down the line
 - Added aud and hrd parameters for UHD compliant encodes
 - Added the option to include a second audio stream, which is compatible with all audio options
 - Added support for stream copying based on stream number in ffmpeg/ffprobe
 - Added option to downmix audio streams to stereo, while still retaining the LFE track
-    - Added additional logic to allow for stream copying and filtering simultaneously (ffmpeg cannot do both at the same time)
+    - Added additional logic to allow for stream copying and filtering simultaneously 
 - Improvements to 2-pass encoding. The script now checks for an existing x265 log file (larger than 9 MB) and will skip the first pass if found
-- Added utility function Write-Report to write important encoding information to a file named "<Title>.report". This acts as a "quick-view" for relevant encoder metrics, and is easier to digest than the full log file
+- Added utility function Write-Report to write important encoding information to a file named "<Title>.rep". This acts as a quick-view for encoding metrics, and is easier to digest than the full log file
+    - To generate a report file, use the -GenerateReport parameter
 - Added utility function to show a file deletion prompt when necessary
 - Added Set-Parameters utility function, which assigns default preset values to parameters when they aren't passed by the user (subme, b-intra, bframes, etc.)
-- Added -RemoveFiles parameter that deletes extra files generated while the script is running (excluding input, output, and report file)
+- Added -RemoveFiles parameter that deletes extra files generated while the script is running 
+    - Excludes input, output, and report files
+- Added a deinterlace filter (CRF only)
 
