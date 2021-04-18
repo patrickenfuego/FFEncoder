@@ -478,7 +478,6 @@ $ffmpegParams = @{
     AudioInput     = $audioArray
     Subtitles      = $Subtitles
     Preset         = $Preset
-    Tune           = $Tune
     RateControl    = $rateControl
     Deblock        = $Deblock
     Deinterlace    = $Deinterlace
