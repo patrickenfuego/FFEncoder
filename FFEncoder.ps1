@@ -150,7 +150,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", "aacat", "ataac", "aac_at", 1, 2, 3, 4, 5)]
+        "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5)]
     [Alias("A")]
     [string]$Audio = "copy",
 
@@ -168,7 +168,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", "aacat", "ataac", "aac_at", 1, 2, 3, 4, 5)]
+        "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5)]
     [Alias("A2")]
     [string]$Audio2 = "none",
 
@@ -242,7 +242,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 4)]
     [Alias("AQM")]
-    [int]$AqMode = 2,
+    [int]$AqMode,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -260,7 +260,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.0, 50.0)]
     [Alias("PRDQ")]
-    [double]$PsyRdoq = 1.00,
+    [double]$PsyRdoq,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
