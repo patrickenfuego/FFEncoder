@@ -37,7 +37,7 @@
         ## Adjust psycho visual settings and aq-mode level/strength ##
         ./FFEncoder.ps1 "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -PsyRd 4.0 -PsyRdoq 1.50 -AqMode 1 -AqStrength 0.90 -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .INPUTS
-        4K HDR video file 
+        HD/FHD/UHD video file 
     .OUTPUTS
         crop.txt - File used for auto-cropping
         4K HDR encoded video file
@@ -46,8 +46,7 @@
 
         Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.), or you may be left with a file that will not play
  
-        ffmpeg cannot decode Dolby Atmos streams, nor can the metadata be identified using ffprobe. If you try and copy a Dolby Atmos track, THE SCRIPT WILL FAIL.
-        This is not a flaw in the script, but rather a limitation of ffmpeg
+        To decode Dolby Atmos streams, be sure to have the latest ffmpeg build installed
     .PARAMETER Help
         Displays help information for the script
     .PARAMETER TestFrames

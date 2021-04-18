@@ -30,7 +30,7 @@ function Measure-CropDimensions
     if ($cropWidth -eq 0 -or $cropHeight -eq 0) {
         throw "One or both of the crop values are equal to 0. Check the input path and try again."
     }
-    elseif ($cropWidth -gt 3800) { $enableHDR = $true }
+    elseif ($cropWidth -gt 3000) { $enableHDR = $true }
     else { $enableHDR = $false }
     
     Write-Host "** CROP DIMENSIONS SUCCESSFULLY RETRIEVED ** " @progressColors
