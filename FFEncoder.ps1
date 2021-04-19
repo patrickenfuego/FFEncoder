@@ -323,7 +323,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("Report")]
+    [alias("Report", "GR")]
     [switch]$GenerateReport
 )
 
