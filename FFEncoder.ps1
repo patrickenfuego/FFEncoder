@@ -158,7 +158,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(1, 3000)]
+    [ValidateRange(-1, 3000)]
     [Alias("AB", "ABitrate")]
     [int]$AudioBitrate,
 
@@ -176,7 +176,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(1, 3000)]
+    [ValidateRange(-1, 3000)]
     [Alias("AB2", "ABitrate2")]
     [int]$AudioBitrate2,
 
