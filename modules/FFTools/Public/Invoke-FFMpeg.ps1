@@ -113,7 +113,7 @@ function Invoke-FFMpeg {
     )
 
     #Determine the resolution and fetch metadata if 4K
-    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $Paths.InputFile }
+    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus }
     else { $UHD = $false }
     
     #Building the audio argument array(s) based on user input

@@ -131,4 +131,11 @@ v. 1.6.5
 - Added -RemoveFiles parameter that deletes extra files generated while the script is running 
     - Excludes input, output, and report files
 - Added a deinterlace filter (CRF only)
+- Added support for HDR10+ (additional dependency required)
+    - Only working on Windows
+
+Planned:
+
+- HDR10+ support on UNIX
+- Frame threads parameter
 

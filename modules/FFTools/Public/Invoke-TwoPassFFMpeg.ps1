@@ -114,7 +114,7 @@ function Invoke-TwoPassFFMpeg {
         exit
     }
     #Check if the source is UHD. If so, gather HDR metadata
-    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $Paths.InputFile }
+    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus }
     else { $UHD = $false }
     #Builds the audio argument array(s) based on user input
     $audioParam1 = @{

@@ -16,8 +16,26 @@ function Get-HDRMetadata {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
-        [string]$InputFile
+        [string]$InputFile,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [string]$HDR10PlusPath
     )
+    #Internal function that generates an HDR10+ metadata json file if the source is Profile A/B compliant
+    function Confirm-HDR10Plus {
+        $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser --verify -"
+        if ($res[1] -like "*HDR10+*") {
+            Write-Host "HDR10+ SEI metadata found..." -NoNewline
+            if (Test-Path -Path $HDR10PlusPath) { Write-Host "JSON file already exists" @warnColors }
+            else {
+                Write-Host "Generating JSON file" @emphasisColors
+                cmd.exe /c "ffmpeg -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser -o `"$HDR10PlusPath`" -" 2>&1
+            }
+            return $true
+        }
+        else { return $false }
+    }
+
     #Constants for mastering display color primaries
     Set-Variable -Name Display_P3 -Value "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
     Set-Variable -Name BT_2020 -Value "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
@@ -62,7 +80,11 @@ function Get-HDRMetadata {
     #MAx content light level and max frame average light level
     $maxCLL = $metadata.side_data_list[1].max_content
     $maxFAL = $metadata.side_data_list[1].max_average
-
+    #Check if input has HDR10+ metadata and append the generated json file if present
+    $isHDR10Plus = Confirm-HDR10Plus
+    if ($isHDR10Plus) {
+        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath':"
+    }
     $metadataObj = @{
         PixelFmt       = $pixelFmt
         ColorSpace     = $colorSpace

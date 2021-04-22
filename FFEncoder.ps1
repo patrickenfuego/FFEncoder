@@ -387,6 +387,7 @@ function Set-ScriptPaths {
         $stereoPath = Join-Path -Path $root -ChildPath "$oTitle`_stereo.$oExt"
         $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle`_stereo-remux.$oExt"
         $reportPath = Join-Path -Path $root -ChildPath "$oTitle.rep"
+        $hdr10PlusPath = Join-Path -Path $root -ChildPath "metadata.json"
     }
     #Regex match could not be made on the folder pattern
     else {
@@ -400,6 +401,7 @@ function Set-ScriptPaths {
         $stereoPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo.mkv"
         $remuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
         $reportPath = Join-Path -Path $os.DefaultPath -ChildPath "report.rep"
+        $hdr10PlusPath = Join-Path -Path $os.DefaultPath -ChildPath "metadata.json"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
@@ -416,6 +418,7 @@ function Set-ScriptPaths {
         OutputFile = $OutputPath
         Title      = $oTitle
         ReportPath = $reportPath
+        HDR10Plus  = $hdr10PlusPath
     }
     return $pathObject
 }
@@ -527,7 +530,7 @@ if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
     Get-ChildItem -Path $paths.Root | ForEach-Object { 
-        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv"
+        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json"
     }
 }
 #Remove variable from memory to prevent leaking into another encode
