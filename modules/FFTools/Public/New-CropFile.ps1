@@ -49,17 +49,22 @@ function New-CropFile {
         Start-RSJob -Name "Crop 00:01:30" -Throttle 4 -ScriptBlock {
             $c1 = ffmpeg -ss 90 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
             Write-Output -InputObject $c1
+            Clear-Variable c1
         } 
         
-        Start-RSJob -Name "Crop 00:20:00" -ArgumentList $InputPath -Throttle 4 -ScriptBlock {
-            $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-            Write-Output -InputObject $c2
-        } 
+        if ($duration -gt 20) {
+            Start-RSJob -Name "Crop 00:20:00" -Throttle 4 -ScriptBlock {
+                $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                Write-Output -InputObject $c2
+                Clear-Variable c2
+            } 
+        }
 
         if ($duration -gt 40) {
             Start-RSJob -Name "Crop 00:40:00" -Throttle 4 -ScriptBlock {
                 $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c3
+                Clear-Variable c3
             } 
         }
 
@@ -67,6 +72,7 @@ function New-CropFile {
             Start-RSJob -Name "Crop 01:00:00" -Throttle 4 -ScriptBlock {
                 $c4 = ffmpeg -ss 01:00:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c4
+                Clear-Variable c4
             }
         }
 
@@ -74,6 +80,7 @@ function New-CropFile {
             Start-RSJob -Name "Crop 01:20:00" -Throttle 4 -ScriptBlock {
                 $c5 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c5
+                Clear-Variable c5
             }
         }
 
@@ -81,6 +88,7 @@ function New-CropFile {
             Start-RSJob -Name "Crop 01:30:00" -Throttle 4 -ScriptBlock {
                 $c6 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c6
+                Clear-Variable c6
             }
         }
 
