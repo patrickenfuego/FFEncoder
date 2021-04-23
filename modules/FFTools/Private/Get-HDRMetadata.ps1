@@ -26,7 +26,7 @@ function Get-HDRMetadata {
         $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser --verify -"
         if ($? -and $res[1] -like "*HDR10+*") {
             Write-Host "HDR10+ SEI metadata found..." -NoNewline
-            if (Test-Path -Path $HDR10PlusPath) { Write-Host "JSON file already exists" @warnColors }
+            if (Test-Path -Path $HDR10PlusPath) { Write-Host "JSON metadata file already exists" @warnColors }
             else {
                 Write-Host "Generating JSON file" @emphasisColors
                 cmd.exe /c "ffmpeg -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser -o `"$HDR10PlusPath`" -" 2>&1
