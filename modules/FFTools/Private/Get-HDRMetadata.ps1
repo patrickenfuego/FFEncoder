@@ -24,7 +24,7 @@ function Get-HDRMetadata {
     #Internal function that generates an HDR10+ metadata json file if the source is Profile A/B compliant
     function Confirm-HDR10Plus {
         $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser --verify -"
-        if ($res[1] -like "*HDR10+*") {
+        if ($? -and $res[1] -like "*HDR10+*") {
             Write-Host "HDR10+ SEI metadata found..." -NoNewline
             if (Test-Path -Path $HDR10PlusPath) { Write-Host "JSON file already exists" @warnColors }
             else {
