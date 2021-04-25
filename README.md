@@ -99,6 +99,7 @@ FFEncoder can accept the following parameters from the command line:
 | **QComp**          | 0.60    | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
 | **BFrames**        | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
 | **BIntra**         | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
+| **IntraSmoothing** | 1 (on)  | False         | **SIS**                | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
 | **Subme**          | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
 | **NoiseReduction** | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
 | **OutputPath**     | N/A     | True          | **O**                  | The path to the encoded output file                                                                                                                      |
@@ -224,7 +225,7 @@ The different parameter options are:
 
 - ffmpeg / ffprobe
 - PowerShell Core (MacOS/Linux users only)
-- *[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
+- \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
   - For the script to work with hdr10plus_parser, make sure it is available via PATH
 
 > You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
