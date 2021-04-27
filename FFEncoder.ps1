@@ -118,7 +118,7 @@
         Enables the evaluation of intra modes in B slices. Accepted values are 0 (off) or 1 (on). Has a minor impact on performance 
     .PARAMETER Subme
         The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a large performance impact 
-    .PARAMETER IntraSmoothing
+    .PARAMETER StrongIntraSmoothing
         Enables/disables strong-intra-smoothing. Default enabled
     .PARAMETER QComp
         Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode
@@ -298,7 +298,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 1)]
     [Alias("SIS")]
-    [int]$IntraSmoothing = 1,
+    [int]$StrongIntraSmoothing = 1,
 
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
@@ -498,7 +498,7 @@ $ffmpegParams = @{
     BFrames        = $BFrames
     BIntra         = $BIntra
     Subme          = $Subme 
-    IntraSmoothing = $IntraSmoothing
+    IntraSmoothing = $StrongIntraSmoothing
     Paths          = $paths
     TestFrames     = $TestFrames
 }

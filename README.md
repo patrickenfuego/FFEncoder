@@ -39,7 +39,7 @@ FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpe
 - \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
   - For the script to work with hdr10plus_parser, make sure it is available via PATH
 
-The script requires PowerShell Core v. 7.0 on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change. 
+The script requires PowerShell Core v. 7.0 on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
 
 > You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
 
@@ -114,37 +114,37 @@ FFEncoder can accept the following parameters from the command line:
 
 > An Asterisk <b>\*</b> denotes that the parameter is required only for its given parameter set (for example, you can choose either CRF or VideBitrate for rate control, but not both):
 
-| Parameter Name     | Default | Mandatory     | Alias                  | Description                                                                                                                                              |
-| ------------------ | ------- | ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **TestFrames**     | 0 (off) | False         | **T**                  | Integer value representing the number of test frames to encode. When enabled, encoding starts at 00:01:30 so that title screens are skipped              |
-| **Help**           | False   | <b>\*</b>True | **H**, **/?**, **?**   | Switch to display help information                                                                                                                       |
-| **InputPath**      | N/A     | True          | **I**                  | The path to the source file (to be encoded)                                                                                                              |
-| **Audio**          | Copy    | False         | **A**                  | Audio preference for the primary stream. See [Audio Options](#audio-options) for more info                                                               |
-| **AudioBitrate**   | Codec   | False         | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
-| **Stereo**         | False   | False         | **2CH**, **ST**        | Switch to downmix the first audio track to stereo. See [Audio Options](#audio-options)                                                                   |
-| **Audio2**         | None    | False         | **A2**                 | Audio preference for the secondary stream. See [Audio Options](#audio-options) for more info                                                             |
-| **AudioBitrate2**  | Codec   | False         | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
-| **Stereo2**        | False   | False         | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo. See [Audio Options](#audio-options)                                                                  |
-| **Subtitles**      | Default | False         | **S**                  | Subtitle passthrough preference. See the [Subtitle Options](#subtitle-options) section for more info                                                     |
-| **Preset**         | Slow    | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset parameters              |
-| **CRF**            | N/A     | <b>\*</b>True | **C**                  | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate             |
-| **VideoBitrate**   | N/A     | <b>\*</b>True | **VBitrate**           | Rate control parameter that targets a specific file size. Can be used as an alternative to CRF rate control when output size is a priority               |
-| **Pass**           | 2       | False         | **P**                  | The number of passes the encoder will perform for ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                |
-| **Deblock**        | -2, -2  | False         | **DBF**                | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                    |
-| **AqMode**         | 2       | False         | **AQM**                | x265 Adaptive Quantization setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                |
-| **AqStrength**     | 1.00    | False         | **AQS**                | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates |
-| **PsyRd**          | 2.00    | False         | **PRD**                | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                          |
-| **PsyRdoq**        | Preset  | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
-| **QComp**          | 0.60    | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
-| **BFrames**        | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
-| **BIntra**         | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
-| **IntraSmoothing** | 1 (on)  | False         | **SIS**                | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
-| **Subme**          | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
-| **NoiseReduction** | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
-| **OutputPath**     | N/A     | True          | **O**                  | The path to the encoded output file                                                                                                                      |
-| **RemoveFiles**    | False   | False         | **Del**, **RM**        | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files                  |
-| **GenerateReport** | False   | False         | **Report**, **GR**     | Switch that generates a report of the encode. Data is pulled from the log file and written in a reading friendly format                                  |
-| **Deinterlace**    | False   | False         | **DI**                 | Switch to enable deinterlacing of interlaced content using yadif                                                                                         |
+| Parameter Name           | Default | Mandatory     | Alias                  | Description                                                                                                                                              |
+| ------------------------ | ------- | ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TestFrames**           | 0 (off) | False         | **T**                  | Integer value representing the number of test frames to encode. When enabled, encoding starts at 00:01:30 so that title screens are skipped              |
+| **Help**                 | False   | <b>\*</b>True | **H**, **/?**, **?**   | Switch to display help information                                                                                                                       |
+| **InputPath**            | N/A     | True          | **I**                  | The path to the source file (to be encoded)                                                                                                              |
+| **Audio**                | Copy    | False         | **A**                  | Audio preference for the primary stream. See [Audio Options](#audio-options) for more info                                                               |
+| **AudioBitrate**         | Codec   | False         | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
+| **Stereo**               | False   | False         | **2CH**, **ST**        | Switch to downmix the first audio track to stereo. See [Audio Options](#audio-options)                                                                   |
+| **Audio2**               | None    | False         | **A2**                 | Audio preference for the secondary stream. See [Audio Options](#audio-options) for more info                                                             |
+| **AudioBitrate2**        | Codec   | False         | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
+| **Stereo2**              | False   | False         | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo. See [Audio Options](#audio-options)                                                                  |
+| **Subtitles**            | Default | False         | **S**                  | Subtitle passthrough preference. See the [Subtitle Options](#subtitle-options) section for more info                                                     |
+| **Preset**               | Slow    | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset parameters              |
+| **CRF**                  | N/A     | <b>\*</b>True | **C**                  | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate             |
+| **VideoBitrate**         | N/A     | <b>\*</b>True | **VBitrate**           | Rate control parameter that targets a specific file size. Can be used as an alternative to CRF rate control when output size is a priority               |
+| **Pass**                 | 2       | False         | **P**                  | The number of passes the encoder will perform for ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                |
+| **Deblock**              | -2, -2  | False         | **DBF**                | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                    |
+| **AqMode**               | 2       | False         | **AQM**                | x265 Adaptive Quantization setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                |
+| **AqStrength**           | 1.00    | False         | **AQS**                | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates |
+| **PsyRd**                | 2.00    | False         | **PRD**                | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                          |
+| **PsyRdoq**              | Preset  | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
+| **QComp**                | 0.60    | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
+| **BFrames**              | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
+| **BIntra**               | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
+| **StrongIntraSmoothing** | 1 (on)  | False         | **SIS**                | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
+| **Subme**                | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
+| **NoiseReduction**       | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
+| **OutputPath**           | N/A     | True          | **O**                  | The path to the encoded output file                                                                                                                      |
+| **RemoveFiles**          | False   | False         | **Del**, **RM**        | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files                  |
+| **GenerateReport**       | False   | False         | **Report**, **GR**     | Switch that generates a report of the encode. Data is pulled from the log file and written in a reading friendly format                                  |
+| **Deinterlace**          | False   | False         | **DI**                 | Switch to enable deinterlacing of interlaced content using yadif                                                                                         |
 
 &nbsp;
 
@@ -257,6 +257,3 @@ The different parameter options are:
   | Polish    | `pol` |
   | Romanian  | `rum` |
   | Spanish   | `spa` |
-
-
-
