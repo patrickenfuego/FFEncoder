@@ -30,6 +30,8 @@ FFEncoder is a cross-platform PowerShell script that is meant to make high defin
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify complicated CLI arguments for each source. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is extensive, and many of the arguments are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
 
+&nbsp;
+
 ## Requirements
 
 - ffmpeg / ffprobe
