@@ -1,5 +1,9 @@
 - [FFEncoder](#ffencoder)
   - [About](#about)
+  - [Requirements](#requirements)
+    - [Windows](#windows)
+    - [Linux](#linux)
+    - [MacOS](#macos)
   - [Auto-Cropping](#auto-cropping)
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
   - [Rate Control Options](#rate-control-options)
@@ -13,10 +17,6 @@
     - [Using the aac_at Encoder](#using-the-aac_at-encoder)
     - [Downmixing Multi-Channel Audio to Stereo](#downmixing-multi-channel-audio-to-stereo)
   - [Subtitle Options](#subtitle-options)
-  - [Requirements](#requirements)
-    - [Windows](#windows)
-    - [Linux](#linux)
-    - [MacOS](#macos)
 
 &nbsp;
 
@@ -29,6 +29,43 @@ FFEncoder is a cross-platform PowerShell script that is meant to make high defin
 ## About
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify complicated CLI arguments for each source. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is extensive, and many of the arguments are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
+
+## Requirements
+
+- ffmpeg / ffprobe
+- PowerShell Core v. 7.0 or newer
+- \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
+  - For the script to work with hdr10plus_parser, make sure it is available via PATH
+
+The script requires PowerShell Core v. 7.0 on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change. 
+
+> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
+
+### Windows
+
+For Windows users, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages.
+
+### Linux
+
+For Linux users, you can install ffmpeg using your package manager of choice (apt/yum/pacman):
+
+> `apt install ffmpeg`
+
+To install PowerShell core, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
+
+### MacOS
+
+For Mac users, the easiest way to install ffmpeg is through the [Homebrew](https://brew.sh/) package manager:
+
+> `brew install ffmpeg`
+
+One of the other benefits of using Homebrew is that you can easily install a build that includes non-free libraries like fdk_aac:
+
+> `brew install ffmpeg --with-fdk-aac`
+
+To install PowerShell Core, run the following command using Homebrew:
+
+> `brew install --cask powershell`
 
 &nbsp;
 
@@ -219,39 +256,5 @@ The different parameter options are:
   | Romanian  | `rum` |
   | Spanish   | `spa` |
 
-&nbsp;
 
-## Requirements
 
-- ffmpeg / ffprobe
-- PowerShell Core (MacOS/Linux users only)
-- \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
-  - For the script to work with hdr10plus_parser, make sure it is available via PATH
-
-> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
-
-### Windows
-
-For Windows users, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages.
-
-### Linux
-
-For Linux users, you can install ffmpeg using your package manager of choice (apt/yum/pacman):
-
-> `apt install ffmpeg`
-
-To install PowerShell core, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
-
-### MacOS
-
-For Mac users, the easiest way to install ffmpeg is through the [Homebrew](https://brew.sh/) package manager:
-
-> `brew install ffmpeg`
-
-One of the other benefits of using Homebrew is that you can easily install a build that includes non-free libraries like fdk_aac:
-
-> `brew install ffmpeg --with-fdk-aac`
-
-To install PowerShell Core, run the following command using Homebrew:
-
-> `brew install --cask powershell`

@@ -35,64 +35,30 @@ function New-CropFile {
         if ($duration) { return $duration } else { return $null }
     }
 
-    Import-Module -Name ".\modules\PoshRSJob"
     $duration = Get-Duration
 
-    #if the crop file already exists (from a test run for example) return the path. Else, use ffmpeg to create one
     if (Test-Path -Path $CropFilePath) { 
         Write-Host "Crop file already exists. Skipping crop file generation..." @warnColors
         return
     }
     else {
-        Write-Host "Generating crop file...`n"
-        #Crop segments running in parallel. Putting these jobs in a loop hurts performance as it creates a new runspace pool for each job
-        Start-RSJob -Name "Crop 00:01:30" -Throttle 4 -ScriptBlock {
-            $c1 = ffmpeg -ss 90 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-            Write-Output -InputObject $c1
-            Clear-Variable c1
-        } 
-        
-        if ($duration -gt 20) {
-            Start-RSJob -Name "Crop 00:20:00" -Throttle 4 -ScriptBlock {
-                $c2 = ffmpeg -ss 00:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-                Write-Output -InputObject $c2
-                Clear-Variable c2
+        Write-Host "Generating crop file in Parallel...`n"
+        $segments = @(
+            @{ Start = '90'; Length =  '00:08:00'; Duration = 0 }
+            @{ Start = '00:20:00'; Length =  '00:08:00'; Duration = 20 } 
+            @{ Start = '00:40:00'; Length =  '00:08:00'; Duration = 40 } 
+            @{ Start = '01:00:00'; Length =  '00:08:00'; Duration = 70 } 
+            @{ Start = '01:20:00'; Length =  '00:03:00'; Duration = 85 } 
+            @{ Start = '01:30:00'; Length =  '00:03:00'; Duration = 95 } 
+        )
+        $cropJob = $segments | ForEach-Object -Parallel {
+            if ($Using:duration -gt $_.Duration) {
+                $c = ffmpeg -ss $_.Start -skip_frame nokey -hide_banner -i $Using:InputPath -t $_.Length -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
+                Write-Output -InputObject $c
             } 
-        }
+        } -AsJob 
 
-        if ($duration -gt 40) {
-            Start-RSJob -Name "Crop 00:40:00" -Throttle 4 -ScriptBlock {
-                $c3 = ffmpeg -ss 00:40:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-                Write-Output -InputObject $c3
-                Clear-Variable c3
-            } 
-        }
-
-        if ($duration -gt 70) {
-            Start-RSJob -Name "Crop 01:00:00" -Throttle 4 -ScriptBlock {
-                $c4 = ffmpeg -ss 01:00:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:08:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-                Write-Output -InputObject $c4
-                Clear-Variable c4
-            }
-        }
-
-        if ($duration -gt 85) {
-            Start-RSJob -Name "Crop 01:20:00" -Throttle 4 -ScriptBlock {
-                $c5 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-                Write-Output -InputObject $c5
-                Clear-Variable c5
-            }
-        }
-
-        if ($duration -gt 95) {
-            Start-RSJob -Name "Crop 01:30:00" -Throttle 4 -ScriptBlock {
-                $c6 = ffmpeg -ss 01:20:00 -skip_frame nokey -hide_banner -i $Using:InputPath -t 00:03:00 -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
-                Write-Output -InputObject $c6
-                Clear-Variable c6
-            }
-        }
-
-        Get-RSJob | Wait-RSJob | Receive-RSJob | Out-File -FilePath $CropFilePath -Append
+        $cropJob | Wait-Job | Receive-Job | Out-File -FilePath $CropFilePath -Append | Stop-Job
     }
 
     Start-Sleep -Milliseconds 500

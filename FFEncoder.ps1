@@ -429,7 +429,7 @@ function Set-ScriptPaths {
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
-Import-Module -Name ".\modules\FFTools" -Force
+Import-Module -Name ".\modules\FFTools"
 
 $stopwatch = [System.Diagnostics.stopwatch]::StartNew()
 $startTime = (Get-Date).ToLocalTime()
@@ -533,5 +533,5 @@ if ($PSBoundParameters['RemoveFiles']) {
         Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json"
     }
 }
-#Remove variable from memory to prevent leaking into another encode
-Remove-Variable paths
+#Run the garbage collector to ensure no memory leaks
+[System.GC]::Collect()
