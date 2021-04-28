@@ -1,6 +1,7 @@
 - [FFEncoder](#ffencoder)
   - [About](#about)
   - [Requirements](#requirements)
+  - [Dependency Installation](#dependency-installation)
     - [Windows](#windows)
     - [Linux](#linux)
     - [MacOS](#macos)
@@ -43,13 +44,18 @@ The script requires PowerShell Core v. 7.0 on all systems as it utilizes new par
 
 > You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
 
+&nbsp;
+
+## Dependency Installation
+
+
 ### Windows
 
-For Windows users, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages.
+Navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages.
 
 ### Linux
 
-For Linux users, you can install ffmpeg using your package manager of choice (apt/yum/pacman):
+You can install ffmpeg using your package manager of choice (apt/yum/pacman/zypper):
 
 > `apt install ffmpeg`
 
@@ -57,7 +63,7 @@ To install PowerShell core, see Microsoft's instructions for your distribution [
 
 ### MacOS
 
-For Mac users, the easiest way to install ffmpeg is through the [Homebrew](https://brew.sh/) package manager:
+The easiest way to install ffmpeg is through the [Homebrew](https://brew.sh/) package manager:
 
 > `brew install ffmpeg`
 
