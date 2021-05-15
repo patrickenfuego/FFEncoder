@@ -109,7 +109,7 @@ FFEncoder supports the following rate control options:
 - **Constant Rate Factor (CRF)** - CRF encoding targets a specific quality level throughout, and isn't concerned with file size. Lower CRF values will result in a higher perceived quality and bitrate
   - Recommended values for 1080p content are between 16-24
   - Recommended values for 2160p content are between 17-26
-- **Average Bitrate** - Average bitrate encoding targets a specific output file size, and isn't concerned with quality. Output size is determined by the formula: <img src="https://render.githubusercontent.com/render/math?math=(\frac{TotalBitrate}{VideoLength})"> . There are 2 varieties of ABR encoding that FFEncoder supports:
+- **Average Bitrate** - Average bitrate encoding targets a specific output file size, and isn't concerned with quality. Output size is determined by dividing the average bitrate by the video length. There are 2 varieties of ABR encoding that FFEncoder supports:
   - **1-Pass** - This option uses a single pass, and isn't aware of the complexities of future frames and can only be scaled based on the past. This generally leads to lower overall quality, but is significantly faster than 2-pass
   - **2-Pass** - 2-Pass encoding uses a first pass to calculate bitrate distribution, which is then used to allocate bits more accurately on the second pass. While it's more time consuming than a single pass encode, quality is generally improved significantly. This script uses a custom combination of parameters for the first pass to help strike a balance between speed and quality
 
