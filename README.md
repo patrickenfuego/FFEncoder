@@ -4,7 +4,7 @@
   - [Dependency Installation](#dependency-installation)
     - [Windows](#windows)
     - [Linux](#linux)
-    - [MacOS](#macos)
+    - [macOS](#macos)
   - [Auto-Cropping](#auto-cropping)
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
   - [Rate Control Options](#rate-control-options)
@@ -42,28 +42,29 @@ FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpe
 
 The script requires PowerShell Core v. 7.0 on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
 
-> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
-
 &nbsp;
 
 ## Dependency Installation
 
+> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
 
 ### Windows
 
-Navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages.
+To download ffmpeg, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages. I recommend the builds provided by Gyan. 
+
+To install the latest version of PowerShell Core, follow the instructions provided by Microsoft [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-windows?view=powershell-7.1).
 
 ### Linux
 
-You can install ffmpeg using your package manager of choice (apt/yum/pacman/zypper):
+You can install ffmpeg using your package manager of choice (apt/yum/pacman):
 
 > `apt install ffmpeg`
 
 To install PowerShell core, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
 
-### MacOS
+### macOS
 
-The easiest way to install ffmpeg is through the [Homebrew](https://brew.sh/) package manager:
+The easiest way to install ffmpeg and PowerShell core is through the [Homebrew](https://brew.sh/) package manager:
 
 > `brew install ffmpeg`
 
@@ -79,7 +80,7 @@ To install PowerShell Core, run the following command using Homebrew:
 
 ## Auto-Cropping
 
-FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze up to 4 separate segments of the source simultaneously. The collected output of each cropping instance is then saved to a file, which is used to determine the ideal cropping width and height for encoding.
+FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze up to 5 separate segments of the source simultaneously. The collected output of each cropping instance is then saved to a file, which is used to determine the ideal cropping width and height for encoding.
 
 &nbsp;
 
