@@ -40,7 +40,9 @@ FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpe
 - \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
   - For the script to work with hdr10plus_parser, make sure it is available via PATH
 
-The script requires PowerShell Core v. 7.0 on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
+The script requires PowerShell Core v. 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
+
+> For Windows users, PowerShell Core is a supplemental installation and will will be installed alongside PowerShell 5.1
 
 &nbsp;
 
