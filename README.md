@@ -119,7 +119,11 @@ FFEncoder supports the following rate control options:
 
 ## Script Parameters
 
-FFEncoder can accept the following parameters from the command line:
+FFEncoder can accept the following parameters from the command line. Most parameters are optional and have default values, except the following three which are **mandatory**:
+
+* InputPath
+* Rate control preference (CRF or Average Bitrate)
+* OutputPath
 
 > An Asterisk <b>\*</b> denotes that the parameter is required only for its given parameter set (for example, you can choose either CRF or VideBitrate for rate control, but not both):
 
