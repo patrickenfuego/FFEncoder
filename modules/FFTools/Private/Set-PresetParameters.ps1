@@ -1,4 +1,4 @@
-function Set-Parameters {
+function Set-PresetParameters {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
@@ -20,22 +20,14 @@ function Set-Parameters {
         'slower'      { $pSubme = 4; $pBIntra = 1; $pBframes = 8; $pPsyRdoq = 1; $pAqMode = 2 }
         'veryslow'    { $pSubme = 4; $pBIntra = 1; $pBframes = 8; $pPsyRdoq = 1; $pAqMode = 2 }
         'placebo'     { $pSubme = 5; $pBIntra = 1; $pBframes = 8; $pPsyRdoq = 1; $pAqMode = 2 }
-        default       { throw "Unrecognized preset option in Set-Parameters" }
+        default       { throw "Unrecognized preset option in Set-PresetParameters" }
     }
-    #If user passes custom params, set them instead of preset defaults
-    if ($ScriptParams.BIntra) { $bIntra = 1 } else { $bIntra = $pBIntra }
-
-    if ($ScriptParams.Subme) { $subme = $ScriptParams.Subme }
-    else { $subme = $pSubme }
-
-    if ($ScriptParams.BFrames) { $bframes = $ScriptParams.BFrames }
-    else { $bframes = $pBframes }
-
-    if ($ScriptParams.PsyRdoq) { $psyRdoq = $ScriptParams.PsyRdoq }
-    else { $psyRdoq = $pPsyRdoq }
-
-    if ($ScriptParams.AqMode) { $aqMode = $ScriptParams.AqMode }
-    else { $aqMode = $pAqMode }
+    #If user passes custom params, set them. Otherwise, use preset defaults
+    $ScriptParams.BIntra ? ($bIntra = 1) : ($bIntra = $pBIntra)
+    $ScriptParams.Subme ? ($subme = $ScriptParams.Subme) : ($subme = $pSubme)
+    $ScriptParams.BFrames ? ($bframes = $ScriptParams.BFrames) : ($bframes = $pBframes)
+    $ScriptParams.PsyRdoq ? ($psyRdoq = $ScriptParams.PsyRdoq) : ($psyRdoq = $pPsyRdoq)
+    $ScriptParams.AqMode ? ($aqMode = $ScriptParams.AqMode) : ($aqMode = $pAqMode)
 
     $params = @{
         Subme   = $subme

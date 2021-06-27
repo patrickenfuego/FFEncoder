@@ -164,7 +164,7 @@ function Invoke-FFMpeg {
         PsyRdoq = $PsyRdoq 
         AqMode  = $AqMode 
     }
-    $p = Set-Parameters -ScriptParams $presetArgs -Preset $Preset
+    $p = Set-PresetParameters -ScriptParams $presetArgs -Preset $Preset
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 

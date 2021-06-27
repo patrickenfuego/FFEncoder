@@ -163,7 +163,7 @@ function Invoke-TwoPassFFMpeg {
         PsyRdoq = $PsyRdoq 
         AqMode  = $AqMode 
     }
-    $p = Set-Parameters -ScriptParams $presetArgs -Preset $Preset
+    $p = Set-PresetParameters -ScriptParams $presetArgs -Preset $Preset
     #Build the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
