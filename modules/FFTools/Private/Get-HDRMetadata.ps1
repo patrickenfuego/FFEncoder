@@ -83,7 +83,7 @@ function Get-HDRMetadata {
     #Check if input has HDR10+ metadata and append the generated json file if present
     $isHDR10Plus = Confirm-HDR10Plus
     if ($isHDR10Plus) {
-        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath':"
+        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath"
     }
     $metadataObj = @{
         PixelFmt       = $pixelFmt

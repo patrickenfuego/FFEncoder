@@ -23,11 +23,11 @@ function Set-PresetParameters {
         default       { throw "Unrecognized preset option in Set-PresetParameters" }
     }
     #If user passes custom params, set them. Otherwise, use preset defaults
-    $ScriptParams.BIntra ? ($bIntra = 1) : ($bIntra = $pBIntra)
-    $ScriptParams.Subme ? ($subme = $ScriptParams.Subme) : ($subme = $pSubme)
-    $ScriptParams.BFrames ? ($bframes = $ScriptParams.BFrames) : ($bframes = $pBframes)
-    $ScriptParams.PsyRdoq ? ($psyRdoq = $ScriptParams.PsyRdoq) : ($psyRdoq = $pPsyRdoq)
-    $ScriptParams.AqMode ? ($aqMode = $ScriptParams.AqMode) : ($aqMode = $pAqMode)
+    $bIntra = $ScriptParams.BIntra ? 1 : $pBIntra
+    $subme = $ScriptParams.Subme ? $ScriptParams.Subme : $pSubme
+    $bframes = $ScriptParams.BFrames ? $ScriptParams.BFrames : $pBframes
+    $psyRdoq = $ScriptParams.PsyRdoq ? $ScriptParams.PsyRdoq : $pPsyRdoq
+    $aqMode = $ScriptParams.AqMode ? $ScriptParams.AqMode : $pAqMode
 
     $params = @{
         Subme   = $subme

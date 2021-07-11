@@ -112,9 +112,15 @@ function Invoke-FFMpeg {
         [switch]$Deinterlace
     )
 
+    function Write-Banner {
+        Write-Host "To view your progress, run " -NoNewline
+        Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
+        Write-Host " in a different PowerShell session`n`n"
+    }
+
     #Determine the resolution and fetch metadata if 4K
-    if ($CropDimensions[2]) { $UHD = $true; $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus }
-    else { $UHD = $false }
+    if ($CropDimensions[2]) { $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus }
+    else { $HDR = $null }
     
     #Building the audio argument array(s) based on user input
     $audioParam1 = @{
@@ -164,86 +170,70 @@ function Invoke-FFMpeg {
         PsyRdoq = $PsyRdoq 
         AqMode  = $AqMode 
     }
-    $p = Set-PresetParameters -ScriptParams $presetArgs -Preset $Preset
+    #Set preset based arguments based on user input
+    $presetParams = Set-PresetParameters -ScriptParams $presetArgs -Preset $Preset
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
-    switch ($RateControl[0]) {
-        '-crf' { Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors }
-        '-b:v' { Write-Host "**** 1 Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors }
+    #Set the base arguments and pass them to Set-FFMPegArgs function
+    $baseArgs = @{
+        Audio          = $audio
+        Subtitles      = $subs
+        Preset         = $Preset
+        CropDimensions = $CropDimensions
+        RateControl    = $RateControl
+        PresetParams   = $presetParams
+        QComp          = $QComp
+        Deblock        = $Deblock
+        AqStrength     = $AqStrength
+        NoiseReduction = $NoiseReduction
+        IntraSmoothing = $IntraSmoothing
+        HDR            = $HDR
+        Paths          = $Paths
+        TestFrames     = $TestFrames
+        Deinterlace    = $Deinterlace
     }
-    Write-Host "***** STARTING FFMPEG *****" @progressColors
-    Write-Host "To view your progress, run " -NoNewline
-    Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
-    Write-Host " in a different PowerShell session`n`n"
+    $ffmpegArgs = Set-FFMpegArgs @baseArgs
+    
+    #Two pass encoding
+    if ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
+        Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
+        Write-Host "***** STARTING FFMPEG PASS 1 *****" @progressColors
+        Write-Host "Generating 1st pass encoder metrics..."
+        Write-Banner
 
-    #Encode with HDR metadata if input is 4K, which is signaled by an enable HDR flag in $CropDimensions[2] 
-    if ($UHD) {
-        if ($PSBoundParameters['TestFrames']) {
-            Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-            ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                level-idc=5.1:keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
-                psy-rdoq=$($p.PsyRdoq):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:`
-                b-intra=$($p.BIntra):strong-intra-smoothing=$IntraSmoothing" `
-                $Paths.OutputFile 2>$Paths.LogPath
+        if ((Test-Path $Paths.X265Log) -and [int]([math]::Round((Get-Item $Paths.X265Log).Length / 1MB, 2)) -gt 10) {
+            Write-Host "A full x265 first pass log already exists. Proceeding to second pass...`n" @warnColors
         }
         else {
-            ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -pix_fmt $HDR.PixelFmt `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                level-idc=5.1:keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                colorprim=$($HDR.ColorPrimaries):transfer=$($HDR.Transfer):colormatrix=$($HDR.ColorSpace):aud=1:hrd=1:open-gop=0:frame-threads=2:`
-                psy-rdoq=$($p.PsyRdoq):chromaloc=2:$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma)):max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL):hdr10-opt=1:`
-                b-intra=$($p.BIntra):strong-intra-smoothing=$IntraSmoothing" `
-                $Paths.OutputFile 2>$Paths.LogPath
+            ffmpeg $ffmpegArgs[0] -f null - 2>$Paths.LogPath
         }
+
+        Write-Host
+        Write-Host "***** STARTING FFMPEG PASS 2 *****" @progressColors
+        Write-Banner
+
+        ffmpeg $ffmpegArgs[1] $Paths.OutputFile 2>>$Paths.LogPath
     }
-    #Deinterlace content
-    elseif ($Deinterlace) {
-        if ($PSBoundParameters['TestFrames']) {
-            Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-            ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "yadif, crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
-                strong-intra-smoothing=$IntraSmoothing" `
-                $Paths.OutputFile 2>$Paths.LogPath
-        }
-        else {
-            ffmpeg -probesize 100MB -i $Paths.InputFile -vf "yadif, crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
-                strong-intra-smoothing=$IntraSmoothing" `
-                $Paths.OutputFile 2>$Paths.LogPath
-        }
+    #CRF encode
+    elseif ($RateControl[0] -eq '-crf') {
+        Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
+        Write-Host "***** STARTING FFMPEG *****" @progressColors
+        Write-Banner
+
+        ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
     }
-    #Encode SDR content (1080p and below)
+    #One pass encoding
+    elseif ($RateControl[0] -eq '-b:v') {
+        Write-Host "**** 1 Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
+        Write-Host "***** STARTING FFMPEG *****" @progressColors
+        Write-Banner
+
+        ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+    }
+    #Should be unreachable. Throw error and exit script if rate control cannot be detected
     else {
-        if ($PSBoundParameters['TestFrames']) {
-            Write-Host "Test Run Enabled. Encoding $TestFrames frames`n" @warnColors
-            ffmpeg -probesize 100MB -ss 00:01:30 -i $Paths.InputFile -frames:v $TestFrames -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
-                strong-intra-smoothing=$IntraSmoothing" `
-                $Paths.OutputFile 2>$Paths.LogPath
-        }
-        else {
-            ffmpeg -probesize 100MB -i $Paths.InputFile -vf "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])" `
-                -color_range tv -map 0:v:0 -c:v libx265 $audio $subs $RateControl -preset $Preset -profile:v main10 -pix_fmt yuv420p10le `
-                -x265-params "nr-intra=$($NoiseReduction[0]):nr-inter=$($NoiseReduction[1]):aq-mode=$($p.AqMode):aq-strength=$AqStrength`:psy-rd=$PsyRd`:`
-                keyint=192:qcomp=$QComp`:deblock=$($Deblock[0]),$($Deblock[1]):sao=0:rc-lookahead=48:subme=$($p.Subme):bframes=$($p.BFrames)`:`
-                psy-rdoq=$($p.PsyRdoq):open-gop=0:b-intra=$($p.BIntra):frame-threads=2:merange=44:colorprim=bt709:transfer=bt709:colormatrix=bt709:`
-                strong-intra-smoothing=$IntraSmoothing" `
-                $Paths.OutputFile 2>$Paths.LogPath
-        }
+        throw "Rate control method could not be determined from input parameters"
     }
 }
 
