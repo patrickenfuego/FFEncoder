@@ -133,32 +133,27 @@ function Invoke-FFMpeg {
     }
     $audio = Set-AudioPreference @audioParam1
     if ($null -ne $AudioInput[1]) {
-        $copyOpt = @("copy", "c", "copyall", "ca", 0, 1, 2, 3, 4, 5)
+        #Verify if stream copying and a named codec are used together
+        $copyOpt = @('copy', 'c', 'copyall', 'ca', 0, 1, 2, 3, 4, 5)
         if ($AudioInput[1].Stereo -and 
             $copyOpt -contains $AudioInput[0].Audio -and 
             $copyOpt -notcontains $AudioInput[1].Audio) {
-            $audioParam2 = @{
-                Paths       = $Paths
-                UserChoice  = $AudioInput[1].Audio
-                Bitrate     = $AudioInput[1].Bitrate
-                Stream      = 1
-                Stereo      = $AudioInput[1].Stereo
-                AudioFrames = $TestFrames
-                RemuxStream = $true
-            }
+            
+            $remuxStream = $true
         }
-        else {
-            $audioParam2 = @{
-                Paths       = $Paths
-                UserChoice  = $AudioInput[1].Audio
-                Bitrate     = $AudioInput[1].Bitrate
-                Stream      = 1
-                Stereo      = $AudioInput[1].Stereo
-                AudioFrames = $TestFrames
-                RemuxStream = $false
-            } 
+        else { $remuxStream = $false }
+
+        $audioParam2 = @{
+            Paths       = $Paths
+            UserChoice  = $AudioInput[1].Audio
+            Bitrate     = $AudioInput[1].Bitrate
+            Stream      = 1
+            Stereo      = $AudioInput[1].Stereo
+            AudioFrames = $TestFrames
+            RemuxStream = $remuxStream
         }
         $audio2 = Set-AudioPreference @audioParam2
+
         if ($null -ne $audio2) { $audio = $audio + $audio2 }
     }
     
@@ -175,7 +170,7 @@ function Invoke-FFMpeg {
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
-    #Set the base arguments and pass them to Set-FFMPegArgs function
+    #Set the base arguments and pass them to Set-FFMpegArgs function
     $baseArgs = @{
         Audio          = $audio
         Subtitles      = $subs

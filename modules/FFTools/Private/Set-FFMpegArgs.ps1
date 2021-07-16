@@ -31,11 +31,11 @@ function Set-FFMpegArgs {
     [CmdletBinding()]
     param (
         # Parameter help description
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [array]$Audio,
 
         # Parameter help description
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [array]$Subtitles,
 
         # x265 preset setting
@@ -48,11 +48,11 @@ function Set-FFMpegArgs {
         [int[]]$CropDimensions,
 
         # Parameter help description
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [array]$RateControl,
 
         # Parameter help description
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [hashtable]$PresetParams,
 
         # Adjusts the quantizer curve compression factor
@@ -61,7 +61,6 @@ function Set-FFMpegArgs {
 
         # Deblock filter setting
         [Parameter(Mandatory = $false)]
-        [Alias("DBF")]
         [int[]]$Deblock,
 
         # aq-strength. Higher values equate to a lower QP, but can also increase bitrate significantly
@@ -77,7 +76,7 @@ function Set-FFMpegArgs {
         [int]$IntraSmoothing,
 
         # Parameter help description
-        [Parameter()]
+        [Parameter(Mandatory = $false)]
         [hashtable]$HDR,
 
         # Path to the log file
