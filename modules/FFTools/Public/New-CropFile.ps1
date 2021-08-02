@@ -42,21 +42,58 @@ function New-CropFile {
         return
     }
     else {
-        Write-Host "Generating crop file in Parallel...`n"
         $segments = @(
-            @{ Start = '90'; Length =  '00:08:00'; Duration = 0 }
-            @{ Start = '00:20:00'; Length =  '00:08:00'; Duration = 20 } 
-            @{ Start = '00:40:00'; Length =  '00:08:00'; Duration = 40 } 
-            @{ Start = '01:00:00'; Length =  '00:08:00'; Duration = 70 } 
-            @{ Start = '01:20:00'; Length =  '00:03:00'; Duration = 85 } 
-            @{ Start = '01:30:00'; Length =  '00:03:00'; Duration = 95 } 
+            @{ Start = '90'; Length =  '00:00:46'; Duration = 0 }
+            @{ Start = '00:05:00'; Length =  '00:00:46'; Duration = 7 }
+            @{ Start = '00:10:00'; Length =  '00:00:46'; Duration = 11 }
+            @{ Start = '00:15:00'; Length =  '00:00:46'; Duration = 16 }
+            @{ Start = '00:20:00'; Length =  '00:00:46'; Duration = 21 }
+            @{ Start = '00:25:00'; Length =  '00:00:46'; Duration = 26 }
+            @{ Start = '00:30:00'; Length =  '00:00:46'; Duration = 31 }
+            @{ Start = '00:35:00'; Length =  '00:00:46'; Duration = 36 }
+            @{ Start = '00:40:00'; Length =  '00:00:46'; Duration = 41 }
+            @{ Start = '00:45:00'; Length =  '00:00:46'; Duration = 46 }
+            @{ Start = '00:50:00'; Length =  '00:00:46'; Duration = 51 }
+            @{ Start = '00:55:00'; Length =  '00:00:46'; Duration = 56 }
+            @{ Start = '01:00:00'; Length =  '00:00:46'; Duration = 61 }
+            @{ Start = '01:05:00'; Length =  '00:00:46'; Duration = 66 }
+            @{ Start = '01:10:00'; Length =  '00:00:46'; Duration = 71 }
+            @{ Start = '01:15:00'; Length =  '00:00:46'; Duration = 76 }
+            @{ Start = '01:20:00'; Length =  '00:00:46'; Duration = 81 }
+            @{ Start = '01:25:00'; Length =  '00:00:46'; Duration = 86 }
+            @{ Start = '01:30:00'; Length =  '00:00:46'; Duration = 91 }
+            @{ Start = '01:35:00'; Length =  '00:00:46'; Duration = 96 }
+            @{ Start = '01:40:00'; Length =  '00:00:46'; Duration = 101 }
+            @{ Start = '01:45:00'; Length =  '00:00:46'; Duration = 106 }
+            @{ Start = '01:50:00'; Length =  '00:00:46'; Duration = 111 }
+            @{ Start = '01:55:00'; Length =  '00:00:46'; Duration = 116 }
+            @{ Start = '02:00:00'; Length =  '00:00:46'; Duration = 121 }
+            @{ Start = '02:05:00'; Length =  '00:00:46'; Duration = 126 }
+            @{ Start = '02:10:00'; Length =  '00:00:46'; Duration = 131 }
+            @{ Start = '02:15:00'; Length =  '00:00:46'; Duration = 136 }
+            @{ Start = '02:20:00'; Length =  '00:00:46'; Duration = 141 }
+            @{ Start = '02:25:00'; Length =  '00:00:46'; Duration = 146 }
+            @{ Start = '02:30:00'; Length =  '00:00:46'; Duration = 151 }
+            @{ Start = '02:35:00'; Length =  '00:00:46'; Duration = 156 }
+            @{ Start = '02:40:00'; Length =  '00:00:46'; Duration = 161 }
+            @{ Start = '02:45:00'; Length =  '00:00:46'; Duration = 166 }
+            @{ Start = '02:50:00'; Length =  '00:00:46'; Duration = 171 }
+            @{ Start = '02:55:00'; Length =  '00:00:46'; Duration = 176 }
+            @{ Start = '03:00:00'; Length =  '00:00:46'; Duration = 181 }
+            @{ Start = '03:05:00'; Length =  '00:00:46'; Duration = 186 }
+            @{ Start = '03:10:00'; Length =  '00:00:46'; Duration = 191 }
+            @{ Start = '03:15:00'; Length =  '00:00:46'; Duration = 196 }
+            @{ Start = '03:20:00'; Length =  '00:00:46'; Duration = 201 }
+            @{ Start = '03:25:00'; Length =  '00:00:46'; Duration = 206 }
+            @{ Start = '03:30:00'; Length =  '00:00:46'; Duration = 211 }
+
         )
         $cropJob = $segments | ForEach-Object -Parallel {
             if ($Using:duration -gt $_.Duration) {
                 $c = ffmpeg -ss $_.Start -skip_frame nokey -hide_banner -i $Using:InputPath -t $_.Length -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c
             } 
-        } -AsJob 
+        } -AsJob -ThrottleLimit 6
 
         $cropJob | Wait-Job | Receive-Job | Out-File -FilePath $CropFilePath -Append | Stop-Job
     }
@@ -68,11 +105,15 @@ function New-CropFile {
     #If the crop file fails to generate, sleep for 5 seconds and perform a recursive call to try again
     else {
         #base case
-        if ($Count -eq 0) { throw "There was an issue creating the crop file. Check the input path and try again." }
+        if ($Count -eq 0) { 
+            throw "There was an issue creating the crop file. Check the input path and try again."
+            exit 2
+        }
         else {
             Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
             Start-Sleep -Seconds 5
             $Count--
+            if (Test-Path $CropFilePath) { Remove-Item -Path $CropFilePath -Force }
             New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath -Count $Count
         }
     }
