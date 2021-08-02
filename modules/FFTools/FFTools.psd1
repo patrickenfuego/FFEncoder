@@ -89,7 +89,8 @@ AliasesToExport = 'iffmpeg', 'itpffmpeg', 'ncf', 'ghdr'
 # List of all files packaged with this module
 FileList = 'FFTools.psd1', 'FFTools.psm1', 'Private\Set-AudioPreference.ps1', 'Private\Get-SubtitleStream', 'Private\Set-SubtitlePreference',
 'Private\Get-HDRMetadata.ps1', 'Public\Invoke-FFMpeg.ps1', 'Public\Invoke-TwoPassFFMpeg.ps1', 'Public\New-CropFile.ps1', 'Public\Measure-CropDimensions.ps1',
-'Private\Convert-ToStereo.ps1', 'Private\Set-PresetParameters.ps1', 'Private\Set-FFMPegArgs.ps1', 'Utils\Remove-FilePrompt.ps1', 'Utils\Write-Report.ps1'
+'Private\Convert-ToStereo.ps1', 'Private\Set-PresetParameters.ps1', 'Private\Set-FFMPegArgs.ps1', 'Utils\Remove-FilePrompt.ps1', 'Utils\Write-Report.ps1',
+'Utils\Confirm-HDR10Plus.ps1'
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{

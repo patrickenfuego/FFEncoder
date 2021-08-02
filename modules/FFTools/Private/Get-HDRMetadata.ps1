@@ -1,17 +1,19 @@
-###################################################################
-#
-#   Written by: Patrick Kelly
-#   Last Modified: 12/31/2020
-#
-###################################################################
 <#
-    Function that gathers HDR metadata automatically using ffprobe
-
+    .SYNOPSIS       
+        Function that gathers HDR metadata automatically using ffprobe
     .PARAMETER InputFile
         Path to source file. This is the file to be encoded
+    .PARAMETER HDR10PlusPath
+        Output path of the json file containing HDR10+ metadata
     .Outputs
         PowerShell object containing relevant HDR metadata
+    .NOTES
+        Calls utility function to check for and generate HDR10+ metadata
+    
+        If the HDR10+ parser cannot be found, this function will ignore it and only grab
+        the base layer metadata
 #>
+
 function Get-HDRMetadata {
     [CmdletBinding()]
     param (
@@ -21,20 +23,6 @@ function Get-HDRMetadata {
         [Parameter(Mandatory = $true, Position = 1)]
         [string]$HDR10PlusPath
     )
-    #Internal function that generates an HDR10+ metadata json file if the source is Profile A/B compliant
-    function Confirm-HDR10Plus {
-        $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser --verify -"
-        if ($? -and $res[1] -like "*HDR10+*") {
-            Write-Host "HDR10+ SEI metadata found..." -NoNewline
-            if (Test-Path -Path $HDR10PlusPath) { Write-Host "JSON metadata file already exists" @warnColors }
-            else {
-                Write-Host "Generating JSON file" @emphasisColors
-                cmd.exe /c "ffmpeg -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_parser -o `"$HDR10PlusPath`" -" 2>&1
-            }
-            return $true
-        }
-        else { return $false }
-    }
 
     #Constants for mastering display color primaries
     Set-Variable -Name Display_P3 -Value "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
@@ -47,6 +35,7 @@ function Get-HDRMetadata {
         Write-Warning "<$InputFile> could not be found. Check the input path and try again."
         $ioError = New-Object System.IO.FileNotFoundException
         throw $ioError
+        exit 2
     }
     #Gather HDR metadata using ffprobe
     $probe = ffprobe -hide_banner -loglevel error -select_streams V -print_format json `
@@ -58,6 +47,7 @@ function Get-HDRMetadata {
 
     if (!$metadata) {
         throw "10-bit pixel format could not be found within the first 5 frames. Make sure the input file supports HDR."
+        exit 2
     }
 
     [string]$pixelFmt = $metadata.pix_fmt
@@ -81,9 +71,9 @@ function Get-HDRMetadata {
     $maxCLL = $metadata.side_data_list[1].max_content
     $maxFAL = $metadata.side_data_list[1].max_average
     #Check if input has HDR10+ metadata and append the generated json file if present
-    $isHDR10Plus = Confirm-HDR10Plus
+    $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
     if ($isHDR10Plus) {
-        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath"
+        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath'"
     }
     $metadataObj = @{
         PixelFmt       = $pixelFmt
