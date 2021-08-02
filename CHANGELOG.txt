@@ -133,9 +133,11 @@ v. 1.6.5
 - Added a deinterlace filter (CRF only)
 - Added support for HDR10+ (additional dependency required)
     - Only working on Windows
+- Created a new function Set-FFMpegArgs to condense the two ffmpeg functions into one function. This function builds a dynamic array list based on InputPath
+- Added HDR10+ support for UNIX systems
 
 Planned:
 
-- HDR10+ support on UNIX
 - Frame threads parameter
+- Logic for copying multiple specific subtitle languages from source file
 
