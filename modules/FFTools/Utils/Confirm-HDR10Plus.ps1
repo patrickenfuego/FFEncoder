@@ -50,5 +50,5 @@ function Confirm-HDR10Plus {
         }
         return $true
     }
-    else { Write-host "DEBUG: nothing found"; return $false }
+    else { return $false }
 }
