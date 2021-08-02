@@ -1,6 +1,6 @@
 - [FFEncoder](#ffencoder)
   - [About](#about)
-  - [Requirements](#requirements)
+  - [Dependencies](#dependencies)
   - [Dependency Installation](#dependency-installation)
     - [Windows](#windows)
     - [Linux](#linux)
@@ -33,12 +33,13 @@ FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpe
 
 &nbsp;
 
-## Requirements
+## Dependencies
 
 - ffmpeg / ffprobe
 - PowerShell Core v. 7.0 or newer
 - \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
   - For the script to work with hdr10plus_parser, make sure it is available via PATH
+  - To access the `dhdr10-info` parameter in ffmpeg, enable HDR10_PLUS in `cmake` during manual compilation (or update to the latest version of ffmpeg)
 
 The script requires PowerShell Core v. 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
 
@@ -52,7 +53,7 @@ The script requires PowerShell Core v. 7.0 or newer on all systems as it utilize
 
 ### Windows
 
-To download ffmpeg, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages. I recommend the builds provided by Gyan. 
+To download ffmpeg, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages. I recommend the builds provided by Gyan.
 
 To install the latest version of PowerShell Core, follow the instructions provided by Microsoft [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-windows?view=powershell-7.1).
 
@@ -98,7 +99,7 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 - Maximum/Minimum Luminance
 - Maximum Content Light Level
 - Maximum Frame Average Light Level
-- HDR10+ SEI packets (if applicable)
+- HDR10+ SEI packets (optional, see [dependencies](#dependency-installation))
 
 Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for every source I've seen.
 
@@ -121,9 +122,9 @@ FFEncoder supports the following rate control options:
 
 FFEncoder can accept the following parameters from the command line. Most parameters are optional and have default values, except the following three which are **mandatory**:
 
-* InputPath
-* Rate control preference (CRF or Average Bitrate)
-* OutputPath
+- InputPath
+- Rate control preference (CRF or Average Bitrate)
+- OutputPath
 
 > An Asterisk <b>\*</b> denotes that the parameter is required only for its given parameter set (for example, you can choose either CRF or VideBitrate for rate control, but not both):
 
@@ -152,6 +153,7 @@ FFEncoder can accept the following parameters from the command line. Most parame
 | **BFrames**              | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
 | **BIntra**               | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
 | **StrongIntraSmoothing** | 1 (on)  | False         | **SIS**                | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
+| **FrameThreads**         | System  | False         | **ST**                 | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores    |
 | **Subme**                | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
 | **NoiseReduction**       | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
 | **OutputPath**           | N/A     | True          | **O**                  | The path to the encoded output file                                                                                                                      |
@@ -168,8 +170,7 @@ Video encoding is a subjective process, and I have my own personal preferences. 
 - `no-sao` - I really hate the way sao looks, so it's disabled along with `selective-sao`. There's a reason it's earned the moniker "smooth all objects", and it makes everything look too waxy in my opinion
 - `rc-lookahead=48` - I have found 48 (2 \* 24 fps) to be a number with good gains and no diminishing returns. This is recommended by many at the [doom9 forums](https://forum.doom9.org/showthread.php?t=175993)
 - `keyint=192` - This is personal preference. I like to spend a few extra bits to insert more I-frames into a GOP, which helps with random seeking throughout the video. The bitrate increase is trivial
-- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 uses closed GOPs by default. For more insight, listen to [Ben Waggoner](https://streaminglearningcenter.com/articles/open-and-closed-gops-all-you-need-to-know.html) has to say on the topic
-- `frame-threads=2` - It's known that more frame threads degrade overall quality (additional reading can be found [here](https://forum.doom9.org/showthread.php?t=176197&page=3)). 2 frame threads is a nice compromise for most systems
+- `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 uses closed GOPs by default. For more insight, listen to  what [Ben Waggoner](https://streaminglearningcenter.com/articles/open-and-closed-gops-all-you-need-to-know.html) has to say on the topic
 
 ### Exclusive to First Pass ABR
 
@@ -179,7 +180,6 @@ x265 offers a `--no-slow-firstpass` option to speed up the first pass of a 2-Pas
 - `max-merge=2` - This is the default value for presets ultrafast - medium, and is meant to increase first pass speeds for presets slow - placebo. `--no-slow-firstpass` lowers this to 1
 - `subme=2` - This is one of the settings set by `--no-slow-firstpass`
 - `b-intra=0` - Disabled, regardless if it's enabled via parameter or preset
-- `frame-threads=MAX(2, --frame-threads)` - If your CPU supports more than 2 frame threads, they will be used for the first pass only
 
 ### Exclusive to 4K UHD Content
 

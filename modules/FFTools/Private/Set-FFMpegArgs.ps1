@@ -75,6 +75,10 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [int]$IntraSmoothing,
 
+        # Number of frame threads the encoder should use
+        [Parameter(Mandatory = $false)]
+        [int]$FrameThreads,
+
         # Parameter help description
         [Parameter(Mandatory = $false)]
         [hashtable]$HDR,
@@ -123,7 +127,6 @@ function Set-FFMpegArgs {
         'sao=0'
         'rc-lookahead=48'
         'open-gop=0'
-        'frame-threads=2'
         "psy-rd=$PsyRd"
         "qcomp=$QComp"
         "subme=$($PresetParams.Subme)"
@@ -162,9 +165,14 @@ function Set-FFMpegArgs {
         "deblock=$($Deblock[0]),$($Deblock[1])"
     )
 
-    ## End global array declarations ##
+    ## End base array declarations ##
 
     ## Build Argument Arrays ##
+
+    #Add frame threads parameter if set by user
+    if ($PSBoundParameters['FrameThreads']) {
+        $x265Array += "frame-threads=$FrameThreads"
+    }
 
     #Test frames. Null if not passed by user
     $testArray = $PSBoundParameters['TestFrames'] ? 

@@ -123,6 +123,9 @@
         The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a large performance impact 
     .PARAMETER StrongIntraSmoothing
         Enables/disables strong-intra-smoothing. Default enabled
+    .PARAMETER FrameThreads
+        Set the number of frame threads used by the encoder. More threads equate to faster encoding, but with decreased quality. If no value is passed, the encoder default
+        is used based on the number of logical CPU cores available to the system. If you aren't sure what this does, don't set it
     .PARAMETER QComp
         Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode
     .PARAMETER OutputPath
@@ -304,6 +307,12 @@ param (
     [ValidateRange(0, 1)]
     [Alias("SIS")]
     [int]$StrongIntraSmoothing = 1,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(1, 8)]
+    [Alias("FT")]
+    [int]$FrameThreads,
 
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
@@ -507,6 +516,7 @@ $ffmpegParams = @{
     BIntra         = $BIntra
     Subme          = $Subme 
     IntraSmoothing = $StrongIntraSmoothing
+    FrameThreads   = $FrameThreads
     Paths          = $paths
     TestFrames     = $TestFrames
 }

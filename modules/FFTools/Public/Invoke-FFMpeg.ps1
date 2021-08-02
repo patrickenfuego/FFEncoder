@@ -97,6 +97,10 @@ function Invoke-FFMpeg {
         [Alias("SIS")]
         [int]$IntraSmoothing,
 
+        # Number of frame threads the encoder should use
+        [Parameter(Mandatory = $false)]
+        [int]$FrameThreads,
+
         # Path to the log file
         [Parameter(Mandatory = $true)]
         [Alias("L")]
@@ -183,6 +187,7 @@ function Invoke-FFMpeg {
         AqStrength     = $AqStrength
         NoiseReduction = $NoiseReduction
         IntraSmoothing = $IntraSmoothing
+        FrameThreads   = $FrameThreads
         HDR            = $HDR
         Paths          = $Paths
         TestFrames     = $TestFrames
@@ -190,7 +195,7 @@ function Invoke-FFMpeg {
     }
     $ffmpegArgs = Set-FFMpegArgs @baseArgs
     
-    #Two pass encoding
+    #Two pass encode
     if ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
         Write-Host "***** STARTING FFMPEG PASS 1 *****" @progressColors
@@ -218,7 +223,7 @@ function Invoke-FFMpeg {
 
         ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
     }
-    #One pass encoding
+    #One pass encode
     elseif ($RateControl[0] -eq '-b:v') {
         Write-Host "**** 1 Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
         Write-Host "***** STARTING FFMPEG *****" @progressColors
@@ -229,6 +234,7 @@ function Invoke-FFMpeg {
     #Should be unreachable. Throw error and exit script if rate control cannot be detected
     else {
         throw "Rate control method could not be determined from input parameters"
+        exit 2
     }
 }
 
