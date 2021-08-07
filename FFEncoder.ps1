@@ -443,7 +443,7 @@ function Set-ScriptPaths {
 
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
 
-Import-Module -Name ".\modules\FFTools"
+Import-Module -Name "$PSScriptRoot\modules\FFTools"
 
 $stopwatch = [System.Diagnostics.stopwatch]::StartNew()
 $startTime = (Get-Date).ToLocalTime()
