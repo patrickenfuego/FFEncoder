@@ -42,6 +42,7 @@ function New-CropFile {
         return
     }
     else {
+        Write-Host "Generating crop file..."
         $segments = @(
             @{ Start = '90'; Length =  '00:00:46'; Duration = 0 }
             @{ Start = '00:05:00'; Length =  '00:00:46'; Duration = 7 }
