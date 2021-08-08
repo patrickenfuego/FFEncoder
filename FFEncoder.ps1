@@ -470,11 +470,9 @@ if ($PSBoundParameters['CRF']) {
     $rateControl = @('-crf', $CRF, $false)
 }
 elseif ($PSBoundParameters['VideoBitrate']) {
-    if ($Pass -eq 2) { 
-        $rateControl = @('-b:v', $VideoBitrate, $true) 
-    }
-    else { 
-        $rateControl = @('-b:v', $VideoBitrate, $false)
+    $rateControl = switch ($Pass) {
+        1 { @('-b:v', $VideoBitrate, $false) }
+        Default { @('-b:v', $VideoBitrate, $true) }
     }
 }
 else {
