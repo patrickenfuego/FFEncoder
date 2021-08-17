@@ -79,6 +79,12 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,
 
+        [Parameter(Mandatory = $false)]
+        [array]$FFMpegExtra,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$x265Extra,
+
         # Parameter help description
         [Parameter(Mandatory = $false)]
         [hashtable]$HDR,
@@ -167,6 +173,28 @@ function Set-FFMpegArgs {
 
     ## End base array declarations ##
 
+    ## Unpack extra parameters
+
+    if ($PSBoundParameters['FFMpegExtra']) {
+        [string[]]$ffmpegExtraArray = @()
+        foreach ($arg in $FFMpegExtra) {
+            if ($arg -is [hashtable]) {
+                foreach ($entry in $arg.GetEnumerator()) {
+                    $ffmpegExtraArray += "$($entry.Name)"
+                    $ffmpegExtraArray += "$($entry.Value)"
+                }
+            }
+            else { $ffmpegExtraArray += $arg }
+        }
+    }
+
+    if ($PSBoundParameters['x265Extra']) {
+        [string[]]$x265ExtraArray = @()
+        foreach ($arg in $x265Extra.GetEnumerator()) {
+            $x265ExtraArray += "$($arg.Name)=$($arg.Value)"
+        }
+    }
+
     ## Build Argument Arrays ##
 
     #Add frame threads parameter if set by user
@@ -216,12 +244,14 @@ function Set-FFMpegArgs {
 
     $ffmpegArgsAL += $vfArray
     if ($testArray) { $ffmpegArgsAL += $testArray }
+    if ($ffmpegExtraArray) { $ffmpegArgsAL += $ffmpegExtraArray }
     $ffmpegArgsAL += $pxFormatArray
 
     #Build x265 arguments for CRF/ 1-pass
     if (!$twoPass) {
         #Combine x265 args and join
-        $tmpArray = $x265Array + $resArray 
+        $tmpArray = $x265Array + $resArray
+        if ($x265ExtraArray) { $tmpArray += $x265ExtraArray }
         $x265String = $tmpArray -join ":"
         $ffmpegArgsAL += @('-x265-params', "`"$x265String`"")
 
@@ -237,16 +267,10 @@ function Set-FFMpegArgs {
         $ffmpegArgsAL += @('-x265-params', "`"$x265String`"")
         #Second pass
         $tmpArray = @('pass=2', "stats='$($Paths.X265Log)'") + $x265Array + $resArray
+        if ($x265ExtraArray) { $tmpArray += $x265ExtraArray }
         $x265String = $tmpArray -join ":"
         $ffmpegPassTwoArgsAL += @('-x265-params', "`"$x265String`"")
 
         return @($ffmpegArgsAL, $ffmpegPassTwoArgsAL)
     }
 }
-
-
-
-
-
-
-

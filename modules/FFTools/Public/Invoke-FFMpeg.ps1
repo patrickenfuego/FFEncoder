@@ -101,6 +101,12 @@ function Invoke-FFMpeg {
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,
 
+        [Parameter(Mandatory = $false)]
+        [array]$FFMpegExtra,
+
+        [Parameter(Mandatory = $false)]
+        [hashtable]$x265Extra,
+
         # Path to the log file
         [Parameter(Mandatory = $true)]
         [Alias("L")]
@@ -188,6 +194,8 @@ function Invoke-FFMpeg {
         NoiseReduction = $NoiseReduction
         IntraSmoothing = $IntraSmoothing
         FrameThreads   = $FrameThreads
+        FFMpegExtra    = $FFMpegExtra
+        x265Extra      = $x265Extra
         HDR            = $HDR
         Paths          = $Paths
         TestFrames     = $TestFrames

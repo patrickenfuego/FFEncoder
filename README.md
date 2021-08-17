@@ -9,6 +9,7 @@
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
   - [Rate Control Options](#rate-control-options)
   - [Script Parameters](#script-parameters)
+    - [Using the Extra Parameter Options](#using-the-extra-parameter-options)
   - [Hard Coded Parameters](#hard-coded-parameters)
     - [Exclusive to First Pass ABR](#exclusive-to-first-pass-abr)
     - [Exclusive to 4K UHD Content](#exclusive-to-4k-uhd-content)
@@ -79,17 +80,19 @@ To install PowerShell Core, run the following command using Homebrew:
 
 > `brew install --cask powershell`
 
-&nbsp;
+---
 
 ## Auto-Cropping
 
 FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze up to 5 separate segments of the source simultaneously. The collected output of each cropping instance is then saved to a file, which is used to determine the ideal cropping width and height for encoding.
 
-&nbsp;
+---
 
 ## Automatic HDR Metadata
 
 FFEncoder will automatically fetch and fill HDR metadata before encoding begins. This includes:
+
+> **NOTE:** Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for every source I've seen.
 
 - Mastering Display Color Primaries (Display P3 and BT.2020 supported)
 - Pixel format
@@ -101,9 +104,7 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 - Maximum Frame Average Light Level
 - HDR10+ SEI packets (optional, see [dependencies](#dependency-installation))
 
-Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for every source I've seen.
-
-&nbsp;
+---
 
 ## Rate Control Options
 
@@ -112,11 +113,11 @@ FFEncoder supports the following rate control options:
 - **Constant Rate Factor (CRF)** - CRF encoding targets a specific quality level throughout, and isn't concerned with file size. Lower CRF values will result in a higher perceived quality and bitrate
   - Recommended values for 1080p content are between 16-24
   - Recommended values for 2160p content are between 17-26
-- **Average Bitrate** - Average bitrate encoding targets a specific output file size, and isn't concerned with quality. Output size is determined by dividing the average bitrate by the video length. There are 2 varieties of ABR encoding that FFEncoder supports:
+- **Average Bitrate** - Average bitrate encoding targets a specific output file size, and isn't concerned with quality. There are 2 varieties of ABR encoding that FFEncoder supports:
   - **1-Pass** - This option uses a single pass, and isn't aware of the complexities of future frames and can only be scaled based on the past. This generally leads to lower overall quality, but is significantly faster than 2-pass
   - **2-Pass** - 2-Pass encoding uses a first pass to calculate bitrate distribution, which is then used to allocate bits more accurately on the second pass. While it's more time consuming than a single pass encode, quality is generally improved significantly. This script uses a custom combination of parameters for the first pass to help strike a balance between speed and quality
 
-&nbsp;
+---
 
 ## Script Parameters
 
@@ -153,15 +154,37 @@ FFEncoder can accept the following parameters from the command line. Most parame
 | **BFrames**              | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
 | **BIntra**               | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
 | **StrongIntraSmoothing** | 1 (on)  | False         | **SIS**                | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
-| **FrameThreads**         | System  | False         | **ST**                 | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores    |
+| **FrameThreads**         | System  | False         | **FT**                 | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores    |
 | **Subme**                | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
+| **FFMpegExtra**          | N/A     | False         | **FE**                 | Pass additional settings to ffmpeg as a generic array of single and multi-valued elements. Useful for options not covered by other parameters            |
+| **x265Extra**            | N/A     | False         | **XE**                 | Pass additional settings to the x265 encoder as a hashtable of values. Useful for options not covered by other parameters                                |
 | **NoiseReduction**       | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
 | **OutputPath**           | N/A     | True          | **O**                  | The path to the encoded output file                                                                                                                      |
 | **RemoveFiles**          | False   | False         | **Del**, **RM**        | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files                  |
 | **GenerateReport**       | False   | False         | **Report**, **GR**     | Switch that generates a report of the encode. Data is pulled from the log file and written in a reading friendly format                                  |
 | **Deinterlace**          | False   | False         | **DI**                 | Switch to enable deinterlacing of interlaced content using yadif                                                                                         |
 
-&nbsp;
+### Using the Extra Parameter Options
+
+> **WARNING**: The script **does not** check syntax, and assumes you know what you're doing. Be sure to test, test, test!
+
+You can pass additional arguments not provided by the script to both ffmpeg and x265 using the `-FFMpegExtra` and `-x265Extra` parameters, respectively.
+
+`-FFMpegExtra` accepts a generic array that can receive single and multi-valued arguments. For options that receive no argument, i.e. `stats/nostats`, pass it as a single element; otherwise, use a hashtable. For example:
+
+```PowerShell
+#Pass additional arguments to ffmpeg using an array with a hashtable and a single value
+.\FFEncoder.ps1 $InputPath -CRF 18 -FFMpegExtra @{ '-t', 20; '-stats_period' = 5 }, '-autorotate' -o $OutputPath
+```
+
+`-x265Extra` accepts a hashtable of values as input, in the form of `<key = value>`. For example:
+
+```PowerShell
+#Pass additional arguments to the x265 encoder using a hashtable of values
+.\FFEncoder.ps1 $InputPath -CRF 18 -x265Extra @{ 'max-merge' = 1; 'max-tu-size' = 16 } -o $OutputPath
+```
+
+---
 
 ## Hard Coded Parameters
 
@@ -189,7 +212,7 @@ x265 offers a `--no-slow-firstpass` option to speed up the first pass of a 2-Pas
 
 - `merange=44` - The default value of 57 is a bit much for 1080p content, and it slows the encode with no noticeable gain
 
-&nbsp;
+---
 
 ## Audio Options
 
@@ -217,7 +240,7 @@ FFEncoder currently supports the following audio options wih the `-Audio`/`-Audi
 | **Stream #** | `0-5`            | N/A            | Select an audio stream using its stream identifier in ffmpeg/ffprobe. Not compatible with the `-Stereo` parameters                      |
 | **None**     | `none`, `n`      | N/A            | No audio streams will be added to the output file                                                                                       |
 
-&nbsp;
+---
 
 ### Using the libfdk_aac Encoder
 
@@ -241,7 +264,7 @@ With FFEncoder, you can downmix either of the two output streams to stereo using
 
 When using any combination of `copy`/`c`/`copyall`/`ca` and `-Stereo`/`-Stereo2`, the script will multiplex the primary audio stream out of the container and encode it separately; this is because ffmpeg cannot stream copy and filter at the same time. See [here](https://stackoverflow.com/questions/53518589/how-to-use-filtering-and-stream-copy-together-with-ffmpeg) for a nice explanation. Once the primary encode finishes, the external audio file (now converted to stereo) is multiplexed back into the primary container with the other streams selected.
 
-&nbsp;
+---
 
 ## Subtitle Options
 
