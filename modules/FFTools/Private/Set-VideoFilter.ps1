@@ -1,6 +1,10 @@
 <#
     .SYNOPSIS
         Private function for setting video filters
+    .DESCRIPTION
+        Sets video filters passed via the script. If manual filters
+        are passed via -FFMpegExtra parameter, they are joined with
+        other script parameters here
 #>
 
 function Set-VideoFilter {
@@ -21,7 +25,7 @@ function Set-VideoFilter {
 
     [array]$vfArray = $null
 
-    #if manual crop dimensions are passed, pull them out
+    #if manual crop dimensions are passed, parse them out
     if ($CropDimensions -contains -1) {
         [string]$cropStr = $FFMpegExtra.Where({ $_['-vf'] -match "crop" }) | 
             Select-Object -ExpandProperty '-vf'
