@@ -58,7 +58,9 @@ To install the latest version of PowerShell Core, follow the instructions provid
 
 You can install ffmpeg using your package manager of choice (apt/yum/pacman):
 
-> `apt install ffmpeg`
+```shell
+apt install ffmpeg
+```
 
 To install PowerShell core, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
 
@@ -66,15 +68,21 @@ To install PowerShell core, see Microsoft's instructions for your distribution [
 
 The easiest way to install ffmpeg and PowerShell core is through the [Homebrew](https://brew.sh/) package manager:
 
-> `brew install ffmpeg`
+```shell
+brew install ffmpeg
+```
 
 One of the other benefits of using Homebrew is that you can easily install a build that includes non-free libraries like fdk_aac:
 
-> `brew install ffmpeg --with-fdk-aac`
+```shell
+brew install ffmpeg --with-fdk-aac
+```
 
 To install PowerShell Core, run the following command using Homebrew:
 
-> `brew install --cask powershell`
+```shell
+brew install --cask powershell
+```
 
 ---
 
