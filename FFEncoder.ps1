@@ -397,7 +397,7 @@ param (
 #Change these to modify the default path for generated files when a regex match cannot be made
 $macDefaultPath = '~/Movies'
 $linuxDefaultPath = '~/Videos'
-$windowsDefaultPath = "$env:USERPROFILE\Videos"
+$windowsDefaultPath = [Environment]::GetFolderPath('MyVideos')
 
 ## End Global Variables ##
 
