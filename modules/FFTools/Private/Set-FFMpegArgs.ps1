@@ -216,7 +216,7 @@ function Set-FFMpegArgs {
     $null
     
     #Set video specific filter arguments
-    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra
+    if ($Scale) { $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra }
 
     #Set arguments for UHD/FHD based on the presence of HDR metadata
     if ($HDR) {

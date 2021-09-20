@@ -376,8 +376,8 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("point", "spline16", "spline36", "bilinear", "bicubic", "lanczos",
-        "fast_bilinear", "neighbor", "area", "gauss", "sinc", "spline")]
-    [Alias("DT", "ResizeType", "ResampleType")]
+        "fast_bilinear", "neighbor", "area", "gauss", "sinc", "spline", "bicublin")]
+    [Alias("SF", "ResizeType")]
     [string]$ScaleFilter = "bilinear",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
@@ -512,8 +512,15 @@ $paths = Set-ScriptPaths
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
 
-#If scale is used, verify arguments
-if ($PSBoundParameters['Scale']) {
+#If scale is used, verify arguments and handle errors
+if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and !$PSBoundParameters['Scale']) {
+    throw "No scaling library selected. Set a value for -Scale (scale or zscale) and try again."
+    exit 2
+}
+# elseif ($PSBoundParameters['Resolution'] -and !$PSBoundParameters['Scale']) {
+
+# }
+elseif ($PSBoundParameters['Scale']) {
     if ($Scale -eq "Scale") {
         $validArgs = @("fast_bilinear", "neighbor", "area", "gauss", "sinc", "spline", "lanczos", "bilinear", "bicubic")
         if ($validArgs -notcontains $PSBoundParameters['ScaleFilter']) {
