@@ -9,6 +9,7 @@
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
   - [Rate Control Options](#rate-control-options)
   - [Script Parameters](#script-parameters)
+    - [Rescaling Videos](#rescaling-videos)
     - [Using the Extra Parameter Options](#using-the-extra-parameter-options)
   - [Hard Coded Parameters](#hard-coded-parameters)
     - [Exclusive to First Pass ABR](#exclusive-to-first-pass-abr)
@@ -20,33 +21,28 @@
     - [Downmixing Multi-Channel Audio to Stereo](#downmixing-multi-channel-audio-to-stereo)
   - [Subtitle Options](#subtitle-options)
 
-&nbsp;
+---
 
 # FFEncoder
 
 FFEncoder is a cross-platform PowerShell script that is meant to make high definition video encoding easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress video files for streaming or archiving.
 
-&nbsp;
-
 ## About
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify complicated CLI arguments for each source. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is extensive, and many of the arguments are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
 
-&nbsp;
+---
 
 ## Dependencies
 
 - ffmpeg / ffprobe
 - PowerShell Core v. 7.0 or newer
-- \*[quietvoid's HDR10+ parser](https://github.com/quietvoid/hdr10plus_parser) (optional for HDR10+ encoding)
-  - For the script to work with hdr10plus_parser, make sure it is available via PATH
-  - To access the `dhdr10-info` parameter in ffmpeg, enable HDR10_PLUS in `cmake` during manual compilation (or update to the latest version of ffmpeg)
 
-The script requires PowerShell Core v. 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
+The script requires PowerShell Core 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
 
 > For Windows users, PowerShell Core is a supplemental installation and will will be installed alongside PowerShell 5.1
 
-&nbsp;
+---
 
 ## Dependency Installation
 
@@ -84,7 +80,9 @@ To install PowerShell Core, run the following command using Homebrew:
 
 ## Auto-Cropping
 
-FFEncoder will auto-crop your video, and works similarly to programs like Handbrake. The script uses ffmpeg's `cropdetect` argument to analyze up to 5 separate segments of the source simultaneously. The collected output of each cropping instance is then saved to a file, which is used to determine the ideal cropping width and height for encoding.
+> **NOTE**: FFEncoder uses modulus 2 rounding to detect black borders. I've found this to be the most consistent choice for the majority content. If you do not want the script to auto-crop your video, you may pass **override crop values** via the `-FFMpegExtra` parameter (see [Script Parameters](#script-parameters) for more info).
+
+FFEncoder will auto-crop your video, and works similarly to programs like [Handbrake](https://handbrake.fr/) with more emphasis on accuracy. The script analyzes up to 6 separate segments of the source simultaneously, collects the output, and saves it to a file which is used to determine cropping values for encoding.
 
 ---
 
@@ -92,7 +90,7 @@ FFEncoder will auto-crop your video, and works similarly to programs like Handbr
 
 FFEncoder will automatically fetch and fill HDR metadata before encoding begins. This includes:
 
-> **NOTE:** Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for every source I've seen.
+> **NOTE**: Color Range (Limited) and Chroma Subsampling (4:2:0) are currently hard coded as they are the same for all Blu-Ray sources. If you need dynamic parameters, put in a feature request and I will add them.
 
 - Mastering Display Color Primaries (Display P3 and BT.2020 supported)
 - Pixel format
@@ -102,7 +100,7 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 - Maximum/Minimum Luminance
 - Maximum Content Light Level
 - Maximum Frame Average Light Level
-- HDR10+ SEI packets (optional, see [dependencies](#dependency-installation))
+- HDR10+ Metadata
 
 ---
 
@@ -129,40 +127,60 @@ FFEncoder can accept the following parameters from the command line. Most parame
 
 > An Asterisk <b>\*</b> denotes that the parameter is required only for its given parameter set (for example, you can choose either CRF or VideBitrate for rate control, but not both):
 
-| Parameter Name           | Default | Mandatory     | Alias                  | Description                                                                                                                                              |
-| ------------------------ | ------- | ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **TestFrames**           | 0 (off) | False         | **T**                  | Integer value representing the number of test frames to encode. When enabled, encoding starts at 00:01:30 so that title screens are skipped              |
-| **Help**                 | False   | <b>\*</b>True | **H**, **/?**, **?**   | Switch to display help information                                                                                                                       |
-| **InputPath**            | N/A     | True          | **I**                  | The path to the source file (to be encoded)                                                                                                              |
-| **Audio**                | Copy    | False         | **A**                  | Audio preference for the primary stream. See [Audio Options](#audio-options) for more info                                                               |
-| **AudioBitrate**         | Codec   | False         | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
-| **Stereo**               | False   | False         | **2CH**, **ST**        | Switch to downmix the first audio track to stereo. See [Audio Options](#audio-options)                                                                   |
-| **Audio2**               | None    | False         | **A2**                 | Audio preference for the secondary stream. See [Audio Options](#audio-options) for more info                                                             |
-| **AudioBitrate2**        | Codec   | False         | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
-| **Stereo2**              | False   | False         | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo. See [Audio Options](#audio-options)                                                                  |
-| **Subtitles**            | Default | False         | **S**                  | Subtitle passthrough preference. See the [Subtitle Options](#subtitle-options) section for more info                                                     |
-| **Preset**               | Slow    | False         | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset parameters              |
-| **CRF**                  | N/A     | <b>\*</b>True | **C**                  | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate             |
-| **VideoBitrate**         | N/A     | <b>\*</b>True | **VBitrate**           | Rate control parameter that targets a specific file size. Can be used as an alternative to CRF rate control when output size is a priority               |
-| **Pass**                 | 2       | False         | **P**                  | The number of passes the encoder will perform for ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                |
-| **Deblock**              | -2, -2  | False         | **DBF**                | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                    |
-| **AqMode**               | 2       | False         | **AQM**                | x265 Adaptive Quantization setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                |
-| **AqStrength**           | 1.00    | False         | **AQS**                | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates |
-| **PsyRd**                | 2.00    | False         | **PRD**                | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                          |
-| **PsyRdoq**              | Preset  | False         | **PRDQ**               | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
-| **QComp**                | 0.60    | False         | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
-| **BFrames**              | Preset  | False         | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
-| **BIntra**               | Preset  | False         | **BINT**               | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
-| **StrongIntraSmoothing** | 1 (on)  | False         | **SIS**                | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
-| **FrameThreads**         | System  | False         | **FT**                 | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores    |
-| **Subme**                | Preset  | False         | **SM**, **SPM**        | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
-| **FFMpegExtra**          | N/A     | False         | **FE**                 | Pass additional settings to ffmpeg as a generic array of single and multi-valued elements. Useful for options not covered by other parameters            |
-| **x265Extra**            | N/A     | False         | **XE**                 | Pass additional settings to the x265 encoder as a hashtable of values. Useful for options not covered by other parameters                                |
-| **NoiseReduction**       | 0, 0    | False         | **NR**                 | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
-| **OutputPath**           | N/A     | True          | **O**                  | The path to the encoded output file                                                                                                                      |
-| **RemoveFiles**          | False   | False         | **Del**, **RM**        | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files                  |
-| **GenerateReport**       | False   | False         | **Report**, **GR**     | Switch that generates a report of the encode. Data is pulled from the log file and written in a reading friendly format                                  |
-| **Deinterlace**          | False   | False         | **DI**                 | Switch to enable deinterlacing of interlaced content using yadif                                                                                         |
+| Parameter Name           | Default  | Mandatory     | Alias                    | Description                                                                                                                                              |
+| ------------------------ | -------- | ------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TestFrames**           | 0 (off)  | False         | **T**                    | Integer value representing the number of test frames to encode. When enabled, encoding starts at 00:01:30 so that title screens are skipped              |
+| **Help**                 | False    | <b>\*</b>True | **H**, **/?**, **?**     | Switch to display help information                                                                                                                       |
+| **InputPath**            | N/A      | True          | **I**                    | The path to the source file (to be encoded)                                                                                                              |
+| **Audio**                | Copy     | False         | **A**                    | Audio preference for the primary stream. See [Audio Options](#audio-options) for more info                                                               |
+| **AudioBitrate**         | Codec    | False         | **AB**, **ABitrate**     | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)               |
+| **Stereo**               | False    | False         | **2CH**, **ST**          | Switch to downmix the first audio track to stereo. See [Audio Options](#audio-options)                                                                   |
+| **Audio2**               | None     | False         | **A2**                   | Audio preference for the secondary stream. See [Audio Options](#audio-options) for more info                                                             |
+| **AudioBitrate2**        | Codec    | False         | **AB2**, **ABitrate2**   | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS. See [Audio Options](#audio-options)            |
+| **Stereo2**              | False    | False         | **2CH2**, **ST2**        | Switch to downmix the second audio track to stereo. See [Audio Options](#audio-options)                                                                  |
+| **Subtitles**            | Default  | False         | **S**                    | Subtitle passthrough preference. See the [Subtitle Options](#subtitle-options) section for more info                                                     |
+| **Preset**               | Slow     | False         | **P**                    | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset parameters              |
+| **CRF**                  | N/A      | <b>\*</b>True | **C**                    | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. A lower value will result in a higher overall bitrate             |
+| **VideoBitrate**         | N/A      | <b>\*</b>True | **VBitrate**             | Rate control parameter that targets a specific file size. Can be used as an alternative to CRF rate control when output size is a priority               |
+| **Pass**                 | 2        | False         | **P**                    | The number of passes the encoder will perform for ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                |
+| **Deblock**              | -2, -2   | False         | **DBF**                  | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                    |
+| **AqMode**               | 2        | False         | **AQM**                  | x265 Adaptive Quantization setting. Ranges from 0 - 4. See x265 documentation for more info on AQ Modes and how they work                                |
+| **AqStrength**           | 1.00     | False         | **AQS**                  | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates |
+| **PsyRd**                | 2.00     | False         | **PRD**                  | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                          |
+| **PsyRdoq**              | Preset   | False         | **PRDQ**                 | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info      |
+| **QComp**                | 0.60     | False         | **Q**                    | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                      |
+| **BFrames**              | Preset   | False         | **B**                    | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use            |
+| **BIntra**               | Preset   | False         | **BINT**                 | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                     |
+| **StrongIntraSmoothing** | 1 (on)   | False         | **SIS**                  | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                            |
+| **FrameThreads**         | System   | False         | **FT**                   | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores    |
+| **Subme**                | Preset   | False         | **SM**, **SPM**          | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact       |
+| **FFMpegExtra**          | N/A      | False         | **FE**                   | Pass additional settings to ffmpeg as a generic array of single and multi-valued elements. Useful for options not covered by other parameters            |
+| **x265Extra**            | N/A      | False         | **XE**                   | Pass additional settings to the x265 encoder as a hashtable of values. Useful for options not covered by other parameters                                |
+| **NoiseReduction**       | 0, 0     | False         | **NR**                   | Noise reduction filter. The first value represents intra frames, and the second value inter frames; values range from 0-2000. Useful for grainy sources  |
+| **Scale**                | None     | <b>\*</b>True | **Resize**, **Resample** | Scaling library to use. Options are `scale` (ffmpeg default) and `zscale` (requires libzimg). Required parameter for rescaling content                   |
+| **ScaleFilter**          | bilinear | False         | **ScaleType**, **SF**    | Scaling filter to use. See [Rescaling Video](#rescaling-video) for more info                                                                             |
+| **Resolution**           | 1080p    | False         | **Res**, **R**           | Scaling resolution. See [Rescaling Video](#rescaling-video) for more info                                                                                |
+| **OutputPath**           | N/A      | True          | **O**                    | The path to the encoded output file                                                                                                                      |
+| **RemoveFiles**          | False    | False         | **Del**, **RM**          | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files                  |
+| **GenerateReport**       | False    | False         | **Report**, **GR**       | Switch that generates a report of the encode. Data is pulled from the log file and written in a reading friendly format                                  |
+| **Deinterlace**          | False    | False         | **DI**                   | Switch to enable deinterlacing of interlaced content using yadif                                                                                         |
+
+### Rescaling Videos
+
+> **NOTE**: Dithering is not currently supported with scaling, but will be added in a future release
+
+You can rescale (upscale/downscale) a video with FFEncoder using the three scaling-related parameters:
+
+- `-Scale` (**required for rescaling**)
+- `ScaleFilter`
+- `Resolution`
+
+The script currently supports three resolutions to which you can scale between: **2160p**, **1080p**, and **720p**. Rescaling retains SAR (source aspect ratio) and will use the input cropping width to determine aspect ratio (it will also work with overridden crop values passed via `-FFMpegExtra`). The available options for `-ScaleFilter` depend on the scaling library used:
+
+| Library  | Available Options                                                                        |
+| -------- | ---------------------------------------------------------------------------------------- |
+| `scale`  | fast_bilinear, bilinear, bicubic, neighbor, area, bicublin, gauss, sinc, lanczos, spline |
+| `zscale` | point, bilinear, bicubic, spline16, spline36, lanczos                                    |
 
 ### Using the Extra Parameter Options
 
@@ -174,7 +192,7 @@ You can pass additional arguments not provided by the script to both ffmpeg and 
 
 ```PowerShell
 #Pass additional arguments to ffmpeg using an array with a hashtable and a single value
-.\FFEncoder.ps1 $InputPath -CRF 18 -FFMpegExtra @{ '-t', 20; '-stats_period' = 5 }, '-autorotate' -o $OutputPath
+.\FFEncoder.ps1 $InputPath -CRF 18 -FFMpegExtra @{ '-t' = 20; '-stats_period' = 5 }, '-autorotate' -o $OutputPath
 ```
 
 `-x265Extra` accepts a hashtable of values as input, in the form of `<key = value>`. For example:
