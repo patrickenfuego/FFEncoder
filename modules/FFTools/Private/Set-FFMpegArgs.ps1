@@ -93,10 +93,15 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $true)]
         [hashtable]$Paths,
 
+        # Scale settings
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Scale,
+
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
         [int]$TestFrames,
 
+        # Switch to enable deinterlacing with yadif
         [Parameter(Mandatory = $false)]
         [switch]$Deinterlace
     )
@@ -180,8 +185,11 @@ function Set-FFMpegArgs {
         foreach ($arg in $FFMpegExtra) {
             if ($arg -is [hashtable]) {
                 foreach ($entry in $arg.GetEnumerator()) {
-                    $ffmpegExtraArray += "$($entry.Name)"
-                    $ffmpegExtraArray += "$($entry.Value)"
+                    #Skip crop args. Handled in Set-VideoFilter
+                    if ($entry.Value -notmatch "crop") {
+                        $ffmpegExtraArray += "$($entry.Name)"
+                        $ffmpegExtraArray += "$($entry.Value)"
+                    }
                 }
             }
             else { $ffmpegExtraArray += $arg }
@@ -207,14 +215,14 @@ function Set-FFMpegArgs {
     ( @('-ss', '00:01:30', '-frames:v', $TestFrames) ) : 
     $null
     
-    #Video filter array
-    $vfArray = $Deinterlace ?
-    ( @('-vf', "`"yadif, crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])`"") ) :
-    ( @('-vf', "`"crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])`"") )
+    #Set video specific filter arguments
+    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra
 
     #Set arguments for UHD/FHD based on the presence of HDR metadata
     if ($HDR) {
         $pxFormatArray = @('-pix_fmt', $HDR.PixelFmt)
+        if (@('1080p', '720p') -contains $Scale.Resolution) { $level = 4 }
+        else { $level = 5.1 }
         #Arguments specific to 2160p HDR
         $resArray = @(
             "colorprim=$($HDR.ColorPrimaries)"
@@ -223,7 +231,7 @@ function Set-FFMpegArgs {
             "$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
             "max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL)"
             'chromaloc=2'
-            'level-idc=5.1'
+            "level-idc=$level"
             'hdr10-opt=1'
             'aud=1'
             'hrd=1'
@@ -242,7 +250,7 @@ function Set-FFMpegArgs {
 
     ## Combine Arrays ##
 
-    $ffmpegArgsAL += $vfArray
+    if ($vfArray) { $ffmpegArgsAL += $vfArray }
     if ($testArray) { $ffmpegArgsAL += $testArray }
     if ($ffmpegExtraArray) { $ffmpegArgsAL += $ffmpegExtraArray }
     $ffmpegArgsAL += $pxFormatArray

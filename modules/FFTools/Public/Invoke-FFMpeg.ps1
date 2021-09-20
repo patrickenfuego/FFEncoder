@@ -112,6 +112,11 @@ function Invoke-FFMpeg {
         [Alias("L")]
         [hashtable]$Paths,
 
+        # Scale setting
+        [Parameter(Mandatory = $false)]
+        [Alias("Resize", "DS")]
+        [hashtable]$Scale,
+
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
         [Alias("T")]
@@ -198,6 +203,7 @@ function Invoke-FFMpeg {
         x265Extra      = $x265Extra
         HDR            = $HDR
         Paths          = $Paths
+        Scale          = $Scale
         TestFrames     = $TestFrames
         Deinterlace    = $Deinterlace
     }

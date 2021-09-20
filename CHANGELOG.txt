@@ -1,31 +1,31 @@
-v 1.0.0
+v 0.1.0
     - Initial release. Supports Windows and 4K HDR resolution
     
-v 1.1.0
+v 0.2.0
     - Added support for MacOS and Linux
         -Tested on MacOS 11.0.1 "Big Sur"
         -Tested on Ubuntu 20.04 LTS
     - Updated help based comments for script functions
 
-v 1.1.1
+v 0.2.1
     - Completely overhauled help based comments to be more organized and...helpful
     - Added -Help parameter to easily view new help comments and examples
 
-v 1.1.2
+v 0.2.2
     - Changed min-keyint value to preset default
     - Lowered keyint value from 250 to 120 (seeks every 4 frames). This was an error on my part and was not meant to be that high
 
-v1.2.2
+v0.2.3
     - Changed output to a log file instead of the console. On Windows, ffmpeg creates a new line for each frame and the buffer cannot store the entire history
     - Created new function Set-RootPath, which sets the path for the crop file and log file. Logic partially removed from New-CropFile function
     - Changed test encodes to start at the 10 minute mark. It still only encodes 1000 frames, but it will be better test material than the intro screens/logos
 
-v 1.2.3
+v 0.2.4
     - Fixed empty path error in New-CropFile function. The crop path variable was declared globally, but there was some kind of scoping issue 
       which was causing it to become empty. Set-RootPath now returns an object containing the crop and log paths.
     - Changed test runs to begin at approximately 1 minute into the video. This gives a more accurate representation of what to expect when a full encode is performed
 
-v 1.3.3
+v 0.3.4
     - Added multi-threading support while generating a crop file. 3 independent segments will be analyzed simultaneously, giving a nice performance boost
     - Added PoshRSJobs module to further improve multi-threading performance
     - Changed cropdetect to use modulus 2 instead of 16. This will perform similarly to Handbrake, but with a bit more precision
@@ -34,11 +34,11 @@ v 1.3.3
     - Made InputPath positional (position 0) instead of named. The -InputPath parameter can now be excluded if the input path is the first parameter used
     - Updated console messages for clarity and fixed some formatting issues
 
-v 1.3.4
+v 0.4.4
     - Added new parameter -MDColorPrimaries for sources that use BT.2020 instead of Display P3. This is a temporary solution until I can automate this with ffprobe
     - Reduced crop seek duration to 8 minutes for each thread (previously, it was 10 minutes) to speed up the cropping stage of the script
 
-v 1.4.4
+v 0.4.5
     - Extracted 5 functions into a new Module called FFTools. FFTools contains the following functions:
         - Public
             - Get-HDRMetadata - Automatically retrieves all HDR metadata using ffprobe
@@ -57,7 +57,7 @@ v 1.4.4
     - Changed -Test parameter to -TestFrames, which now accepts an integer number of frames to encode. Default is still 1000
     - Fixed small null bug in Get-RootPath function when a match cannot be made for the root path and the crop/log path had to use the OS default path instead
 
-v. 1.4.5
+v. 0.4.6
     - Removed Measure-AudioChannels function from the FFTools module and put the logic inside Set-AudioPreference. It was adding an extra layer of complexity 
       without providing much benefit.
     - Fixed bug with AAC audio encoding in Set-AudioPreference function. When I refactored the function, I forgot to add the 'k' to the end of the bitrate argument 
@@ -67,7 +67,7 @@ v. 1.4.5
     - Added color hash variables to the FFTools module for global use
     - Changed default -CRF parameter value from 16.0 to 17.0
     
-v. 1.5.5
+v. 0.5.6
     - Added option "copyall" / "ca" as an argument to the -Audio parameter. This option will copy all audio streams from the source without encoding
     - Added support for Dolby Digital AC-3 as an argument for the -Audio parameter using "AC3" / "DD". If the source contains a Dolby Digital track already, 
       it will be copied as the primary audio stream. Otherwise, the primary stream will be transcoded to AC-3 at the standard 640 kb/s.
@@ -106,7 +106,7 @@ v. 1.5.5
     - Added -PsyRdoq parameter. Default is 1.00 (preset slow)
     - Added -NrInter parameter. Default is 0
 
-v. 1.6.5
+v. 0.6.6
 
 - Added support for Fraunhofer AAC (libfdk_aac)
 - Added support for aac_at audio. This codec is only available on MacOS
@@ -136,8 +136,4 @@ v. 1.6.5
 - Created a new function Set-FFMpegArgs to condense the two ffmpeg functions into one function. This function builds a dynamic array list based on InputPath
 - Added HDR10+ support for UNIX systems
 
-Planned:
-
-- Frame threads parameter
-- Logic for copying multiple specific subtitle languages from source file
 
