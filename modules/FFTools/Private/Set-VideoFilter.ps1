@@ -42,7 +42,6 @@ function Set-VideoFilter {
     #Setup scaling related variables
     if ($PSBoundParameters['Scale']) {
         [int]$scaleRes = $Scale.Resolution -replace 'p', ''
-        $upscale = ($CropDimensions[1] -lt $scaleRes) ? $true : $false
         [string]$sType = $Scale.Scale.ToLower()
         #set flag for filter
         $set = switch ($sType) {
@@ -57,10 +56,10 @@ function Set-VideoFilter {
             }
         }
         elseif ($CropDimensions[0] -gt 1300 -and $CropDimensions[0] -lt 3000) {
-            #Scaling down from 1080p
-            if (!$upscale) { $widthRes = $CropDimensions[0] / 1.5 }
-            #Scaling up from 1080p
-            else { $widthRes = $CropDimensions[0] * 2 }
+            #scale up/down 1080p
+            $widthRes = ($CropDimensions[1] -lt $scaleRes) ?
+            ($CropDimensions[0] * 2) : 
+            ($CropDimensions[0] / 1.5)
         }
         #scaling up from 720p
         elseif ($CropDimensions[0] -lt 1300) {
