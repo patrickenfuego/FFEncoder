@@ -289,7 +289,7 @@ One of the benefits of the FDK encoder is that it supports variable bitrate (VBR
 
 ### Using the aac_at Encoder
 
-When running FFEncoder on a Mac computer, you gain access to Apple's Core AudioToolbox AAC encoder via the `aac_at` argument. AudioToolbox is, by default, a variable Bitrate (VBR) encoder, but can accept the following values using `-AudioBitrate`/`-AudioBitrate2`:
+When running FFEncoder on a Mac computer, you gain access to the AudioToolbox AAC encoder (open source port of Apple's high quality encoder) via the `aac_at` argument. AudioToolbox is, by default, a variable Bitrate (VBR) encoder, but can accept the following values using `-AudioBitrate`/`-AudioBitrate2`:
 
 - -1 - Auto (VBR)
 - 0 - Constant bitrate (CBR)
