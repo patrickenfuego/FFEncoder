@@ -46,8 +46,9 @@ function Get-HDRMetadata {
         Select-Object -First 1
 
     if (!$metadata) {
-        throw "10-bit pixel format could not be found within the first 5 frames. Make sure the input file supports HDR."
-        exit 2
+        Write-Warning "10-bit pixel format could not be found within the first 5 frames. Make sure the input file supports HDR."
+        Write-Host "HDR metadata will not be copied" @warnColors
+        return $false
     }
 
     [string]$pixelFmt = $metadata.pix_fmt
