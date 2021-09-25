@@ -108,7 +108,8 @@ function Set-FFMpegArgs {
 
     #Split rate control array
     $twoPass = $RateControl[2]
-    $RateControl = $RateControl[0..($RateControl.Length - 2)]
+    $passType = $RateControl[3]
+    $RateControl = $RateControl[0..($RateControl.Length - 3)]
 
     ## Base Array Declarations ##
 
@@ -135,6 +136,7 @@ function Set-FFMpegArgs {
     #x265 args common to all CRF configurations
     $x265Array = @(
         'keyint=192'
+        'min-keyint=24'
         'sao=0'
         'rc-lookahead=48'
         'open-gop=0'
@@ -152,29 +154,92 @@ function Set-FFMpegArgs {
         "deblock=$($Deblock[0]),$($Deblock[1])"
     )
 
-    #Default args for pass 1 in 2-pass encoding
-    $x265FirstPassArray = @(
-        'pass=1'
-        "stats='$($Paths.X265Log)'"
-        'rect=0'
-        'max-merge=2'
-        'keyint=192'
-        'sao=0'
-        'rc-lookahead=48'
-        'open-gop=0'
-        "psy-rd=$PsyRd"
-        "qcomp=$QComp"
-        'subme=2'
-        'b-intra=0'
-        "bframes=$($PresetParams.BFrames)"
-        "psy-rdoq=$($PresetParams.PsyRdoq)"
-        "aq-mode=$($PresetParams.AqMode)"
-        "nr-intra=$($NoiseReduction[0])"
-        "nr-inter=$($NoiseReduction[1])"
-        "aq-strength=$AqStrength"
-        "strong-intra-smoothing=$IntraSmoothing"
-        "deblock=$($Deblock[0]),$($Deblock[1])"
-    )
+    if ($passType) {
+        $x265FirstPassArray = switch -Regex ($passType) {
+            "^d[efault]*$" {
+                @(
+                    'pass=1'
+                    "stats='$($Paths.X265Log)'"
+                    'keyint=192'
+                    'min-keyint=24'
+                    'sao=0'
+                    'rc-lookahead=48'
+                    'open-gop=0'
+                    "psy-rd=$PsyRd"
+                    "qcomp=$QComp"
+                    "b-intra=$($PresetParams.BIntra)"
+                    "subme=$($PresetParams.Subme)"
+                    "bframes=$($PresetParams.BFrames)"
+                    "psy-rdoq=$($PresetParams.PsyRdoq)"
+                    "aq-mode=$($PresetParams.AqMode)"
+                    "nr-intra=$($NoiseReduction[0])"
+                    "nr-inter=$($NoiseReduction[1])"
+                    "aq-strength=$AqStrength"
+                    "strong-intra-smoothing=$IntraSmoothing"
+                    "deblock=$($Deblock[0]),$($Deblock[1])"
+                )
+                break
+            }
+            "^f[ast]*$" {
+                @(
+                    'pass=1'
+                    "stats='$($Paths.X265Log)'"
+                    'rect=0'
+                    'amp=0'
+                    'max-merge=1'
+                    'fast-intra=1'
+                    'early-skip=1'
+                    'rd=2'
+                    'subme=2'
+                    'me=0'
+                    'ref=1'
+                    'keyint=192'
+                    'min-keyint=24'
+                    'sao=0'
+                    'rc-lookahead=48'
+                    'open-gop=0'
+                    "psy-rd=$PsyRd"
+                    "qcomp=$QComp"
+                    "b-intra=$($PresetParams.BIntra)"
+                    "bframes=$($PresetParams.BFrames)"
+                    "psy-rdoq=$($PresetParams.PsyRdoq)"
+                    "aq-mode=$($PresetParams.AqMode)"
+                    "nr-intra=$($NoiseReduction[0])"
+                    "nr-inter=$($NoiseReduction[1])"
+                    "aq-strength=$AqStrength"
+                    "strong-intra-smoothing=$IntraSmoothing"
+                    "deblock=$($Deblock[0]),$($Deblock[1])"
+                )
+                break
+            }
+            "^c[ustom]*$" {
+                @(
+                    'pass=1'
+                    "stats='$($Paths.X265Log)'"
+                    'rect=0'
+                    'amp=0'
+                    'max-merge=2'
+                    'keyint=192'
+                    'min-keyint=24'
+                    'sao=0'
+                    'rc-lookahead=48'
+                    'open-gop=0'
+                    "psy-rd=$PsyRd"
+                    "qcomp=$QComp"
+                    'subme=2'
+                    "bframes=$($PresetParams.BFrames)"
+                    "psy-rdoq=$($PresetParams.PsyRdoq)"
+                    "aq-mode=$($PresetParams.AqMode)"
+                    "nr-intra=$($NoiseReduction[0])"
+                    "nr-inter=$($NoiseReduction[1])"
+                    "aq-strength=$AqStrength"
+                    "strong-intra-smoothing=$IntraSmoothing"
+                    "deblock=$($Deblock[0]),$($Deblock[1])"
+                )
+                break
+            }
+        }
+    }
 
     ## End base array declarations ##
 
@@ -279,6 +344,9 @@ function Set-FFMpegArgs {
         $x265String = $tmpArray -join ":"
         $ffmpegPassTwoArgsAL += @('-x265-params', "`"$x265String`"")
 
+        Write-Host "VERBOSE: FIRST PASS ARRAY IS:`n $($ffmpegArgsAL -join " ")"
+        Write-host ""
+        Write-Host "VERBOSE: SECOND PASS ARRAY IS:`n $($ffmpegPassTwoArgsAL -join " ")" 
         return @($ffmpegArgsAL, $ffmpegPassTwoArgsAL)
     }
 }
