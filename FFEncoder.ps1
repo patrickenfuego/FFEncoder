@@ -264,6 +264,11 @@ param (
     [ValidateRange(1, 2)]
     [int]$Pass = 2,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateSet("Default", "d", "Fast", "f", "Custom", "c")]
+    [Alias("FPT", "PassType")]
+    [string]$FirstPassType = "Default",
+
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(-6, 6)]
@@ -291,7 +296,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.0, 50.0)]
-    [Alias("PRDQ")]
+    [Alias("PRQ")]
     [double]$PsyRdoq,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
@@ -321,7 +326,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 7)]
-    [Alias("SM", "SPM")]
+    [Alias("SM", "Subpel")]
     [int]$Subme,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
@@ -345,12 +350,6 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [Alias("XE", "x265")]
     [hashtable]$x265Extra,
-
-    [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
-    [ValidateNotNullOrEmpty()]
-    [Alias("O")]
-    [string]$OutputPath,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -389,7 +388,13 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [alias("Report", "GR")]
-    [switch]$GenerateReport
+    [switch]$GenerateReport,
+
+    [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
+    [ValidateNotNullOrEmpty()]
+    [Alias("O")]
+    [string]$OutputPath
 )
 
 ## Global Variables ##
@@ -492,7 +497,7 @@ function Set-ScriptPaths {
 
 ######################################## Main Script Logic ########################################
 
-if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit }
+if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit 0 }
 
 Import-Module -Name "$PSScriptRoot\modules\FFTools"
 
@@ -517,9 +522,6 @@ if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -an
     throw "No scaling library selected. Set a value for -Scale (scale or zscale) and try again."
     exit 2
 }
-# elseif ($PSBoundParameters['Resolution'] -and !$PSBoundParameters['Scale']) {
-
-# }
 elseif ($PSBoundParameters['Scale']) {
     if ($Scale -eq "Scale") {
         $validArgs = @("fast_bilinear", "neighbor", "area", "gauss", "sinc", "spline", "lanczos", "bilinear", "bicubic")
@@ -585,12 +587,12 @@ else {
 
 #Setting the rate control argument array
 if ($PSBoundParameters['CRF']) {
-    $rateControl = @('-crf', $CRF, $false)
+    $rateControl = @('-crf', $CRF, $false, $false)
 }
 elseif ($PSBoundParameters['VideoBitrate']) {
     $rateControl = switch ($Pass) {
-        1 { @('-b:v', $VideoBitrate, $false) }
-        Default { @('-b:v', $VideoBitrate, $true) }
+        1 { @('-b:v', $VideoBitrate, $false, $false) }
+        Default { @('-b:v', $VideoBitrate, $true, $FirstPassType) }
     }
 }
 else {
