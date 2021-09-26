@@ -537,6 +537,8 @@ $paths = Set-ScriptPaths
 #if the output path already exists, prompt to delete the existing file or exit script
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
+#Enable verbose logging if passed
+if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
 
 #If scale is used, verify arguments and handle errors
 if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and !$PSBoundParameters['Scale']) {
@@ -662,6 +664,7 @@ $ffmpegParams = @{
     x265Extra      = $x265Extra
     Scale          = $scaleHash
     Paths          = $paths
+    Verbosity      = $vLevel
     TestFrames     = $TestFrames
 }
 

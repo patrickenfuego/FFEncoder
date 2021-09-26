@@ -20,8 +20,18 @@ function Set-VideoFilter {
         [array]$FFMpegExtra,
 
         [Parameter(Mandatory = $false, Position = 3)]
-        [switch]$Deinterlace
+        [switch]$Deinterlace,
+
+        [Parameter(Mandatory = $false, Position = 4)]
+        [string]$Verbosity
     )
+
+    if ($PSBoundParameters['Verbosity']) {
+        $VerbosePreference = 'Continue'
+    }
+    else {
+        $VerbosePreference = 'SilentlyContinue'
+    }
 
     [array]$vfArray = $null
 
@@ -111,5 +121,6 @@ function Set-VideoFilter {
         $vfArray = @('-vf', "`"$vfString`"")
     }
 
+    Write-Verbose "VIDEO FILTER ARRAY:`n$($vfArray -join " ")`n"
     return $vfArray
 }

@@ -132,15 +132,28 @@ function Invoke-FFMpeg {
         [Alias("T")]
         [int]$TestFrames,
 
+        # Deinterlacing
         [Parameter(Mandatory = $false)]
         [Alias("DI")]
-        [switch]$Deinterlace
+        [switch]$Deinterlace,
+
+        # Enable Verbose output
+        [Parameter(Mandatory = $false)]
+        [Alias("V")]
+        [string]$Verbosity
     )
 
     function Write-Banner {
         Write-Host "To view your progress, run " -NoNewline
         Write-Host "Get-Content '$($Paths.LogPath)' -Tail 10" @emphasisColors -NoNewline
         Write-Host " in a different PowerShell session`n`n"
+    }
+
+    if ($PSBoundParameters['Verbosity']) {
+        $VerbosePreference = 'Continue'
+    }
+    else {
+        $VerbosePreference = 'SilentlyContinue'
     }
 
     #Determine the resolution and fetch metadata if 4K
@@ -181,6 +194,7 @@ function Invoke-FFMpeg {
 
         if ($null -ne $audio2) { $audio = $audio + $audio2 }
     }
+    Write-Verbose "AUDIO ARGUMENTS:`n$($audio -join " ")`n"
     
     #Set args to preset default if not modified by the user via parameters
     $presetArgs = @{ 
@@ -192,6 +206,7 @@ function Invoke-FFMpeg {
     }
     #Set preset based arguments based on user input
     $presetParams = Set-PresetParameters -ScriptParams $presetArgs -Preset $Preset
+    Write-Verbose "PRESET PARAMETER VALUES:`n$($presetParams | Out-String)`n"
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
@@ -218,6 +233,7 @@ function Invoke-FFMpeg {
         Scale          = $Scale
         TestFrames     = $TestFrames
         Deinterlace    = $Deinterlace
+        Verbosity      = $Verbosity
     }
     $ffmpegArgs = Set-FFMpegArgs @baseArgs
     

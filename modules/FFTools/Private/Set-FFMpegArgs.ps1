@@ -111,8 +111,18 @@ function Set-FFMpegArgs {
 
         # Switch to enable deinterlacing with yadif
         [Parameter(Mandatory = $false)]
-        [switch]$Deinterlace
+        [switch]$Deinterlace,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Verbosity
     )
+
+    if ($PSBoundParameters['Verbosity']) {
+        $VerbosePreference = 'Continue'
+    }
+    else {
+        $VerbosePreference = 'SilentlyContinue'
+    }
 
     #Split rate control array
     $twoPass = $RateControl[2]
@@ -266,7 +276,7 @@ function Set-FFMpegArgs {
     $null
     
     #Set video specific filter arguments
-    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra
+    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra $Deinterlace $Verbosity
 
     #Set arguments for UHD/FHD based on the presence of HDR metadata
     if ($HDR) {
