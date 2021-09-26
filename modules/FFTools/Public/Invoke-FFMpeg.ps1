@@ -75,6 +75,16 @@ function Invoke-FFMpeg {
         [Alias("NR")]
         [int[]]$NoiseReduction,
 
+        #Transform unit recursion depth (intra, inter)
+        [Parameter(Mandatory = $false)]
+        [Alias("TU")]
+        [int[]]$TuDepth,
+
+        #Early exit setting for TU recursion depth
+        [Parameter(Mandatory = $false)]
+        [Alias("LTU")]
+        [int]$LimitTu,
+
         # Adjusts the quantizer curve compression factor
         [Parameter(Mandatory = $false)]
         [Alias("Q")]
@@ -197,6 +207,8 @@ function Invoke-FFMpeg {
         Deblock        = $Deblock
         AqStrength     = $AqStrength
         NoiseReduction = $NoiseReduction
+        TuDepth        = $TuDepth
+        LimitTu        = $LimitTu
         IntraSmoothing = $IntraSmoothing
         FrameThreads   = $FrameThreads
         FFMpegExtra    = $FFMpegExtra

@@ -42,6 +42,9 @@
     .EXAMPLE
         ## Pass additional x265 arguments not covered by other script parameters ##
         ./FFEncoder.ps1 "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -PsyRd 4.0 -CRF 20 -x265Extra @{'max-merge' = 1} -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
+    .EXAMPLE
+        ## Scale 2160p video down to 1080p using zscale and spline36 ##
+        .\FFEncoder "$HOME\Videos\Ex.Machina.2014.DTS-HD.2160p.mkv" -Scale zscale -ScaleFilter spline36 -Res 1080p -CRF 18 -o "$HOME\Videos\Ex Machina (2014) DTS-HD 1080p.mkv"
     .INPUTS
         HD/FHD/UHD video file 
     .OUTPUTS
@@ -109,6 +112,8 @@
             ex: 10m (10 mb/s) | 10.5M (10.5 mb/s)
     .PARAMETER Pass
         The number of passes to perform when running an average bitrate encode using the VIdeoBitrate parameter
+    .PARAMETER FirstPassType
+        Tuning option for the first pass of a two pass encode. Accepted values (from slowest to fastest): Default/d, Custom/c, Fast/f. Default value is 'Default'/'d'
     .PARAMETER Deblock
         Deblock filter settings. The first value represents strength, and the second value represents frequency
     .PARAMETER AqMode
@@ -121,6 +126,10 @@
         Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info
     .PARAMETER NoiseReduction
         ScaleFilter to help reduce high frequency noise (such as film grain). First value represents intra frames, and the second value represents inter frames
+    .PARAMETER TuDepth
+        Recursion depth for transform units (TU). Accepted values are 1-4. First value represents intra depth, and the second value represents inter depth. Default values are 1, 1
+    .PARAMETER LimitTu
+        Early exit condition for TU depth recursion. Accepted values are 0-4. Default is 0
     .PARAMETER BFrames
         The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use
     .PARAMETER BIntra 
@@ -218,7 +227,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
-        "chi", "kor", "gre", "rum")]
+        "chi", "kor", "gre", "rum", "rus", "swe")]
     [Alias("S")]
     [string]$Subtitles = "default",
 
@@ -304,6 +313,18 @@ param (
     [ValidateRange(0, 2000)]
     [Alias("NR")]
     [int[]]$NoiseReduction = @(0, 0),
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(1, 4)]
+    [Alias("TU")]
+    [int[]]$TuDepth = @(1, 1),
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(1, 4)]
+    [Alias("LTU")]
+    [int]$LimitTu = 0,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -629,6 +650,8 @@ $ffmpegParams = @{
     PsyRd          = $PsyRd
     PsyRdoq        = $PsyRdoq
     NoiseReduction = $NoiseReduction
+    TuDepth        = $TuDepth
+    LimitTu        = $LimitTu    
     Qcomp          = $QComp
     BFrames        = $BFrames
     BIntra         = $BIntra
