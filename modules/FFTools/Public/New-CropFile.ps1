@@ -42,61 +42,83 @@ function New-CropFile {
         return
     }
     else {
-        Write-Host "Generating crop file..."
         $segments = @(
-            @{ Start = '90'; Length =  '00:00:45'; Duration = 0 }
-            @{ Start = '00:05:00'; Length =  '00:00:45'; Duration = 7 }
-            @{ Start = '00:10:00'; Length =  '00:00:45'; Duration = 11 }
-            @{ Start = '00:15:00'; Length =  '00:00:45'; Duration = 16 }
-            @{ Start = '00:20:00'; Length =  '00:00:45'; Duration = 21 }
-            @{ Start = '00:25:00'; Length =  '00:00:45'; Duration = 26 }
-            @{ Start = '00:30:00'; Length =  '00:00:45'; Duration = 31 }
-            @{ Start = '00:35:00'; Length =  '00:00:45'; Duration = 36 }
-            @{ Start = '00:40:00'; Length =  '00:00:45'; Duration = 41 }
-            @{ Start = '00:45:00'; Length =  '00:00:45'; Duration = 46 }
-            @{ Start = '00:50:00'; Length =  '00:00:45'; Duration = 51 }
-            @{ Start = '00:55:00'; Length =  '00:00:45'; Duration = 56 }
-            @{ Start = '01:00:00'; Length =  '00:00:45'; Duration = 61 }
-            @{ Start = '01:05:00'; Length =  '00:00:45'; Duration = 66 }
-            @{ Start = '01:10:00'; Length =  '00:00:45'; Duration = 71 }
-            @{ Start = '01:15:00'; Length =  '00:00:45'; Duration = 76 }
-            @{ Start = '01:20:00'; Length =  '00:00:45'; Duration = 81 }
-            @{ Start = '01:25:00'; Length =  '00:00:45'; Duration = 86 }
-            @{ Start = '01:30:00'; Length =  '00:00:45'; Duration = 91 }
-            @{ Start = '01:35:00'; Length =  '00:00:45'; Duration = 96 }
-            @{ Start = '01:40:00'; Length =  '00:00:40'; Duration = 101 }
-            @{ Start = '01:45:00'; Length =  '00:00:40'; Duration = 106 }
-            @{ Start = '01:50:00'; Length =  '00:00:40'; Duration = 111 }
-            @{ Start = '01:55:00'; Length =  '00:00:40'; Duration = 116 }
-            @{ Start = '02:00:00'; Length =  '00:00:35'; Duration = 121 }
-            @{ Start = '02:05:00'; Length =  '00:00:35'; Duration = 126 }
-            @{ Start = '02:10:00'; Length =  '00:00:35'; Duration = 131 }
-            @{ Start = '02:15:00'; Length =  '00:00:35'; Duration = 136 }
-            @{ Start = '02:20:00'; Length =  '00:00:35'; Duration = 141 }
-            @{ Start = '02:25:00'; Length =  '00:00:35'; Duration = 146 }
-            @{ Start = '02:30:00'; Length =  '00:00:30'; Duration = 151 }
-            @{ Start = '02:35:00'; Length =  '00:00:30'; Duration = 156 }
-            @{ Start = '02:40:00'; Length =  '00:00:30'; Duration = 161 }
-            @{ Start = '02:45:00'; Length =  '00:00:30'; Duration = 166 }
-            @{ Start = '02:50:00'; Length =  '00:00:30'; Duration = 171 }
-            @{ Start = '02:55:00'; Length =  '00:00:30'; Duration = 176 }
-            @{ Start = '03:00:00'; Length =  '00:00:30'; Duration = 181 }
-            @{ Start = '03:05:00'; Length =  '00:00:30'; Duration = 186 }
-            @{ Start = '03:10:00'; Length =  '00:00:30'; Duration = 191 }
-            @{ Start = '03:15:00'; Length =  '00:00:25'; Duration = 196 }
-            @{ Start = '03:20:00'; Length =  '00:00:25'; Duration = 201 }
-            @{ Start = '03:25:00'; Length =  '00:00:25'; Duration = 206 }
-            @{ Start = '03:30:00'; Length =  '00:00:25'; Duration = 211 }
+            @{ Start = '90'; Length = '00:00:45'; Duration = 0 }
+            @{ Start = '00:05:00'; Length = '00:00:45'; Duration = 7 }
+            @{ Start = '00:10:00'; Length = '00:00:45'; Duration = 11 }
+            @{ Start = '00:15:00'; Length = '00:00:45'; Duration = 16 }
+            @{ Start = '00:20:00'; Length = '00:00:45'; Duration = 21 }
+            @{ Start = '00:25:00'; Length = '00:00:45'; Duration = 26 }
+            @{ Start = '00:30:00'; Length = '00:00:45'; Duration = 31 }
+            @{ Start = '00:35:00'; Length = '00:00:45'; Duration = 36 }
+            @{ Start = '00:40:00'; Length = '00:00:45'; Duration = 41 }
+            @{ Start = '00:45:00'; Length = '00:00:45'; Duration = 46 }
+            @{ Start = '00:50:00'; Length = '00:00:45'; Duration = 51 }
+            @{ Start = '00:55:00'; Length = '00:00:45'; Duration = 56 }
+            @{ Start = '01:00:00'; Length = '00:00:45'; Duration = 61 }
+            @{ Start = '01:05:00'; Length = '00:00:45'; Duration = 66 }
+            @{ Start = '01:10:00'; Length = '00:00:45'; Duration = 71 }
+            @{ Start = '01:15:00'; Length = '00:00:45'; Duration = 76 }
+            @{ Start = '01:20:00'; Length = '00:00:45'; Duration = 81 }
+            @{ Start = '01:25:00'; Length = '00:00:45'; Duration = 86 }
+            @{ Start = '01:30:00'; Length = '00:00:40'; Duration = 91 }
+            @{ Start = '01:35:00'; Length = '00:00:40'; Duration = 96 }
+            @{ Start = '01:40:00'; Length = '00:00:40'; Duration = 101 }
+            @{ Start = '01:45:00'; Length = '00:00:40'; Duration = 106 }
+            @{ Start = '01:50:00'; Length = '00:00:40'; Duration = 111 }
+            @{ Start = '01:55:00'; Length = '00:00:35'; Duration = 116 }
+            @{ Start = '02:00:00'; Length = '00:00:35'; Duration = 121 }
+            @{ Start = '02:05:00'; Length = '00:00:35'; Duration = 126 }
+            @{ Start = '02:10:00'; Length = '00:00:35'; Duration = 131 }
+            @{ Start = '02:15:00'; Length = '00:00:35'; Duration = 136 }
+            @{ Start = '02:20:00'; Length = '00:00:35'; Duration = 141 }
+            @{ Start = '02:25:00'; Length = '00:00:35'; Duration = 146 }
+            @{ Start = '02:30:00'; Length = '00:00:30'; Duration = 151 }
+            @{ Start = '02:35:00'; Length = '00:00:30'; Duration = 156 }
+            @{ Start = '02:40:00'; Length = '00:00:30'; Duration = 161 }
+            @{ Start = '02:45:00'; Length = '00:00:30'; Duration = 166 }
+            @{ Start = '02:50:00'; Length = '00:00:30'; Duration = 171 }
+            @{ Start = '02:55:00'; Length = '00:00:30'; Duration = 176 }
+            @{ Start = '03:00:00'; Length = '00:00:30'; Duration = 181 }
+            @{ Start = '03:05:00'; Length = '00:00:30'; Duration = 186 }
+            @{ Start = '03:10:00'; Length = '00:00:30'; Duration = 191 }
+            @{ Start = '03:15:00'; Length = '00:00:25'; Duration = 196 }
+            @{ Start = '03:20:00'; Length = '00:00:25'; Duration = 201 }
+            @{ Start = '03:25:00'; Length = '00:00:25'; Duration = 206 }
+            @{ Start = '03:30:00'; Length = '00:00:25'; Duration = 211 }
 
         )
-        $cropJob = $segments | ForEach-Object -Parallel {
+        #Determine the number of threads based on duration
+        $threadCount = 0
+        foreach ($entry in $segments) {
+            if ($duration -gt $entry.Duration) { $threadCount++ } else { break }
+        }
+        #Create queue and synchronize it for thread safety
+        $queue = [System.Collections.Queue]::new()
+        1..$threadCount | ForEach-Object { $queue.Enqueue($_) }
+        $syncQueue = [System.Collections.Queue]::Synchronized($queue)
+        #Run the crop jobs
+        $cropJob = $segments | ForEach-Object -AsJob -ThrottleLimit 6 -Parallel {
+            $sqCopy = $Using:syncQueue
             if ($Using:duration -gt $_.Duration) {
                 $c = ffmpeg -ss $_.Start -skip_frame nokey -hide_banner -i $Using:InputPath -t $_.Length -vf fps=1/2,cropdetect=round=2 -an -sn -f null - 2>&1
                 Write-Output -InputObject $c
+        
+                $sqCopy.Dequeue()
             } 
-        } -AsJob -ThrottleLimit 6
+        } 
+        #Update status bar
+        while ($cropJob.State -eq 'Running') {
+            if ($syncQueue.Count -gt 0) {
+                $status = ((1 / $syncQueue.Count) * 100)
+                Write-Progress -Activity "Generating Crop File" -Status "Progress ->" -PercentComplete $status
+                Start-Sleep -Milliseconds 100
+            }
+        }
 
+        Write-Progress -Activity "Sending Data to Crop File" -Status "Writing..."
         $cropJob | Wait-Job | Receive-Job | Out-File -FilePath $CropFilePath -Append | Stop-Job
+        Write-Progress -Activity "Cropping Complete!" -Completed
     }
 
     Start-Sleep -Milliseconds 500
