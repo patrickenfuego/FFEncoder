@@ -54,7 +54,7 @@ function Confirm-HDR10Plus {
         $res = bash -c "ffmpeg -loglevel panic -i $InputFile -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath extract -"
     }
     #Windows platform. Requires cmd
-    #Verifies if the source is HDR10 compatible
+    #Verifies if the source is HDR10+ compatible
     else {
         $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -"
     }
