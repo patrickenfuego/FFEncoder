@@ -67,6 +67,10 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [double]$AqStrength,
 
+        # psy-rd setting
+        [Parameter(Mandatory = $false)]
+        [double]$PsyRd,
+
         # Filter to help reduce high frequency noise (grain)
         [Parameter(Mandatory = $false)]
         [int[]]$NoiseReduction,
@@ -224,7 +228,7 @@ function Set-FFMpegArgs {
         "deblock=$($Deblock[0]),$($Deblock[1])"
     )
 
-    if ($passType) {
+    if ($twoPass) {
         $x265FirstPassArray = switch -Regex ($passType) {
             "^d[efault]*$" {
                 @(
@@ -288,7 +292,7 @@ function Set-FFMpegArgs {
             "colorprim=$($HDR.ColorPrimaries)"
             "transfer=$($HDR.Transfer)"
             "colormatrix=$($HDR.ColorSpace)"
-            "$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
+            "master-display=$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
             "max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL)"
             'chromaloc=2'
             "level-idc=$level"

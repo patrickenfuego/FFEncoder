@@ -157,7 +157,9 @@ function Invoke-FFMpeg {
     }
 
     #Determine the resolution and fetch metadata if 4K
-    if ($CropDimensions[2]) { $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus }
+    if ($CropDimensions[2]) { 
+        $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath
+    }
     else { $HDR = $null }
     
     #Building the audio argument array(s) based on user input
@@ -210,7 +212,7 @@ function Invoke-FFMpeg {
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
-    #Set the base arguments and pass them to Set-FFMpegArgs function
+    #Set the base arguments and pass them to Set-FFMpegArgs or Set-DvArgs functions
     $baseArgs = @{
         Audio          = $audio
         Subtitles      = $subs
@@ -219,6 +221,7 @@ function Invoke-FFMpeg {
         RateControl    = $RateControl
         PresetParams   = $presetParams
         QComp          = $QComp
+        PsyRd          = $PsyRd
         Deblock        = $Deblock
         AqStrength     = $AqStrength
         NoiseReduction = $NoiseReduction
@@ -235,10 +238,61 @@ function Invoke-FFMpeg {
         Deinterlace    = $Deinterlace
         Verbosity      = $Verbosity
     }
-    $ffmpegArgs = Set-FFMpegArgs @baseArgs
-    
+
+    ($HDR.DV) ? ($dvArgs = Set-DVArgs @baseArgs) : ($ffmpegArgs = Set-FFMpegArgs @baseArgs)
+    #If Dolby Vision is found and args not empty/null, set params for encode
+    if ($dvArgs) {
+        Write-host "DEBUG: DvArgs.FFMpegVideo is:`n`n $($dvArgs.FFMpegVideo)" 
+        Write-host "DEBUG: DvArgs.x265Args1 is:`n`n $($dvArgs.x265Args1)`n" 
+        if ($null -ne $dvArgs.x265Args2) {
+            Write-Host
+            Write-Host "***** STARTING x265 PIPE PASS 1 *****" @progressColors
+            Write-Banner
+            if ($IsLinux -or $IsMacOS) {
+                $hevcPath = [regex]::Escape($Paths.hevcPath)
+                bash -c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath 2>$($Paths.LogPath)"
+            }
+            else {
+                cmd.exe /c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`""
+            }
+            Write-Host
+            Write-Host "***** STARTING x265 PIPE PASS 2 *****" @progressColors
+            Write-Banner
+            if ($IsLinux -or $IsMacOS) {
+                $hevcPath = [regex]::Escape($Paths.hevcPath)
+                bash -c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $hevcPath 2>>$($Paths.LogPath)"
+            }
+            else {
+                cmd.exe /c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`""
+            }
+        }
+        else {
+            Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
+            Write-Host "***** STARTING x265 PIPE *****" @progressColors
+            Write-Banner
+
+            if ($IsLinux -or $IsMacOS) {
+                $hevcPath = [regex]::Escape($Paths.hevcPath)
+                bash -c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath"
+            }
+            else {
+                cmd.exe /c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`""
+            }
+        }
+        #Set temp path for muxing back into original container
+        $tmpPath = $Paths.OutputFile -replace '.mkv', '-tmp.mkv'
+        ffmpeg $dvArgs.FFMpegOther $tmpPath
+        Start-Sleep -Milliseconds 500
+
+        if (Test-Path -Path $tmpPath) {
+            ffmpeg -loglevel panic -i $Paths.hevcPath -i $tmpPath -map 0 -map 1 $Paths.OutputFile
+        }
+        else {
+            throw "Could not generate file with extra ffmpeg parameters. Run the scriot and try again."
+        }
+    }
     #Two pass encode
-    if ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
+    elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
         Write-Host "***** STARTING FFMPEG PASS 1 *****" @progressColors
         Write-Host "Generating 1st pass encoder metrics..."

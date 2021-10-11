@@ -479,12 +479,14 @@ function Set-ScriptPaths {
         $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle`_stereo-remux.$oExt"
         $reportPath = Join-Path -Path $root -ChildPath "$oTitle.rep"
         $hdr10PlusPath = Join-Path -Path $root -ChildPath "metadata.json"
+        $dvPath = Join-Path -Path $root -ChildPath "$oTitle`_rpu.bin"
+        $hevcPath = Join-Path -Path $oRoot -ChildPath "$oTitle.hevc"
     }
     #Regex match could not be made on the folder pattern
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
         $os = Get-OperatingSystem
-        Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
+        Write-Host $os.OperatingSystem "detected. Using path: <$($os.DefaultPath)>"
         #Creating path strings used throughout the script
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
@@ -493,6 +495,8 @@ function Set-ScriptPaths {
         $remuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
         $reportPath = Join-Path -Path $os.DefaultPath -ChildPath "report.rep"
         $hdr10PlusPath = Join-Path -Path $os.DefaultPath -ChildPath "metadata.json"
+        $dvPath = Join-Path -Path $os.DefaultPath -ChildPath "rpu.bin"
+        $hevcPath = Join-Path -Path $os.DefaultPath -ChildPath "hevc.hevc"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
@@ -506,10 +510,12 @@ function Set-ScriptPaths {
         CropPath   = $cropPath
         LogPath    = $logPath
         X265Log    = $x265Log
-        OutputFile = $OutputPath
         Title      = $oTitle
         ReportPath = $reportPath
         HDR10Plus  = $hdr10PlusPath
+        DvPath     = $dvPath
+        HevcPath   = $hevcPath
+        OutputFile = $OutputPath
     }
     return $pathObject
 }
@@ -538,7 +544,7 @@ $paths = Set-ScriptPaths
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
 #Enable verbose logging if passed
-if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
+if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' } else { $vLevel = $null }
 
 #If scale is used, verify arguments and handle errors
 if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and !$PSBoundParameters['Scale']) {
