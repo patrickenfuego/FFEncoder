@@ -78,9 +78,7 @@ function Get-HDRMetadata {
     $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
     #Check if input has Dolby Vision metadata
     $isDV = Confirm-DolbyVision -InputFile $InputFile -DolbyVisionPath $DolbyVisionPath
-    if ($isHDR10Plus) {
-        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath'"
-    }
+   
     $metadataObj = @{
         PixelFmt       = $pixelFmt
         ColorSpace     = $colorSpace
