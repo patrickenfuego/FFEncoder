@@ -300,6 +300,15 @@ function Set-FFMpegArgs {
             'aud=1'
             'hrd=1'
         )
+        if ($HDR.HDR10Plus) { 
+            if ($IsLinux -or $IsMacOS) {
+                $hdr10PlusPath = [regex]::Escape($Paths.HDR10Plus)
+            }
+            else {
+                $hdr10PlusPath = "`"$($Paths.HDR10Plus)`""
+            }
+            $resArray += "dhdr10-info=$hdr10PlusPath" 
+        }
     }
     else {
         $pxFormatArray = @('-pix_fmt', 'yuv420p10le')

@@ -1,3 +1,13 @@
+<#
+    .SYNOPSIS
+        Private function that sets encoding array arguments for Dolby Vision
+    .DESCRIPTION
+        This function translates ffmpeg type syntax to x265 syntax to keep a consistent feel throughout the script.
+        This function is a proxy function for Set-FFMpegArgs
+    .NOTES
+        This function is needed because ffmpeg does not currently support RPU files for DV encoding
+#>
+
 function Set-DVArgs {
     [CmdletBinding()]
     param (
@@ -104,8 +114,6 @@ function Set-DVArgs {
     $passType = $RateControl[3]
     $RateControl = $RateControl[0..($RateControl.Length - 3)]
 
-    Write-Host "DEBUG: TWO PASS IS:" $twoPass
-
     ## Unpack extra parameters ##
 
     if ($PSBoundParameters['FFMpegExtra']) {
@@ -127,182 +135,178 @@ function Set-DVArgs {
         [string[]]$x265ExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $x265Extra.GetEnumerator()) {
             #Convert extra args from ffmpeg format to x265 no-arg format
-            # if ($arg.Name -eq 'limit-modes') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--limit-modes' }
-            #         0 { $x265ExtraArray += '--no-limit-modes' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'rect') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--rect' }
-            #         0 { $x265ExtraArray += '--no-rect' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'amp') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--amp' }
-            #         0 { $x265ExtraArray += '--no-amp' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'early-skip') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--early-skip' }
-            #         0 { $x265ExtraArray += '--no-early-skip' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'splitrd-skip') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--splitrd-skip' }
-            #         0 { $x265ExtraArray += '--no-splitrd-skip' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'splitrd-skip') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--splitrd-skip' }
-            #         0 { $x265ExtraArray += '--no-splitrd-skip' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'fast-intra') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--fast-intra' }
-            #         0 { $x265ExtraArray += '--no-fast-intra' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'cu-lossless') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--cu-lossless' }
-            #         0 { $x265ExtraArray += '--no-cu-lossless' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'tskip-fast') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--tskip-fast' }
-            #         0 { $x265ExtraArray += '--no-tskip-fast' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'rd-refine') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--rd-refine' }
-            #         0 { $x265ExtraArray += '--no-rd-refine' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'dynamic-refine') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--dynamic-refine' }
-            #         0 { $x265ExtraArray += '--no-dynamic-refine' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'tskip') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--tskip' }
-            #         0 { $x265ExtraArray += '--no-tskip' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'temporal-mvp') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--temporal-mvp' }
-            #         0 { $x265ExtraArray += '--no-temporal-mvp' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'weightp' -or $arg.Name -eq 'w') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--weightp' }
-            #         0 { $x265ExtraArray += '--no-weightp' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'weightb') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--weightb' }
-            #         0 { $x265ExtraArray += '--no-weightb' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'analyze-src-pics') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--analyze-src-pics' }
-            #         0 { $x265ExtraArray += '--no-analyze-src-pics' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'hme') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--hme' }
-            #         0 { $x265ExtraArray += '--no-hme' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'constrained-intra') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--constrained-intra' }
-            #         0 { $x265ExtraArray += '--no-constrained-intra' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'open-gop') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--open-gop' }
-            #         0 { $x265ExtraArray += '--no-open-gop' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'scenecut') {
-            #     switch ($arg.Value) {
-            #         0 { $x265ExtraArray += '--no-scenecut' }
-            #         default { $x265ExtraArray += @('--scenecut', "$($arg.Value)") }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'hist-scenecut') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--hist-scenecut' }
-            #         0 { $x265ExtraArray += '--no-hist-scenecut' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'b-pyramid') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--b-pyramid' }
-            #         0 { $x265ExtraArray += '--no-b-pyramid' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'lossless') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--lossless' }
-            #         0 { $x265ExtraArray += '--no-lossless' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'aq-motion') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--aq-motion' }
-            #         0 { $x265ExtraArray += '--no-aq-motion' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'cutree') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--cutree' }
-            #         0 { $x265ExtraArray += '--no-cutree' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'lossless') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--lossless' }
-            #         0 { $x265ExtraArray += '--no-lossless' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'rc-grain') {
-            #     switch ($arg.Value) {
-            #         1 { $x265ExtraArray += '--rc-grain' }
-            #         0 { $x265ExtraArray += '--no-rc-grain' }
-            #     }
-            # }
-            # elseif ($arg.Name -eq 'aq-motion' -and $arg.Value -eq 1) {
-            #     $x265BaseArray += '--aq-motion'
-            # }
-            # elseif ($arg.Name -eq 'hevc-aq' -and $arg.Value -eq 1) {
-            #     $x265ExtraArray += '--hevc-aq'
-            # }
-            # elseif ($arg.Name -eq 'sao' -and $arg.Value -eq 1) {
-            #     $x265ExtraArray += '--sao'
-            # }
-            if ($arg.Value -in 0, 1) {
+            #Looking for a better way to do this...setting these values
+            #based only on (1, 0) causes false positives for some options
+            if ($arg.Name -eq 'limit-modes') {
                 switch ($arg.Value) {
-                    1 { $x265ExtraArray += "--$($arg.Name)" }
-                    0 { $x265ExtraArray += "--no-$($arg.Name)" }
+                    1 { $x265ExtraArray += '--limit-modes' }
+                    0 { $x265ExtraArray += '--no-limit-modes' }
                 }
+            }
+            elseif ($arg.Name -eq 'rect') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--rect' }
+                    0 { $x265ExtraArray += '--no-rect' }
+                }
+            }
+            elseif ($arg.Name -eq 'amp') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--amp' }
+                    0 { $x265ExtraArray += '--no-amp' }
+                }
+            }
+            elseif ($arg.Name -eq 'early-skip') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--early-skip' }
+                    0 { $x265ExtraArray += '--no-early-skip' }
+                }
+            }
+            elseif ($arg.Name -eq 'splitrd-skip') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--splitrd-skip' }
+                    0 { $x265ExtraArray += '--no-splitrd-skip' }
+                }
+            }
+            elseif ($arg.Name -eq 'splitrd-skip') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--splitrd-skip' }
+                    0 { $x265ExtraArray += '--no-splitrd-skip' }
+                }
+            }
+            elseif ($arg.Name -eq 'fast-intra') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--fast-intra' }
+                    0 { $x265ExtraArray += '--no-fast-intra' }
+                }
+            }
+            elseif ($arg.Name -eq 'cu-lossless') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--cu-lossless' }
+                    0 { $x265ExtraArray += '--no-cu-lossless' }
+                }
+            }
+            elseif ($arg.Name -eq 'tskip-fast') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--tskip-fast' }
+                    0 { $x265ExtraArray += '--no-tskip-fast' }
+                }
+            }
+            elseif ($arg.Name -eq 'rd-refine') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--rd-refine' }
+                    0 { $x265ExtraArray += '--no-rd-refine' }
+                }
+            }
+            elseif ($arg.Name -eq 'dynamic-refine') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--dynamic-refine' }
+                    0 { $x265ExtraArray += '--no-dynamic-refine' }
+                }
+            }
+            elseif ($arg.Name -eq 'tskip') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--tskip' }
+                    0 { $x265ExtraArray += '--no-tskip' }
+                }
+            }
+            elseif ($arg.Name -eq 'temporal-mvp') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--temporal-mvp' }
+                    0 { $x265ExtraArray += '--no-temporal-mvp' }
+                }
+            }
+            elseif ($arg.Name -eq 'weightp' -or $arg.Name -eq 'w') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--weightp' }
+                    0 { $x265ExtraArray += '--no-weightp' }
+                }
+            }
+            elseif ($arg.Name -eq 'weightb') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--weightb' }
+                    0 { $x265ExtraArray += '--no-weightb' }
+                }
+            }
+            elseif ($arg.Name -eq 'analyze-src-pics') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--analyze-src-pics' }
+                    0 { $x265ExtraArray += '--no-analyze-src-pics' }
+                }
+            }
+            elseif ($arg.Name -eq 'hme') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--hme' }
+                    0 { $x265ExtraArray += '--no-hme' }
+                }
+            }
+            elseif ($arg.Name -eq 'constrained-intra') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--constrained-intra' }
+                    0 { $x265ExtraArray += '--no-constrained-intra' }
+                }
+            }
+            elseif ($arg.Name -eq 'open-gop') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--open-gop' }
+                    0 { $x265ExtraArray += '--no-open-gop' }
+                }
+            }
+            elseif ($arg.Name -eq 'scenecut') {
+                switch ($arg.Value) {
+                    0 { $x265ExtraArray += '--no-scenecut' }
+                    default { $x265ExtraArray += @('--scenecut', "$($arg.Value)") }
+                }
+            }
+            elseif ($arg.Name -eq 'hist-scenecut') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--hist-scenecut' }
+                    0 { $x265ExtraArray += '--no-hist-scenecut' }
+                }
+            }
+            elseif ($arg.Name -eq 'b-pyramid') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--b-pyramid' }
+                    0 { $x265ExtraArray += '--no-b-pyramid' }
+                }
+            }
+            elseif ($arg.Name -eq 'lossless') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--lossless' }
+                    0 { $x265ExtraArray += '--no-lossless' }
+                }
+            }
+            elseif ($arg.Name -eq 'aq-motion') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--aq-motion' }
+                    0 { $x265ExtraArray += '--no-aq-motion' }
+                }
+            }
+            elseif ($arg.Name -eq 'cutree') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--cutree' }
+                    0 { $x265ExtraArray += '--no-cutree' }
+                }
+            }
+            elseif ($arg.Name -eq 'lossless') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--lossless' }
+                    0 { $x265ExtraArray += '--no-lossless' }
+                }
+            }
+            elseif ($arg.Name -eq 'rc-grain') {
+                switch ($arg.Value) {
+                    1 { $x265ExtraArray += '--rc-grain' }
+                    0 { $x265ExtraArray += '--no-rc-grain' }
+                }
+            }
+            elseif ($arg.Name -eq 'aq-motion' -and $arg.Value -eq 1) {
+                $x265BaseArray += '--aq-motion'
+            }
+            elseif ($arg.Name -eq 'hevc-aq' -and $arg.Value -eq 1) {
+                $x265ExtraArray += '--hevc-aq'
+            }
+            elseif ($arg.Name -eq 'sao' -and $arg.Value -eq 1) {
+                $x265ExtraArray += '--sao'
             }
             else {
                 $x265ExtraArray += @("--$($arg.Name)", "$($arg.Value)")
@@ -331,14 +335,14 @@ function Set-DVArgs {
         '-pix_fmt'
         'yuv420p10le'
     )
-
+    
     $ffmpegOtherArray = @(
         '-probesize'
         '100MB'
         '-i'
         $inputPath
         '-map'
-        '-0:v:0'
+        '0:v'
         $Audio
         $Subtitles
     )
@@ -360,7 +364,7 @@ function Set-DVArgs {
         '--vbv-maxrate'
         '160000'
         '--master-display'
-        "'$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))'"
+        "$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
         '--max-cll'
         "`"$($HDR.MaxCLL),$($HDR.MaxFAL)`""
         '--colormatrix'
@@ -389,7 +393,7 @@ function Set-DVArgs {
         '--aq-mode'
         "$($PresetParams.AqMode)"
         '--aq-strength'
-        "$AqStrength"
+        $AqStrength
         '--rc-lookahead'
         '48'
         '--keyint'
@@ -397,7 +401,7 @@ function Set-DVArgs {
         '--min-keyint'
         '24'
         '--psy-rd'
-        "$PsyRd"
+        $PsyRd
         '--tu-intra-depth'
         "$($TuDepth[0])"
         '--tu-inter-depth'
@@ -405,7 +409,7 @@ function Set-DVArgs {
         '--limit-tu'
         "$LimitTu"
         '--qcomp'
-        "$Qcomp"
+        $Qcomp
         '--nr-intra'
         "$($NoiseReduction[0])"
         '--nr-inter'
@@ -424,6 +428,7 @@ function Set-DVArgs {
     #Set test frames if passed
     if ($PSBoundParameters['TestFrames']) {
         $ffmpegBaseVideoArray += @('-ss', '00:01:30', '-frames:v', $TestFrames)
+        $x265BaseArray += @('-f', $TestFrames)
     }
     
     #Add final argument for piping
@@ -441,14 +446,14 @@ function Set-DVArgs {
     if ($PSBoundParameters['FrameThreads']) { $x265BaseArray += @('-F', "$FrameThreads") }
     ($PresetParams.BIntra -eq 1) ? ($x265BaseArray += @('--b-intra')) : ($x265BaseArray += @('--no-b-intra'))
 
-    ($PSBoundParameters['StrongIntraSmoothing'] -eq 0) ?
+    ($IntraSmoothing -eq 0) ?
     ($x265BaseArray += @('--no-strong-intra-smoothing')) : 
     ($x265BaseArray += @('--strong-intra-smoothing'))
 
     ## Set rate control ##
 
     if ($RateControl[0] -like '-crf') {
-        $x265BaseArray += @('--crf', "$($RateControl[1])")
+        $x265BaseArray += @('--crf', $RateControl[1])
     }
     elseif ($RateControl[0] -like '-b:v') {
         $val = switch -Wildcard ($RateControl[1]) {
@@ -460,7 +465,7 @@ function Set-DVArgs {
             }
             default { throw "Unknown bitrate suffix"; exit 2 }
         }
-        $x265BaseArray += @('--bitrate', "$val")
+        $x265BaseArray += @('--bitrate', $val)
     }
 
     Write-Verbose "FFMPEG VIDEO ARGS ARE: `n $($ffmpegBaseVideoArray -join " ")`n"
@@ -529,13 +534,14 @@ function Set-DVArgs {
         $x265BaseArray += @('--subme', "$($PresetParams.Subme)")
 
         Write-Verbose "x265 ARRAY IS:`n $($x265BaseArray -join " ")`n"
-        Write-Host "`nEnd debug return`n`n"
+        
         $dvHash = @{
             FFMpegVideo = $ffmpegBaseVideoArray
             FFMpegOther = $ffmpegOtherArray
             x265Args1   = $x265BaseArray
             x265Args2   = $null
         }
-        return $dvHash
     }
+
+    return $dvHash
 }

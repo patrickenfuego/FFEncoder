@@ -239,56 +239,76 @@ function Invoke-FFMpeg {
         Verbosity      = $Verbosity
     }
 
-    ($HDR.DV) ? ($dvArgs = Set-DVArgs @baseArgs) : ($ffmpegArgs = Set-FFMpegArgs @baseArgs)
-    #If Dolby Vision is found and args not empty/null, set params for encode
+    if ($HDR.DV) { $dvArgs = Set-DVArgs @baseArgs } else { $ffmpegArgs = Set-FFMpegArgs @baseArgs }
+    #If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
     if ($dvArgs) {
-        Write-host "DEBUG: DvArgs.FFMpegVideo is:`n`n $($dvArgs.FFMpegVideo)" 
-        Write-host "DEBUG: DvArgs.x265Args1 is:`n`n $($dvArgs.x265Args1)`n" 
+        Write-Verbose "DV ffmpeg arguments:`n`n $($dvArgs.FFMpegVideo)" 
+        Write-Verbose "DV x265 arguments are:`n`n $($dvArgs.x265Args1)`n"
+        #Two pass x265 encode
         if ($null -ne $dvArgs.x265Args2) {
+            Write-Verbose "DV x265 arguments pass 2 are:`n`n $($dvArgs.x265Args1)`n" 
             Write-Host
+            Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
             Write-Host "***** STARTING x265 PIPE PASS 1 *****" @progressColors
-            Write-Banner
+            Write-Host
+
             if ($IsLinux -or $IsMacOS) {
-                $hevcPath = [regex]::Escape($Paths.hevcPath)
-                bash -c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath 2>$($Paths.LogPath)"
+                $Paths.hevcPath = [regex]::Escape($Paths.hevcPath)
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)"
             }
             else {
-                cmd.exe /c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`""
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`""
             }
+
             Write-Host
             Write-Host "***** STARTING x265 PIPE PASS 2 *****" @progressColors
-            Write-Banner
+            Write-Host
+            
             if ($IsLinux -or $IsMacOS) {
-                $hevcPath = [regex]::Escape($Paths.hevcPath)
-                bash -c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $hevcPath 2>>$($Paths.LogPath)"
+                $Paths.hevcPath = [regex]::Escape($Paths.hevcPath)
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $($Paths.hevcPath)"
             }
             else {
-                cmd.exe /c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`""
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`""
             }
         }
+        #CRF/One pass x265 encode
         else {
             Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
             Write-Host "***** STARTING x265 PIPE *****" @progressColors
-            Write-Banner
+            Write-Host
 
             if ($IsLinux -or $IsMacOS) {
-                $hevcPath = [regex]::Escape($Paths.hevcPath)
-                bash -c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath"
+                $Paths.hevcPath = [regex]::Escape($Paths.hevcPath)
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)"
             }
             else {
-                cmd.exe /c "ffmpeg $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`""
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 
             }
         }
-        #Set temp path for muxing back into original container
-        $tmpPath = $Paths.OutputFile -replace '.mkv', '-tmp.mkv'
-        ffmpeg $dvArgs.FFMpegOther $tmpPath
-        Start-Sleep -Milliseconds 500
-
-        if (Test-Path -Path $tmpPath) {
-            ffmpeg -loglevel panic -i $Paths.hevcPath -i $tmpPath -map 0 -map 1 $Paths.OutputFile
+        #Mux/convert audio and subtitle streams separately from elementary hevc stream
+        Write-Host "`nConverting audio/subtitles..." -NoNewline
+        if ($PSBoundParameters['TestFrames']) {
+            #cut stream at video frame marker
+            $tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
+            ffmpeg -hide_banner -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.OutputFile 2>>$Paths.LogPath
         }
         else {
-            throw "Could not generate file with extra ffmpeg parameters. Run the scriot and try again."
+            ffmpeg -hide_banner $dvArgs.FFMpegOther $Paths.OutputFile 2>>$Paths.LogPath
+        }
+        #If mkvmerge is available, mux streams back together
+        if (Get-Command 'mkvmerge' -and $Paths.OutputFile.EndsWith('mkv')) {
+            Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
+            $comOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-MERGED.$2'
+            mkvmerge --ui-language en --output "$comOut" "(" "$($Paths.hevcPath)" ")" "(" "$($Paths.OutputFile)" ")" `
+                --title "$(Split-Path $Paths.OutputFile -Leaf)" --track-order 0:0,1:0
+            if ($LASTEXITCODE) {
+                Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE"
+                Remove-Item $Paths.OutputFile -Force
+            }
+        }
+        else {
+            Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually with MkvMerge to retain Dolby Vision" @warnColors
         }
     }
     #Two pass encode

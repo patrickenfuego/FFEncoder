@@ -544,7 +544,7 @@ $paths = Set-ScriptPaths
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
 #Enable verbose logging if passed
-if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' } else { $vLevel = $null }
+if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' } #else { $vLevel = $null }
 
 #If scale is used, verify arguments and handle errors
 if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and !$PSBoundParameters['Scale']) {

@@ -63,7 +63,7 @@ function Confirm-DolbyVision {
         return $false
     }
     elseif ((Get-Item $DolbyVisionPath).Length -gt 0) {
-        Write-Host "Dolby Vision Metadata found. Generating RPU file..." -NoNewline
+        Write-Host "Dolby Vision Metadata found. Generating RPU file..." -NoNewline @emphasisColors
         Remove-Item -Path $DolbyVisionPath -Force
 
         if ($IsMacOS -or $IsLinux) {
@@ -74,7 +74,7 @@ function Confirm-DolbyVision {
         }
 
         if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB,2) -gt 1) {
-            Write-Verbose "RPU size is greater than 1 MB. RPU successfully generated"
+            Write-Verbose "RPU size is greater than 1 MB. RPU was most likely generated successfully"
             return $true
         }
         else {
