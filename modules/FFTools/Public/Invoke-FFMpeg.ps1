@@ -145,7 +145,7 @@ function Invoke-FFMpeg {
 
     function Write-Banner {
         Write-Host "To view your progress, run " -NoNewline
-        Write-Host "Get-Content `"$($Paths.LogPath)' -Tail 10`"" @emphasisColors -NoNewline
+        Write-Host "Get-Content `"$($Paths.LogPath)`" -Tail 10`"" @emphasisColors -NoNewline
         Write-Host " in a different PowerShell session`n`n"
     }
 
