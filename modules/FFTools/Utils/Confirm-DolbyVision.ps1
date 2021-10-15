@@ -27,19 +27,27 @@ function Confirm-DolbyVision {
         [string]$Verbosity
     )
 
-    #if x265 not found in PATH, cannot generate RPU
-    if (!(Get-Command 'x265')) {
-        Write-Verbose "x265 not found in PATH. Cannot generate RPU file"
-        return $false
-    }
-
     if ($PSBoundParameters['Verbosity']) {
         $VerbosePreference = 'Continue'
     }
     else {
         $VerbosePreference = 'SilentlyContinue'
     }
- 
+    
+    #if x265 not found in PATH, cannot generate RPU
+    if (!(Get-Command 'x265')) {
+        Write-Verbose "x265 not found in PATH. Cannot encode Dolby Vision"
+        return $false
+    }
+
+    if (Test-Path -Path $DolbyVisionPath) {
+        if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB, 2) -gt 15) {
+            Write-Host "Existing Dolby Vision RPU file found" @emphasisColors
+            Write-Host "If the RPU file was generated during a test encode (i.e. not a full frame count), exit the script NOW" @warnColors
+            return $true
+        }
+    }
+
     #Determine if file supports dolby vision
     if ($IsLinux -or $IsMacOS) {
         $parserPath = $IsLinux ?
@@ -73,7 +81,7 @@ function Confirm-DolbyVision {
             cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool --crop -m 2 extract-rpu - -o `"$DolbyVisionPath`""
         }
 
-        if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB,2) -gt 1) {
+        if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB, 2) -gt 1) {
             Write-Verbose "RPU size is greater than 1 MB. RPU was most likely generated successfully"
             return $true
         }
