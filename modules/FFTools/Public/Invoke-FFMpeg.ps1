@@ -290,11 +290,10 @@ function Invoke-FFMpeg {
         Write-Host "`nConverting audio/subtitles..." -NoNewline
         if ($PSBoundParameters['TestFrames']) {
             #cut stream at video frame marker
-            $tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
-            ffmpeg -hide_banner -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.OutputFile 2>>$Paths.LogPath
+            ffmpeg -hide_banner -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.OutputFile
         }
         else {
-            ffmpeg -hide_banner $dvArgs.FFMpegOther $Paths.OutputFile 2>>$Paths.LogPath
+            ffmpeg -hide_banner $dvArgs.FFMpegOther $Paths.OutputFile
         }
         #If mkvmerge is available, mux streams back together
         if (Get-Command 'mkvmerge' -and $Paths.OutputFile.EndsWith('mkv')) {
@@ -308,7 +307,7 @@ function Invoke-FFMpeg {
             }
         }
         else {
-            Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually with MkvMerge to retain Dolby Vision" @warnColors
+            Write-Verbose "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision" @warnColors
         }
     }
     #Two pass encode

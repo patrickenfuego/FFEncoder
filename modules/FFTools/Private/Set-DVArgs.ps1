@@ -341,8 +341,7 @@ function Set-DVArgs {
         '100MB'
         '-i'
         $inputPath
-        '-map'
-        '0:v'
+        '-vn'
         $Audio
         $Subtitles
     )
