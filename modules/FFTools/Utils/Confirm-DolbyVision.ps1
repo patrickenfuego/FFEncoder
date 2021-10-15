@@ -33,17 +33,18 @@ function Confirm-DolbyVision {
     else {
         $VerbosePreference = 'SilentlyContinue'
     }
-    
+
     #if x265 not found in PATH, cannot generate RPU
     if (!(Get-Command 'x265')) {
         Write-Verbose "x265 not found in PATH. Cannot encode Dolby Vision"
         return $false
     }
 
+    #Check for existing RPU file. Verification based on file size, can be improved
     if (Test-Path -Path $DolbyVisionPath) {
         if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB, 2) -gt 15) {
             Write-Host "Existing Dolby Vision RPU file found" @emphasisColors
-            Write-Host "If the RPU file was generated during a test encode (i.e. not a full frame count), exit the script NOW" @warnColors
+            Write-Host "If the RPU file was generated during a test encode (i.e. not a full frame count), exit the script NOW, delete the file, and regenerate" @warnColors
             return $true
         }
     }
