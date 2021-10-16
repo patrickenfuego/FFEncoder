@@ -109,7 +109,7 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 - Maximum Content Light Level
 - Maximum Frame Average Light Level
 - HDR10+ Metadata
-  - *Dolby Vision Metadata* (Working, but still in testing. See dvtest branch)
+- *Dolby Vision Metadata* (Working, but still in testing. See dvtest branch)
   - Requires x265 to be installed and available via PATH (**Executable must be named x265**) because ffmpeg cannot handle RPU files
   - Currently, only profile 8.1 is supported due it it's backwards compatibility with HDR10. More profiles will be added in the future
 
