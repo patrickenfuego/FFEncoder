@@ -167,12 +167,6 @@ function Set-DVArgs {
                     0 { $x265ExtraArray += '--no-splitrd-skip' }
                 }
             }
-            elseif ($arg.Name -eq 'splitrd-skip') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray += '--splitrd-skip' }
-                    0 { $x265ExtraArray += '--no-splitrd-skip' }
-                }
-            }
             elseif ($arg.Name -eq 'fast-intra') {
                 switch ($arg.Value) {
                     1 { $x265ExtraArray += '--fast-intra' }
