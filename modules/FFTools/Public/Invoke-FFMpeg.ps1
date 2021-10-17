@@ -296,7 +296,7 @@ function Invoke-FFMpeg {
             ffmpeg -hide_banner $dvArgs.FFMpegOther $Paths.OutputFile
         }
         #If mkvmerge is available, mux streams back together
-        if (Get-Command 'mkvmerge' -and $Paths.OutputFile.EndsWith('mkv')) {
+        if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
             Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
             $comOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-MERGED.$2'
             mkvmerge --ui-language en --output "$comOut" "(" "$($Paths.hevcPath)" ")" "(" "$($Paths.OutputFile)" ")" `
