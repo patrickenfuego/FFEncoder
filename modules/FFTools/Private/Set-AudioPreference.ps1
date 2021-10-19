@@ -62,7 +62,6 @@ function Set-AudioPreference {
 
     Write-Host "**** Audio Stream $($Stream + 1) ****" @emphasisColors
 
-    $atmosWarning = "If you're copying a Dolby Atmos stream, you must have the latest ffmpeg build or the SCRIPT WILL FAIL"
     #Params for downmixing to stereo. Passed to the Convert-ToStereo function
     $stereoParams = @{
         Paths       = $Paths
@@ -88,14 +87,12 @@ function Set-AudioPreference {
         "^c[opy]*$" {
             Write-Host "** COPY AUDIO SELECTED **" @progressColors
             Write-Host "Audio stream 0 will be copied. " -NoNewline  
-            Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a:0', '-c:a:0', 'copy')
             break
         }
         "c[opy]*a[ll]*" {
             Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
             Write-Host "All audio streams will be copied. " -NoNewline
-            Write-Host $atmosWarning @warnColors `n
             @('-map', '0:a', '-c:a', 'copy')
             break
         }
