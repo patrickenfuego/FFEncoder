@@ -35,7 +35,7 @@ function Confirm-DolbyVision {
     }
 
     #if x265 not found in PATH, cannot generate RPU
-    if (!(Get-Command 'x265')) {
+    if (!(Get-Command -Name 'x265*')) {
         Write-Verbose "x265 not found in PATH. Cannot encode Dolby Vision"
         return $false
     }
