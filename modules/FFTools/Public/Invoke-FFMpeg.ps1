@@ -242,6 +242,8 @@ function Invoke-FFMpeg {
     if ($HDR.DV) { $dvArgs = Set-DVArgs @baseArgs } else { $ffmpegArgs = Set-FFMpegArgs @baseArgs }
     #If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
     if ($dvArgs) {
+        Start-Transcript -Path $Paths.LogPath -UseMinimalHeader
+       
         Write-Verbose "DV ffmpeg arguments:`n`n $($dvArgs.FFMpegVideo)" 
         Write-Verbose "DV x265 arguments are:`n`n $($dvArgs.x265Args1)`n"
         #Two pass x265 encode
@@ -283,20 +285,25 @@ function Invoke-FFMpeg {
                 bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)"
             }
             else {
-                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | `"$x265BinPath`" $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 
             }
         }
         #Mux/convert audio and subtitle streams separately from elementary hevc stream
-        Write-Host "`nConverting audio/subtitles..." -NoNewline
-        if ($PSBoundParameters['TestFrames']) {
-            #cut stream at video frame marker
-            ffmpeg -hide_banner -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.OutputFile
+        $noStreams = $false
+        if ($audio1 -ne '-an' -and ($audio2 -notin @('-an', $null)) -and $subs -ne '-sn') {
+            Write-Host "`nConverting audio/subtitles..." -NoNewline
+            if ($PSBoundParameters['TestFrames']) {
+                #cut stream at video frame marker
+                ffmpeg -hide_banner -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.OutputFile
+            }
+            else {
+                ffmpeg -hide_banner $dvArgs.FFMpegOther $Paths.OutputFile
+            }
         }
-        else {
-            ffmpeg -hide_banner $dvArgs.FFMpegOther $Paths.OutputFile
-        }
+        else { $noStreams = $true }
+
         #If mkvmerge is available, mux streams back together
-        if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
+        if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv') -and !$noStreams) {
             Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
             $comOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-MERGED.$2'
             mkvmerge --ui-language en --output "$comOut" "(" "$($Paths.hevcPath)" ")" "(" "$($Paths.OutputFile)" ")" `
@@ -307,8 +314,10 @@ function Invoke-FFMpeg {
             }
         }
         else {
-            Write-Verbose "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision" @warnColors
+            Write-Verbose "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
         }
+
+        Stop-Transcript
     }
     #Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
