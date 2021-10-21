@@ -285,7 +285,7 @@ function Invoke-FFMpeg {
                 bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)"
             }
             else {
-                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | `"$x265BinPath`" $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>&1
             }
         }
         #Mux/convert audio and subtitle streams separately from elementary hevc stream
