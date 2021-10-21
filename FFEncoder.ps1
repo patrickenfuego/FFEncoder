@@ -479,7 +479,7 @@ function Set-ScriptPaths {
         $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle`_stereo-remux.$oExt"
         $reportPath = Join-Path -Path $root -ChildPath "$oTitle.rep"
         $hdr10PlusPath = Join-Path -Path $root -ChildPath "metadata.json"
-        $dvPath = Join-Path -Path $root -ChildPath "$oTitle`_rpu.bin"
+        $dvPath = Join-Path -Path $root -ChildPath "rpu.bin"
         $hevcPath = Join-Path -Path $oRoot -ChildPath "$oTitle.hevc"
     }
     #Regex match could not be made on the folder pattern
