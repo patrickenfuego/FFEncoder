@@ -72,7 +72,7 @@ function Confirm-DolbyVision {
         return $false
     }
     elseif ((Get-Item $DolbyVisionPath).Length -gt 0) {
-        Write-Host "Dolby Vision Metadata found. Generating RPU file..." -NoNewline @emphasisColors
+        Write-Host "Dolby Vision Metadata found. Generating RPU file..." @emphasisColors
         Remove-Item -Path $DolbyVisionPath -Force
 
         if ($IsMacOS -or $IsLinux) {
