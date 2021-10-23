@@ -312,7 +312,7 @@ function Set-DVArgs {
 
     if ($IsLinux -or $IsMacOS) {
         $inputPath = [regex]::Escape($Paths.InputFile)
-        $dvPath = [regex]::Escape($Paths.dvPath)
+        $dvPath = [regex]::Escape($Paths.dvPath) 
     }
     else {
         $inputPath = "`"$($Paths.InputFile)`""
@@ -334,7 +334,7 @@ function Set-DVArgs {
         '-probesize'
         '100MB'
         '-i'
-        "$([regex]::Unescape($inputPath))"
+        "`"$($Paths.InputFile)`""
         '-map_chapters'
         '0'
         '-vn'
@@ -359,7 +359,7 @@ function Set-DVArgs {
         '--vbv-maxrate'
         '160000'
         '--master-display'
-        [regex]::Escape("$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))")
+        "`"$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))`""
         '--max-cll'
         "`"$($HDR.MaxCLL),$($HDR.MaxFAL)`""
         '--colormatrix'
