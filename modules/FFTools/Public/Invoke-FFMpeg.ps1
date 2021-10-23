@@ -245,7 +245,9 @@ function Invoke-FFMpeg {
         Write-Verbose "DV ffmpeg arguments:`n`n $($dvArgs.FFMpegVideo)" 
         Write-Verbose "DV x265 arguments are:`n`n $($dvArgs.x265Args1)`n"
 
-        if ($IsLinux -or $IsMacOS) { $Paths.hevcPath = [regex]::Escape($Paths.hevcPath) }
+        if ($IsLinux -or $IsMacOS) { 
+            $hevcPath = [regex]::Escape($Paths.hevcPath)  
+        }
 
         #Two pass x265 encode
         if ($null -ne $dvArgs.x265Args2) {
@@ -257,7 +259,7 @@ function Invoke-FFMpeg {
             Write-Banner
 
             if ($IsLinux -or $IsMacOS) {
-                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)" 2>$Paths.LogPath
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath" 2>$Paths.LogPath
             }
             else {
                 cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
@@ -268,10 +270,10 @@ function Invoke-FFMpeg {
             Write-Banner
             
             if ($IsLinux -or $IsMacOS) {
-                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $($Paths.hevcPath)" 2>$Paths.LogPath
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $hevcPath" 2>>$Paths.LogPath
             }
             else {
-                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>>$Paths.LogPath
             }
         }
         #CRF/One pass x265 encode
@@ -281,28 +283,28 @@ function Invoke-FFMpeg {
             Write-Banner
 
             if ($IsLinux -or $IsMacOS) {
-                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)" 2>$Paths.LogPath
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath" 2>$Paths.LogPath
             }
             else {
                 cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
             }
         }
         #Mux/convert audio and subtitle streams separately from elementary hevc stream
-        $noStreams = $false
-        if ($audio1 -ne '-an' -and ($audio2 -notin @('-an', $null)) -and $subs -ne '-sn') {
-            Write-Host "`nConverting audio/subtitles..." -NoNewline
+        if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
+            Write-Host "`nConverting audio/subtitles..."
             $tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 #cut stream at video frame marker
-                ffmpeg -hide_banner -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $tmpOut
+                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $tmpOut 2>>$Paths.LogPath
             }
             else {
-                ffmpeg -hide_banner $dvArgs.FFMpegOther $tmpOut
+                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther $tmpOut 2>>$Paths.LogPath
             }
         }
         else { 
             if ((Get-Command 'mkvextract') -and $Paths.InputFile.EndsWith('mkv')) {
                 #Extract chapters if no other streams are copied
+                Write-Verbose "No additional streams selected. Generating chapter file..."
                 $chapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1.xml')" 
                 mkvextract $Paths.InputFile chapters $chapterPath
             }
@@ -311,22 +313,25 @@ function Invoke-FFMpeg {
         #If mkvmerge is available and output stream is mkv, mux streams back together
         if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
             Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
+            Write-Host
 
             $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language -select_streams a -v 0 -of compact=p=0:nk=1 
             [string]$lang = $streams -replace '\d\|', '' | Group-Object | Sort-Object -Property Count -Descending | 
                 Select-Object -First 1 -ExpandProperty Name
 
-            if (!(Test-Path -Path $chapterPath)) {
-                mkvmerge --ui-language en --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$tmpOut" ")" `
-                    --title "$(Split-Path $Paths.OutputFile -Leaf)" --track-order 0:0, 1:0
+            if (($IsMacOS -or $isLinux) -and $lang -eq 'eng') { $uiLang = 'en_US' } else { $uiLang = $lang }
+
+            if (!$chapterPath) {
+                mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$tmpOut" ")" `
+                    --title "$(Split-Path $Paths.OutputFile -Leaf)" --track-order 0:0,1:0 | Out-File -FilePath $Paths.LogPath -Append
             }
             else {
-                mkvmerge --ui-language en --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" `
-                    --chapter-language $lang --chapters "$chapterPath"
+                mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" `
+                    --chapter-language $lang --chapters "$chapterPath" | Out-File -FilePath $Paths.LogPath -Append
             }
-            if ($LASTEXITCODE) {
-                Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE"
-                if (Test-Path -Path $tmpOut) { Remove-Item $tmpOut -Force }
+            if ($?) {
+                Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE. Removing TMP file..."
+                if (Test-Path -Path $tmpOut -ErrorAction SilentlyContinue) { Remove-Item $tmpOut -Force }
             }
         }
         else {
