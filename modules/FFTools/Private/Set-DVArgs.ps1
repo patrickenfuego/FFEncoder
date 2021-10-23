@@ -334,7 +334,7 @@ function Set-DVArgs {
         '-probesize'
         '100MB'
         '-i'
-        $inputPath
+        "$([regex]::Unescape($inputPath))"
         '-map_chapters'
         '0'
         '-vn'
@@ -359,7 +359,7 @@ function Set-DVArgs {
         '--vbv-maxrate'
         '160000'
         '--master-display'
-        "$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
+        [regex]::Escape("$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))")
         '--max-cll'
         "`"$($HDR.MaxCLL),$($HDR.MaxFAL)`""
         '--colormatrix'
