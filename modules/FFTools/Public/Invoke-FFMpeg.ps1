@@ -313,13 +313,12 @@ function Invoke-FFMpeg {
         #If mkvmerge is available and output stream is mkv, mux streams back together
         if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
             Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
-            Write-Host
 
             $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language -select_streams a -v 0 -of compact=p=0:nk=1 
             [string]$lang = $streams -replace '\d\|', '' | Group-Object | Sort-Object -Property Count -Descending | 
                 Select-Object -First 1 -ExpandProperty Name
-
-            if (($IsMacOS -or $isLinux) -and $lang -eq 'eng') { $uiLang = 'en_US' } else { $uiLang = $lang }
+            #TODO: This needs to be fixed for other languages with a lookup table
+            if (($IsMacOS -or $isLinux) -and $lang -eq 'eng') { $uiLang = 'en_US' } else { $uiLang = 'en' }
 
             if (!$chapterPath) {
                 mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$tmpOut" ")" `
@@ -337,6 +336,8 @@ function Invoke-FFMpeg {
         else {
             Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
         }
+
+        Write-Host
     }
     #Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
