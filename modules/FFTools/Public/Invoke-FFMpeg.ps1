@@ -289,46 +289,28 @@ function Invoke-FFMpeg {
         #Mux/convert audio and subtitle streams separately from elementary hevc stream
         if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
             Write-Host "Converting audio/subtitles..."
-            $tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
+            $Paths.tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 #cut stream at video frame marker
-                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.tmpOut 2>>$Paths.LogPath
             }
             else {
-                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther $tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther $Paths.tmpOut 2>>$Paths.LogPath
             }
         }
         else { 
             if ((Get-Command 'mkvextract') -and $Paths.InputFile.EndsWith('mkv')) {
                 #Extract chapters if no other streams are copied
                 Write-Verbose "No additional streams selected. Generating chapter file..."
-                $chapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')" 
-                mkvextract $Paths.InputFile chapters $chapterPath
+                $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')" 
+                mkvextract $Paths.InputFile chapters $Paths.ChapterPath
             }
+            else { $Paths.ChapterPath = $null }
         }
 
         #If mkvmerge is available and output stream is mkv, mux streams back together
         if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
-            Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
-
-            $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language -select_streams a -v 0 -of compact=p=0:nk=1 
-            [string]$lang = $streams -replace '\d\|', '' | Group-Object | Sort-Object -Property Count -Descending | 
-                Select-Object -First 1 -ExpandProperty Name
-            #TODO: This needs to be fixed for other languages with a lookup table
-            if (($IsMacOS -or $isLinux) -and $lang -eq 'eng') { $uiLang = 'en_US' } else { $uiLang = 'en' }
-
-            if (!$chapterPath) {
-                mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$tmpOut" ")" `
-                    --title "$($Paths.Title)" --track-order 0:0,1:0
-            }
-            else {
-                mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" `
-                    --chapter-language $lang --chapters "$chapterPath"
-            }
-            if ($?) {
-                Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE. Removing TMP file..."
-                if (Test-Path -Path $tmpOut -ErrorAction SilentlyContinue) { Remove-Item $tmpOut -Force }
-            }
+            Invoke-MkvMerge -Paths $Paths -Verbosity $Verbosity
         }
         else {
             Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
