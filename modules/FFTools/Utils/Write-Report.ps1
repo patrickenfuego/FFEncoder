@@ -54,7 +54,6 @@ function Write-Report {
             $log[$i] >> $outPath
         }
         elseif ($log[$i] -match "x265 \[info\]\:.*") { 
-            Write-host "Matched x265 info line:" $log[$i]
             if ($log[$i - 1] -match "video") {
                 "" >> $outPath
                 "-------------- COMPLETION METRICS --------------" >> $outPath
