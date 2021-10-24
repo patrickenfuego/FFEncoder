@@ -516,8 +516,8 @@ function Set-DVArgs {
         $x265FirstPassArray += @('--stats', "`"$($Paths.X265Log)`"", '--pass', '1')
         $x265SecondPassArray = $x265BaseArray + @('--stats', "`"$($Paths.X265Log)`"", '--pass', '2', '--subme', "$($PresetParams.Subme)")
 
-        Write-Verbose "FIRST PASS ARRAY IS:`n $($x265FirstPassArray -join " ")`n"
-        Write-Verbose "SECOND PASS ARRAY IS:`n $($x265SecondPassArray -join " ")`n"
+        Write-Verbose "DV FIRST PASS ARRAY IS:`n $($x265FirstPassArray -join " ")`n"
+        Write-Verbose "DV SECOND PASS ARRAY IS:`n $($x265SecondPassArray -join " ")`n"
         
         $dvHash = @{
             FFMpegVideo = $ffmpegBaseVideoArray
