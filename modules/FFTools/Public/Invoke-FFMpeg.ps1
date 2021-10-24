@@ -305,7 +305,7 @@ function Invoke-FFMpeg {
             if ((Get-Command 'mkvextract') -and $Paths.InputFile.EndsWith('mkv')) {
                 #Extract chapters if no other streams are copied
                 Write-Verbose "No additional streams selected. Generating chapter file..."
-                $chapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1.xml')" 
+                $chapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')" 
                 mkvextract $Paths.InputFile chapters $chapterPath
             }
         }
@@ -323,11 +323,11 @@ function Invoke-FFMpeg {
 
             if (!$chapterPath) {
                 mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$tmpOut" ")" `
-                    --title "$(Split-Path $Paths.OutputFile -Leaf)" --track-order 0:0,1:0 | Out-File -FilePath $Paths.LogPath -Append
+                    --title "$(Split-Path $Paths.OutputFile -Leaf)" --track-order 0:0,1:0
             }
             else {
                 mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" `
-                    --chapter-language $lang --chapters "$chapterPath" | Out-File -FilePath $Paths.LogPath -Append
+                    --chapter-language $lang --chapters "$chapterPath"
             }
             if ($?) {
                 Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE. Removing TMP file..."
