@@ -69,6 +69,9 @@ function Confirm-DolbyVision {
     #If size is 0, DV metadata was not found
     if ((Get-Item $DolbyVisionPath).Length -eq 0) {
         Write-Verbose "Input File does not support Dolby Vision"
+        if (Test-Path -Path $DolbyVisionPath) {
+            Remove-Item -Path $DolbyVisionPath -Force
+        }
         return $false
     }
     elseif ((Get-Item $DolbyVisionPath).Length -gt 0) {
