@@ -239,12 +239,9 @@ function Invoke-FFMpeg {
         Verbosity      = $Verbosity
     }
 
-    if ($HDR.DV) { $dvArgs = Set-DVArgs @baseArgs } else { $ffmpegArgs = Set-FFMpegArgs @baseArgs }
+    if ($HDR.DV -eq $true) { $dvArgs = Set-DVArgs @baseArgs } else { $ffmpegArgs = Set-FFMpegArgs @baseArgs }
     #If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
     if ($dvArgs) {
-        Write-Verbose "DV ffmpeg arguments:`n`n $($dvArgs.FFMpegVideo)" 
-        Write-Verbose "DV x265 arguments are:`n`n $($dvArgs.x265Args1)`n"
-
         if ($IsLinux -or $IsMacOS) { 
             $hevcPath = [regex]::Escape($Paths.hevcPath)  
         }
