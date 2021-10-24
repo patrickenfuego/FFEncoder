@@ -39,7 +39,7 @@ function Write-Report {
     $outPath = $Paths.ReportPath
 
     #Write contents to the report file
-    "*-------------- ENCODING REPORT FOR: $(($Paths.Title).toUpper()) --------------*`n" > $outPath
+    "*-------------- ENCODING REPORT FOR: $(($Paths.Title).toUpper()) --------------*`n" >> $outPath
     "Start Time: " + $DateTimes[0] >> $outPath
     "" >> $outPath
     if ($TwoPass) {

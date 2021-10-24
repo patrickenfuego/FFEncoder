@@ -288,7 +288,7 @@ function Invoke-FFMpeg {
         }
         #Mux/convert audio and subtitle streams separately from elementary hevc stream
         if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
-            Write-Host "`nConverting audio/subtitles..."
+            Write-Host "Converting audio/subtitles..."
             $tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 #cut stream at video frame marker
