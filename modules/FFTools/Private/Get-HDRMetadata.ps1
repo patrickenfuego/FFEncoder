@@ -96,7 +96,8 @@ function Get-HDRMetadata {
         throw "HDR object is null. ffprobe may have failed to retrieve the data. Reload the module and try again, or run ffprobe manually to investigate."
     }
     else {
-        Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **`n" @progressColors
+        Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **" @progressColors
+        Write-Host
         return $metadataObj
     }
 }
