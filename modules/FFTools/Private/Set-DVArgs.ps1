@@ -312,11 +312,13 @@ function Set-DVArgs {
 
     if ($IsLinux -or $IsMacOS) {
         $inputPath = [regex]::Escape($Paths.InputFile)
-        $dvPath = [regex]::Escape($Paths.dvPath) 
+        $dvPath = [regex]::Escape($Paths.dvPath)
+        $masterDisplay = [regex]::Escape("$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))")
     }
     else {
         $inputPath = "`"$($Paths.InputFile)`""
         $dvPath = "`"$($Paths.dvPath)`""
+        $masterDisplay = "`"$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))`""
     }
 
     $ffmpegBaseVideoArray = @(
@@ -359,7 +361,7 @@ function Set-DVArgs {
         '--vbv-maxrate'
         '160000'
         '--master-display'
-        "`"$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))`""
+        $masterDisplay
         '--max-cll'
         "`"$($HDR.MaxCLL),$($HDR.MaxFAL)`""
         '--colormatrix'
