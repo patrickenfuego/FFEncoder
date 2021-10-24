@@ -694,7 +694,8 @@ $stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds`n" -f $stopwatch.Elapsed
 #Generate the report file if parameter is present
 if ($PSBoundParameters['GenerateReport']) {
-    Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths
+    ($Pass -eq 2) ? ($twoPass = $true) : ($twoPass = $false) > $null
+    Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths -TwoPass $twoPass
 }
 #Delete extraneous files if switch is present
 if ($PSBoundParameters['RemoveFiles']) {

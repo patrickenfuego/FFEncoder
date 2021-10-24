@@ -29,7 +29,10 @@ function Write-Report {
         [system.object]$Duration,
 
         [Parameter(Mandatory = $true, Position = 2)]
-        [hashtable]$Paths
+        [hashtable]$Paths,
+
+        [Parameter(Mandatory = $true, Position = 3)]
+        [bool]$TwoPass
     )
 
     $log = Get-Content $Paths.LogPath
@@ -39,24 +42,44 @@ function Write-Report {
     "*-------------- ENCODING REPORT FOR: $(($Paths.Title).toUpper()) --------------*`n" > $outPath
     "Start Time: " + $DateTimes[0] >> $outPath
     "" >> $outPath
-    "-------------- INPUT PARAMETERS --------------" >> $outPath
+    if ($TwoPass) {
+        "-------------- INPUT PARAMETERS: PASS 1 --------------" >> $outPath
+    }
+    else {
+        "-------------- INPUT PARAMETERS --------------" >> $outPath
+    }
     #Loop through the log file and append relevant lines of data to the report
     for ($i = 0; $i -lt $log.Length; $i++) {
-        if ($log[$i] -match 'y4m' -or $log[$i] -match 'raw') { $log[$i] >> $outPath }
-        if ($log[$i] -match "x265 \[info\]\:.*") { 
-            if ($log[$i - 1] -match "video" -or $log[$i - 1] -match 'VES') {
+        if ($log[$i] -match 'y4m' -or $log[$i] -match 'raw') { 
+            $log[$i] >> $outPath
+        }
+        elseif ($log[$i] -match "x265 \[info\]\:.*") { 
+            Write-host "Matched x265 info line:" $log[$i]
+            if ($log[$i - 1] -match "video") {
                 "" >> $outPath
                 "-------------- COMPLETION METRICS --------------" >> $outPath
                 $log[$i - 1] >> $outPath 
             }
+            elseif ($log[$i] -match "VES muxing") {
+                "" >> $outPath
+                "-------------- COMPLETION METRICS --------------" >> $outPath 
+            }
             $log[$i] >> $outPath
         }
-        elseif ($log[$i] -match "encoded \d+ frames") { "" >> $outPath; $log[$i] >> $outPath }
+        elseif ($log[$i] -match "encoded \d+ frames") { 
+            "" >> $outPath
+            $log[$i] >> $outPath
+            "" >> $outPath
+
+            if ($TwoPass) {
+                "-------------- INPUT PARAMETERS: PASS 2 --------------" >> $outPath
+                $TwoPass = $false
+            }
+        }
     }
     "" >> $outPath
     "End Time: " + $DateTimes[1] >> $outPath
     "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds" -f `
         $Duration.Elapsed >> $outPath
-
 }
 
