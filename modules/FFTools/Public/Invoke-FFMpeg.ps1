@@ -319,7 +319,7 @@ function Invoke-FFMpeg {
 
             if (!$chapterPath) {
                 mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$tmpOut" ")" `
-                    --title "$(Split-Path $Paths.OutputFile -Leaf)" --track-order 0:0,1:0
+                    --title "$($Paths.Title)" --track-order 0:0,1:0
             }
             else {
                 mkvmerge --ui-language $uiLang --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" `
