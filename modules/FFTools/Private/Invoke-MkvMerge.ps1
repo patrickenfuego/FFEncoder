@@ -28,24 +28,11 @@ function Invoke-MkvMerge {
         $VerbosePreference = 'SilentlyContinue'
     }
 
-    # $langLookupTable = @{
-    #     'eng' = 'en'
-    #     'deu' = 'de'
-    #     'fra' = 'fr'
-    #     'nld' = 'nl'
-    #     'fin' = 'fi'
-    #     'dan' = 'da'
-    #     'rus' = 'ru'
-
-    # }
-
     Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
 
     $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language -select_streams a -v 0 -of compact=p=0:nk=1 
     [string]$lang = $streams -replace '\d\|', '' | Group-Object | Sort-Object -Property Count -Descending | 
         Select-Object -First 1 -ExpandProperty Name
-    #TODO: This needs to be fixed for other languages with a lookup table
-    #if (($IsMacOS -or $isLinux) -and $lang -eq 'eng') { $uiLang = 'en_US' } else { $uiLang = 'en' }
 
     if (!$Paths.ChapterPath) {
         mkvmerge --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" "(" "$($Paths.tmpOut)" ")" `
