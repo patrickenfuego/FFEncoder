@@ -27,7 +27,7 @@ Author = 'Patrick Kelly'
 CompanyName = 'NA'
 
 # Copyright statement for this module
-Copyright = '(c) 2021 Patrick Kelly, Boe Prox, and the FFMpeg developers. All rights reserved.'
+Copyright = '(c) 2021 Patrick Kelly, quietvoid, and the FFMpeg developers.'
 
 # Description of the functionality provided by this module
 Description = 'Module designed to make interfacing with FFMpeg tools easier, with a primary focus on 4K HDR audio/video encoding'
@@ -91,7 +91,7 @@ AliasesToExport = 'iffmpeg', 'ncf', 'ghdr'
 FileList = 'FFTools.psd1', 'FFTools.psm1', 'Private\Set-AudioPreference.ps1', 'Private\Get-SubtitleStream', 'Private\Set-SubtitlePreference',
 'Private\Get-HDRMetadata.ps1', 'Public\Invoke-FFMpeg.ps1', 'Public\Invoke-TwoPassFFMpeg.ps1', 'Public\New-CropFile.ps1', 'Public\Measure-CropDimensions.ps1',
 'Private\Convert-ToStereo.ps1', 'Private\Set-PresetParameters.ps1', 'Private\Set-FFMPegArgs.ps1', 'Private\Set-VideoFilter.ps1', 'Utils\Remove-FilePrompt.ps1',
-'Private\Set-DVArgs.ps1', 'Utils\Write-Report.ps1', 'Utils\Confirm-HDR10Plus.ps1', 'Utils\Confirm-DolbyVision.ps1'
+'Private\Set-DVArgs.ps1', 'Private\Invoke-MkvMerge.ps1','Utils\Write-Report.ps1', 'Utils\Confirm-HDR10Plus.ps1', 'Utils\Confirm-DolbyVision.ps1'
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
