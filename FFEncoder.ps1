@@ -702,7 +702,7 @@ if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
     Get-ChildItem -Path $paths.Root | ForEach-Object { 
-        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json"
+        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin"
     }
 }
 #Run the garbage collector to ensure no memory leaks
