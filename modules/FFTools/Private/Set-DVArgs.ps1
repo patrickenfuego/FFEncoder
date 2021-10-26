@@ -391,10 +391,6 @@ function Set-DVArgs {
         "$($PresetParams.AqMode)"
         '--aq-strength'
         $AqStrength
-        '--rc-lookahead'
-        '48'
-        '--keyint'
-        '192'
         '--min-keyint'
         '24'
         '--psy-rd'
@@ -439,6 +435,15 @@ function Set-DVArgs {
     }
     if ($x265ExtraArray -notcontains '--open-gop') {
         $x265BaseArray += @('--no-open-gop')
+    }
+    if ($x265ExtraArray -notcontains '--rc-lookahead') {
+        $x265BaseArray += @('--rc-lookahead', 48)
+    }
+    if ($x265ExtraArray -notcontains '--keyint') {
+        $x265BaseArray += @('--keyint', 192)
+    }
+    if ($x265ExtraArray -notcontains '--min-keyint') {
+        $x265BaseArray += @('--min-keyint', 24)
     }
     if ($PSBoundParameters['FrameThreads']) { $x265BaseArray += @('-F', "$FrameThreads") }
     ($PresetParams.BIntra -eq 1) ? ($x265BaseArray += @('--b-intra')) : ($x265BaseArray += @('--no-b-intra'))
