@@ -137,6 +137,16 @@ function Invoke-FFMpeg {
         [Alias("DI")]
         [switch]$Deinterlace,
 
+        # Skip DV even if present
+        [Parameter(Mandatory = $false)]
+        [Alias("NoDV", "SDV")]
+        [switch]$SkipDolbyVision,
+
+        # Skip HDR10+ even if present
+        [Parameter(Mandatory = $false)]
+        [Alias("NoD10P", "STP")]
+        [switch]$SkipHDR10Plus,
+
         # Enable Verbose output
         [Parameter(Mandatory = $false)]
         [Alias("V")]
@@ -145,7 +155,7 @@ function Invoke-FFMpeg {
 
     function Write-Banner {
         Write-Host "To view your progress, run " -NoNewline
-        Write-Host "Get-Content `"$($Paths.LogPath)' -Tail 10`"" @emphasisColors -NoNewline
+        Write-Host "Get-Content `"$($Paths.LogPath)`" -Tail 10" @emphasisColors -NoNewline
         Write-Host " in a different PowerShell session`n`n"
     }
 
@@ -157,7 +167,11 @@ function Invoke-FFMpeg {
     }
 
     #Determine the resolution and fetch metadata if 4K
-    if ($CropDimensions[2]) { $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus }
+    if ($CropDimensions[2]) { 
+        $skipDv = ($SkipDolbyVision) ? $true : $false
+        $skip10P = ($SkipHDR10Plus) ? $true : $false
+        $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath $skipDv $skip10P
+    }
     else { $HDR = $null }
     
     #Building the audio argument array(s) based on user input
@@ -210,7 +224,7 @@ function Invoke-FFMpeg {
     #Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
 
-    #Set the base arguments and pass them to Set-FFMpegArgs function
+    #Set the base arguments and pass them to Set-FFMpegArgs or Set-DvArgs functions
     $baseArgs = @{
         Audio          = $audio
         Subtitles      = $subs
@@ -219,6 +233,7 @@ function Invoke-FFMpeg {
         RateControl    = $RateControl
         PresetParams   = $presetParams
         QComp          = $QComp
+        PsyRd          = $PsyRd
         Deblock        = $Deblock
         AqStrength     = $AqStrength
         NoiseReduction = $NoiseReduction
@@ -235,10 +250,86 @@ function Invoke-FFMpeg {
         Deinterlace    = $Deinterlace
         Verbosity      = $Verbosity
     }
-    $ffmpegArgs = Set-FFMpegArgs @baseArgs
-    
+
+    if ($HDR.DV -eq $true) { $dvArgs = Set-DVArgs @baseArgs } else { $ffmpegArgs = Set-FFMpegArgs @baseArgs }
+    #If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
+    if ($dvArgs) {
+        if ($IsLinux -or $IsMacOS) { 
+            $hevcPath = [regex]::Escape($Paths.hevcPath)  
+        }
+
+        #Two pass x265 encode
+        if ($null -ne $dvArgs.x265Args2) {
+            Write-Host
+            Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
+            Write-Host "***** STARTING x265 PIPE PASS 1 *****" @progressColors
+            Write-Banner
+
+            if ($IsLinux -or $IsMacOS) {
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath" 2>$Paths.LogPath
+            }
+            else {
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
+            }
+
+            Write-Host
+            Write-Host "***** STARTING x265 PIPE PASS 2 *****" @progressColors
+            Write-Banner
+            
+            if ($IsLinux -or $IsMacOS) {
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $hevcPath" 2>>$Paths.LogPath
+            }
+            else {
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>>$Paths.LogPath
+            }
+        }
+        #CRF/One pass x265 encode
+        else {
+            Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
+            Write-Host "***** STARTING x265 PIPE *****" @progressColors
+            Write-Banner
+
+            if ($IsLinux -or $IsMacOS) {
+                bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath" 2>$Paths.LogPath
+            }
+            else {
+                cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
+            }
+        }
+        #Mux/convert audio and subtitle streams separately from elementary hevc stream
+        if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
+            Write-Host "Converting audio/subtitles..."
+            $Paths.tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
+            if ($PSBoundParameters['TestFrames']) {
+                #cut stream at video frame marker
+                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) $Paths.tmpOut 2>>$Paths.LogPath
+            }
+            else {
+                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther $Paths.tmpOut 2>>$Paths.LogPath
+            }
+        }
+        else { 
+            if ((Get-Command 'mkvextract') -and $Paths.InputFile.EndsWith('mkv')) {
+                #Extract chapters if no other streams are copied
+                Write-Verbose "No additional streams selected. Generating chapter file..."
+                $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')" 
+                mkvextract $Paths.InputFile chapters $Paths.ChapterPath
+            }
+            else { $Paths.ChapterPath = $null }
+        }
+
+        #If mkvmerge is available and output stream is mkv, mux streams back together
+        if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
+            Invoke-MkvMerge -Paths $Paths -Verbosity $Verbosity
+        }
+        else {
+            Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
+        }
+
+        Write-Host
+    }
     #Two pass encode
-    if ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
+    elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
         Write-Host "***** STARTING FFMPEG PASS 1 *****" @progressColors
         Write-Host "Generating 1st pass encoder metrics..."

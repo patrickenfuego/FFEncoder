@@ -411,6 +411,16 @@ param (
     [alias("Report", "GR")]
     [switch]$GenerateReport,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("NoDV", "SDV")]
+    [switch]$SkipDolbyVision,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("No10P", "STP")]
+    [switch]$SkipHDR10Plus,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
@@ -479,12 +489,14 @@ function Set-ScriptPaths {
         $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle`_stereo-remux.$oExt"
         $reportPath = Join-Path -Path $root -ChildPath "$oTitle.rep"
         $hdr10PlusPath = Join-Path -Path $root -ChildPath "metadata.json"
+        $dvPath = Join-Path -Path $root -ChildPath "rpu.bin"
+        $hevcPath = Join-Path -Path $oRoot -ChildPath "$oTitle.hevc"
     }
     #Regex match could not be made on the folder pattern
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
         $os = Get-OperatingSystem
-        Write-Host $os.OperatingSystem " detected. Using path: <$($os.DefaultPath)>"
+        Write-Host $os.OperatingSystem "detected. Using path: <$($os.DefaultPath)>"
         #Creating path strings used throughout the script
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
@@ -493,6 +505,8 @@ function Set-ScriptPaths {
         $remuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
         $reportPath = Join-Path -Path $os.DefaultPath -ChildPath "report.rep"
         $hdr10PlusPath = Join-Path -Path $os.DefaultPath -ChildPath "metadata.json"
+        $dvPath = Join-Path -Path $os.DefaultPath -ChildPath "rpu.bin"
+        $hevcPath = Join-Path -Path $os.DefaultPath -ChildPath "hevc.hevc"
     }
 
     Write-Host "Crop file path is: " -NoNewline 
@@ -506,10 +520,12 @@ function Set-ScriptPaths {
         CropPath   = $cropPath
         LogPath    = $logPath
         X265Log    = $x265Log
-        OutputFile = $OutputPath
         Title      = $oTitle
         ReportPath = $reportPath
         HDR10Plus  = $hdr10PlusPath
+        DvPath     = $dvPath
+        HevcPath   = $hevcPath
+        OutputFile = $OutputPath
     }
     return $pathObject
 }
@@ -538,7 +554,7 @@ $paths = Set-ScriptPaths
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
 #Enable verbose logging if passed
-if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
+if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' } #else { $vLevel = $null }
 
 #If scale is used, verify arguments and handle errors
 if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and !$PSBoundParameters['Scale']) {
@@ -599,7 +615,7 @@ if ($skipCropFile) {
     Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
     Write-Host ""
     #Check if source is 4K for HDR metadata
-    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
+    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $InputPath
     if ($res -eq "3840x2160") { $cropDim = @(-1, -1, $true) } else { $cropDim = @(-1, -1, $false) }
 }
 else {
@@ -640,32 +656,34 @@ $audioArray = @($audioHash1, $audioHash2)
 
 #Building parameters for ffmpeg functions
 $ffmpegParams = @{
-    CropDimensions = $cropDim
-    AudioInput     = $audioArray
-    Subtitles      = $Subtitles
-    Preset         = $Preset
-    RateControl    = $rateControl
-    Deblock        = $Deblock
-    Deinterlace    = $Deinterlace
-    AqMode         = $AqMode
-    AqStrength     = $AqStrength
-    PsyRd          = $PsyRd
-    PsyRdoq        = $PsyRdoq
-    NoiseReduction = $NoiseReduction
-    TuDepth        = $TuDepth
-    LimitTu        = $LimitTu    
-    Qcomp          = $QComp
-    BFrames        = $BFrames
-    BIntra         = $BIntra
-    Subme          = $Subme 
-    IntraSmoothing = $StrongIntraSmoothing
-    FrameThreads   = $FrameThreads
-    FFMpegExtra    = $FFMpegExtra
-    x265Extra      = $x265Extra
-    Scale          = $scaleHash
-    Paths          = $paths
-    Verbosity      = $vLevel
-    TestFrames     = $TestFrames
+    CropDimensions  = $cropDim
+    AudioInput      = $audioArray
+    Subtitles       = $Subtitles
+    Preset          = $Preset
+    RateControl     = $rateControl
+    Deblock         = $Deblock
+    Deinterlace     = $Deinterlace
+    AqMode          = $AqMode
+    AqStrength      = $AqStrength
+    PsyRd           = $PsyRd
+    PsyRdoq         = $PsyRdoq
+    NoiseReduction  = $NoiseReduction
+    TuDepth         = $TuDepth
+    LimitTu         = $LimitTu    
+    Qcomp           = $QComp
+    BFrames         = $BFrames
+    BIntra          = $BIntra
+    Subme           = $Subme 
+    IntraSmoothing  = $StrongIntraSmoothing
+    FrameThreads    = $FrameThreads
+    FFMpegExtra     = $FFMpegExtra
+    x265Extra       = $x265Extra
+    Scale           = $scaleHash
+    Paths           = $paths
+    Verbosity       = $vLevel
+    TestFrames      = $TestFrames
+    SkipDolbyVision = $SkipDolbyVision
+    SkipHDR10Plus   = $SkipHDR10Plus
 }
 
 Invoke-FFMpeg @ffmpegParams
@@ -673,6 +691,7 @@ Invoke-FFMpeg @ffmpegParams
 #If stream copy and stereo are used, mux the stream back into the container
 if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
     Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
+    Start-Sleep -Seconds 1
     ffmpeg -i $OutputPath -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $paths.RemuxPath
     Write-Host "Cleaning up..." -NoNewline
     Remove-Item -Path $paths.OutputFile
@@ -688,14 +707,15 @@ $stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds`n" -f $stopwatch.Elapsed
 #Generate the report file if parameter is present
 if ($PSBoundParameters['GenerateReport']) {
-    Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths
+    $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
+    Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths -TwoPass $twoPass
 }
 #Delete extraneous files if switch is present
 if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
     Get-ChildItem -Path $paths.Root | ForEach-Object { 
-        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json"
+        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin"
     }
 }
 #Run the garbage collector to ensure no memory leaks

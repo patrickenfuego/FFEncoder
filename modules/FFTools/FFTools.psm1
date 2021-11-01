@@ -53,7 +53,7 @@ New-Alias -Name cropdim -Value Measure-CropDimensions -Force
 
 $ExportModule = @{
     Alias = @("iffmpeg", "itpffmpeg", "ncf", "mcd")
-    Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus')
+    Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus', 'Confirm-DolbyVision')
     Variable = @("progressColors", "warnColors", "emphasisColors" )
 }
 Export-ModuleMember @ExportModule

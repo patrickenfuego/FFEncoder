@@ -21,12 +21,22 @@ function Get-HDRMetadata {
         [string]$InputFile,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [string]$HDR10PlusPath
+        [string]$HDR10PlusPath,
+
+        [Parameter(Mandatory = $true, Position = 2)]
+        [string]$DolbyVisionPath,
+
+        [Parameter(Mandatory = $false, Position = 3)]
+        [bool]$SkipDolbyVision,
+
+        # Skip HDR10+ even if present
+        [Parameter(Mandatory = $false, Position = 4)]
+        [bool]$SkipHDR10Plus
     )
 
     #Constants for mastering display color primaries
-    Set-Variable -Name Display_P3 -Value "master-display=G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
-    Set-Variable -Name BT_2020 -Value "master-display=G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
+    Set-Variable -Name Display_P3 -Value "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
+    Set-Variable -Name BT_2020 -Value "G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
 
     Write-Host "Retrieving HDR Metadata..." 
 
@@ -71,11 +81,23 @@ function Get-HDRMetadata {
     #MAx content light level and max frame average light level
     $maxCLL = $metadata.side_data_list[1].max_content
     $maxFAL = $metadata.side_data_list[1].max_average
-    #Check if input has HDR10+ metadata and append the generated json file if present
-    $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
-    if ($isHDR10Plus) {
-        $colorTransfer = "$colorTransfer`:dhdr10-info='$HDR10PlusPath'"
+    #Check if input has HDR10+ metadata and generate json if skip not present
+    if (!$SkipHDR10Plus) {
+        $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
     }
+    else { 
+        Write-Verbose "Skipping HDR10+"
+        $isHDR10Plus = $false 
+    }
+    #Check if input has Dolby Vision metadata and generate rpu if skip not present
+    if (!$SkipDolbyVision) {
+        $isDV = Confirm-DolbyVision -InputFile $InputFile -DolbyVisionPath $DolbyVisionPath
+    }
+    else { 
+        Write-Verbose "Skipping Dolby Vision"
+        $isDV = $false 
+    }
+   
     $metadataObj = @{
         PixelFmt       = $pixelFmt
         ColorSpace     = $colorSpace
@@ -86,12 +108,15 @@ function Get-HDRMetadata {
         MinLuma        = $minLuma
         MaxCLL         = $maxCLL
         MaxFAL         = $maxFAL
+        DV             = $isDV
+        HDR10Plus      = $isHDR10Plus
     }
     if ($null -eq $metadataObj) {
         throw "HDR object is null. ffprobe may have failed to retrieve the data. Reload the module and try again, or run ffprobe manually to investigate."
     }
     else {
-        Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **`n" @progressColors
+        Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **" @progressColors
+        Write-Host
         return $metadataObj
     }
 }
