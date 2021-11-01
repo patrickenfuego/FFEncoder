@@ -136,32 +136,45 @@ function Set-FFMpegArgs {
     ## Unpack extra parameters ##
 
     if ($PSBoundParameters['FFMpegExtra']) {
-        [string[]]$ffmpegExtraArray = @()
+        $ffmpegExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $FFMpegExtra) {
             if ($arg -is [hashtable]) {
                 foreach ($entry in $arg.GetEnumerator()) {
                     #Skip crop args. Handled in Set-VideoFilter
                     if ($entry.Value -notmatch "crop") {
-                        $ffmpegExtraArray += "$($entry.Name)"
-                        $ffmpegExtraArray += "$($entry.Value)"
+                        $ffmpegExtraArray.AddRange(@("$($entry.Name)", "$($entry.Value)"))
                     }
                 }
             }
-            else { $ffmpegExtraArray += $arg }
+            else { $ffmpegExtraArray.Add($arg) > $null }
         }
     }
 
+    $skip = @{
+        OpenGop = $false
+        RCL = $false
+        Keyint = $false
+        MinKeyInt = $false
+        Merange = $false
+    }
     if ($PSBoundParameters['x265Extra']) {
-        [string[]]$x265ExtraArray = @()
+        $x265ExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $x265Extra.GetEnumerator()) {
-            $x265ExtraArray += "$($arg.Name)=$($arg.Value)"
+            if ($arg.Name -eq 'sao') { $skip.Sao = $true } 
+            elseif ($arg.Name -eq 'open-gop')     { $skip.OpenGOP = $true } 
+            elseif ($arg.Name -eq 'rc-lookahead') { $skip.RCL = $true } 
+            elseif ($arg.Name -eq 'keyint')       { $skip.Keyint = $true } 
+            elseif ($arg.Name -eq 'min-keyint')   { $skip.MinKeyint = $true } 
+            elseif ($arg.Name -eq 'merange')      { $skip.Merange = $true } 
+        
+            $x265ExtraArray.Add("$($arg.Name)=$($arg.Value)") > $null
         }
     }
 
     ## Base Array Declarations ##
 
     #Primary array list initialized with global values
-    $ffmpegArgsAL = [System.Collections.ArrayList] @(
+    $ffmpegArgsAL = [System.Collections.ArrayList]@(
         '-probesize'
         '100MB'
         '-i'
@@ -178,40 +191,8 @@ function Set-FFMpegArgs {
         $Preset
         $RateControl
     )
-    [System.Collections.ArrayList]$ffmpegPassTwoArgsAL = $null
 
-    #x265 args common to all CRF configurations
-    $x265Array = @(
-        'keyint=192'
-        'min-keyint=24'
-        'sao=0'
-        'rc-lookahead=48'
-        'open-gop=0'
-        "psy-rd=$PsyRd"
-        "qcomp=$QComp"
-        "tu-intra-depth=$($TuDepth[0])"
-        "tu-inter-depth=$($TuDepth[1])"
-        "limit-tu=$LimitTu"
-        "subme=$($PresetParams.Subme)"
-        "b-intra=$($PresetParams.BIntra)"
-        "bframes=$($PresetParams.BFrames)"
-        "psy-rdoq=$($PresetParams.PsyRdoq)"
-        "aq-mode=$($PresetParams.AqMode)"
-        "nr-intra=$($NoiseReduction[0])"
-        "nr-inter=$($NoiseReduction[1])"
-        "aq-strength=$AqStrength"
-        "strong-intra-smoothing=$IntraSmoothing"
-        "deblock=$($Deblock[0]),$($Deblock[1])"
-    )
-    #Settings common to all first pass options
-    $x265FirstPassCommonArray = @(
-        'pass=1'
-        "stats='$($Paths.X265Log)'"
-        'keyint=192'
-        'min-keyint=24'
-        'sao=0'
-        'rc-lookahead=48'
-        'open-gop=0'
+    $x265BaseArray = [System.Collections.ArrayList]@(
         "psy-rd=$PsyRd"
         "qcomp=$QComp"
         "tu-intra-depth=$($TuDepth[0])"
@@ -227,19 +208,105 @@ function Set-FFMpegArgs {
         "strong-intra-smoothing=$IntraSmoothing"
         "deblock=$($Deblock[0]),$($Deblock[1])"
     )
+
+    ## Build Argument Array Lists ##
+
+    #Set test frame args if passed. Insert start time before input
+
+    if ($PSBoundParameters['TestFrames']) {
+        $a = @('-frames:v', $TestFrames)
+        if ($ffmpegExtraArray -contains '-ss') {
+            $i = $ffmpegExtraArray.IndexOf('-ss')
+            $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
+            $ffmpegExtraArray.RemoveRange($i, 2)
+        }
+        else {
+            $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @('-ss', '00:01:30'))
+        }
+        $ffmpegArgsAL.AddRange($a)
+    }
+    #If TestFrames is not used but a start code is passed
+    elseif (!$PSBoundParameters['TestFrames'] -and $ffmpegExtraArray -contains '-ss') {
+        $i = $ffmpegExtraArray.IndexOf('-ss')
+        $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
+        $ffmpegExtraArray.RemoveRange($i, 2)
+    }
+    
+    #Set additional x265 arguments and override arguments
+
+    if ($PSBoundParameters['FrameThreads']) {
+        $x265BaseArray.Add("frame-threads=$FrameThreads") > $null
+    }
+
+    switch ($skip) {
+        { $skip.OpenGOP -eq $false }   { $x265BaseArray.Add('open-gop=0') > $null }
+        { $skip.RCL -eq $false }       { $x265BaseArray.Add('rc-lookahead=48') > $null }
+        { $skip.KeyInt -eq $false }    { $x265BaseArray.Add('keyint=192') > $null }
+        { $skip.MinKeyInt -eq $false } { $x265BaseArray.Add('min-keyint=24') > $null }
+    }
+    
+    #Set video specific filter arguments
+
+    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra $Deinterlace $Verbosity
+    if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
+
+    #Set res and bit depth related arguments for x265
+
+    if ($HDR) {
+        $ffmpegArgsAL.AddRange(@('-pix_fmt', $HDR.PixelFmt))
+        $level = (@('1080p', '720p') -contains $Scale.Resolution) ? 4.1 : 5.1
+        #Arguments specific to 2160p HDR
+        $resArray = @(
+            "colorprim=$($HDR.ColorPrimaries)"
+            "transfer=$($HDR.Transfer)"
+            "colormatrix=$($HDR.ColorSpace)"
+            "master-display=$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
+            "max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL)"
+            'chromaloc=2'
+            "level-idc=$level"
+            'hdr10-opt=1'
+            'aud=1'
+            'hrd=1'
+        )
+        if ($HDR.HDR10Plus -eq $true) { 
+            $resArray += "dhdr10-info='$($Paths.HDR10Plus)'"
+        }
+    }
+    else {
+        $ffmpegArgsAL.AddRange(@('-pix_fmt', 'yuv420p10le'))
+        #Arguments specific to 1080p SDR
+        $resArray = @(
+            'colorprim=bt709'
+            'transfer=bt709'
+            'colormatrix=bt709'
+        )
+        if ($skip.Merange -eq $false) { $resArray += 'merange=44' }
+    }
+    $x265BaseArray.AddRange($resArray)
+
+    #Set ffmpeg extra arguments if passed
+    if ($ffmpegExtraArray) {
+        Write-Verbose "FFMPEG EXTRA ARGS ARE: `n $($ffmpegExtraArray -join ' ')`n"
+        Write-Verbose "NOTE: If -ss was passed, it was moved before the file input and deleted from the above array"
+        $ffmpegArgsAL.AddRange($ffmpegExtraArray) 
+    }
+    #Add x265 extra arguments if passed
+    if ($x265ExtraArray) {
+        $x265BaseArray.AddRange($x265ExtraArray)
+    }
 
     if ($twoPass) {
-        $x265FirstPassArray = switch -Regex ($passType) {
+        [System.Collections.ArrayList]$x265FirstPassArray = switch -Regex ($passType) {
             "^d[efault]*$" {
                 @(
-                    $x265FirstPassCommonArray
+                    $x265BaseArray
                     "subme=$($PresetParams.Subme)"
                 )
                 break
             }
             "^f[ast]*$" {
                 @(
-                    $x265FirstPassCommonArray
+                    $x265BaseArray
                     'rect=0'
                     'amp=0'
                     'max-merge=1'
@@ -254,7 +321,7 @@ function Set-FFMpegArgs {
             }
             "^c[ustom]*$" {
                 @(
-                    $x265FirstPassCommonArray
+                    $x265BaseArray
                     'rect=0'
                     'amp=0'
                     'max-merge=2'
@@ -263,98 +330,29 @@ function Set-FFMpegArgs {
                 break
             }
         }
-    }
 
-    ## End base array declarations ##
+        #Add remaining parameters for first/second pass
+        $x265FirstPassArray.AddRange(@('pass=1', "stats='$($Paths.X265Log)'"))
+        $x265SecondPassArray = $x265BaseArray.Clone()
+        $x265SecondPassArray.AddRange(@('pass=2', "stats='$($Paths.X265Log)'", "subme=$($PresetParams.Subme)"))
+        #Create copy for 2nd pass and join with ffmpeg arrays
+        $ffmpegPassTwoArgsAL = $ffmpegArgsAL.Clone()
+        $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265FirstPassArray -join ':')`"")) 
+        $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "`"$($x265SecondPassArray -join ':')`""))
 
-    ## Build Argument Arrays ##
+        Write-Verbose "FFMPEG FIRST PASS ARRAY IS: `n $($ffmpegArgsAL -join " ")`n"
+        Write-Verbose "FFMPEG SECOND PASS ARRAY IS: `n $($ffmpegPassTwoArgsAL -join " ")`n"
 
-    #Add frame threads parameter if set by user
-    if ($PSBoundParameters['FrameThreads']) {
-        $x265Array += "frame-threads=$FrameThreads"
-    }
-
-    #Test frames. Null if not passed by user
-    $testArray = $PSBoundParameters['TestFrames'] ? 
-    ( @('-ss', '00:01:30', '-frames:v', $TestFrames) ) : 
-    $null
-    
-    #Set video specific filter arguments
-    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra $Deinterlace $Verbosity
-
-    #Set arguments for UHD/FHD based on the presence of HDR metadata
-    if ($HDR) {
-        $pxFormatArray = @('-pix_fmt', $HDR.PixelFmt)
-        if (@('1080p', '720p') -contains $Scale.Resolution) { $level = 4 }
-        else { $level = 5.1 }
-        #Arguments specific to 2160p HDR
-        $resArray = @(
-            "colorprim=$($HDR.ColorPrimaries)"
-            "transfer=$($HDR.Transfer)"
-            "colormatrix=$($HDR.ColorSpace)"
-            "master-display=$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
-            "max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL)"
-            'chromaloc=2'
-            "level-idc=$level"
-            'hdr10-opt=1'
-            'aud=1'
-            'hrd=1'
-        )
-        if ($HDR.HDR10Plus) { 
-            if ($IsLinux -or $IsMacOS) {
-                $hdr10PlusPath = [regex]::Escape($Paths.HDR10Plus)
-            }
-            else {
-                $hdr10PlusPath = "`"$($Paths.HDR10Plus)`""
-            }
-            $resArray += "dhdr10-info=$hdr10PlusPath" 
-        }
-    }
-    else {
-        $pxFormatArray = @('-pix_fmt', 'yuv420p10le')
-        #Arguments specific to 1080p SDR
-        $resArray = @(
-            'merange=44'
-            'colorprim=bt709'
-            'transfer=bt709'
-            'colormatrix=bt709'
-        )
-    }
-
-    ## Combine Arrays ##
-
-    if ($vfArray) { $ffmpegArgsAL += $vfArray }
-    if ($testArray) { $ffmpegArgsAL += $testArray }
-    if ($ffmpegExtraArray) { $ffmpegArgsAL += $ffmpegExtraArray }
-    $ffmpegArgsAL += $pxFormatArray
-
-    #Build x265 arguments for CRF/ 1-pass
-    if (!$twoPass) {
-        #Combine x265 args and join
-        $tmpArray = $x265Array + $resArray
-        if ($x265ExtraArray) { $tmpArray += $x265ExtraArray }
-        $x265String = $tmpArray -join ":"
-        $ffmpegArgsAL += @('-x265-params', "`"$x265String`"")
-
-        Write-Verbose "ARGUMENT ARRAY IS:`n $($ffmpegArgsAL -join " ")`n"
-        return $ffmpegArgsAL
-    }
-    #Build x265 arguments for 2-pass
-    else {
-        #Make a copy of the primary array for pass 2
-        $ffmpegPassTwoArgsAL = $ffmpegArgsAL
-        #First pass
-        $tmpArray = $x265FirstPassArray + $resArray 
-        $x265String = $tmpArray -join ":"
-        $ffmpegArgsAL += @('-x265-params', "`"$x265String`"")
-        #Second pass
-        $tmpArray = @('pass=2', "stats='$($Paths.X265Log)'") + $x265Array + $resArray
-        if ($x265ExtraArray) { $tmpArray += $x265ExtraArray }
-        $x265String = $tmpArray -join ":"
-        $ffmpegPassTwoArgsAL += @('-x265-params', "`"$x265String`"")
-
-        Write-Verbose "FIRST PASS ARRAY IS:`n $($ffmpegArgsAL -join " ")`n"
-        Write-Verbose "SECOND PASS ARRAY IS:`n $($ffmpegPassTwoArgsAL -join " ")`n" 
         return @($ffmpegArgsAL, $ffmpegPassTwoArgsAL)
+    }
+    #CRF/1-Pass
+    else {
+        #Add remaining argument and join with ffmpeg array
+        $x265BaseArray.Add("subme=$($PresetParams.Subme)") > $null
+        $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265BaseArray -join ':')`""))
+
+        Write-Verbose "FFMPEG ARGUMENT ARRAY IS:`n $($ffmpegArgsAL -join " ")`n"
+
+        return $ffmpegArgsAL
     }
 }
