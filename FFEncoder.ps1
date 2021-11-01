@@ -411,6 +411,16 @@ param (
     [alias("Report", "GR")]
     [switch]$GenerateReport,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("NoDV", "SDV")]
+    [switch]$SkipDolbyVision,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("No10P", "STP")]
+    [switch]$SkipHDR10Plus,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
@@ -605,7 +615,7 @@ if ($skipCropFile) {
     Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
     Write-Host ""
     #Check if source is 4K for HDR metadata
-    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
+    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $InputPath
     if ($res -eq "3840x2160") { $cropDim = @(-1, -1, $true) } else { $cropDim = @(-1, -1, $false) }
 }
 else {
@@ -646,32 +656,34 @@ $audioArray = @($audioHash1, $audioHash2)
 
 #Building parameters for ffmpeg functions
 $ffmpegParams = @{
-    CropDimensions = $cropDim
-    AudioInput     = $audioArray
-    Subtitles      = $Subtitles
-    Preset         = $Preset
-    RateControl    = $rateControl
-    Deblock        = $Deblock
-    Deinterlace    = $Deinterlace
-    AqMode         = $AqMode
-    AqStrength     = $AqStrength
-    PsyRd          = $PsyRd
-    PsyRdoq        = $PsyRdoq
-    NoiseReduction = $NoiseReduction
-    TuDepth        = $TuDepth
-    LimitTu        = $LimitTu    
-    Qcomp          = $QComp
-    BFrames        = $BFrames
-    BIntra         = $BIntra
-    Subme          = $Subme 
-    IntraSmoothing = $StrongIntraSmoothing
-    FrameThreads   = $FrameThreads
-    FFMpegExtra    = $FFMpegExtra
-    x265Extra      = $x265Extra
-    Scale          = $scaleHash
-    Paths          = $paths
-    Verbosity      = $vLevel
-    TestFrames     = $TestFrames
+    CropDimensions  = $cropDim
+    AudioInput      = $audioArray
+    Subtitles       = $Subtitles
+    Preset          = $Preset
+    RateControl     = $rateControl
+    Deblock         = $Deblock
+    Deinterlace     = $Deinterlace
+    AqMode          = $AqMode
+    AqStrength      = $AqStrength
+    PsyRd           = $PsyRd
+    PsyRdoq         = $PsyRdoq
+    NoiseReduction  = $NoiseReduction
+    TuDepth         = $TuDepth
+    LimitTu         = $LimitTu    
+    Qcomp           = $QComp
+    BFrames         = $BFrames
+    BIntra          = $BIntra
+    Subme           = $Subme 
+    IntraSmoothing  = $StrongIntraSmoothing
+    FrameThreads    = $FrameThreads
+    FFMpegExtra     = $FFMpegExtra
+    x265Extra       = $x265Extra
+    Scale           = $scaleHash
+    Paths           = $paths
+    Verbosity       = $vLevel
+    TestFrames      = $TestFrames
+    SkipDolbyVision = $SkipDolbyVision
+    SkipHDR10Plus   = $SkipHDR10Plus
 }
 
 Invoke-FFMpeg @ffmpegParams
@@ -679,6 +691,7 @@ Invoke-FFMpeg @ffmpegParams
 #If stream copy and stereo are used, mux the stream back into the container
 if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
     Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
+    Start-Sleep -Seconds 1
     ffmpeg -i $OutputPath -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $paths.RemuxPath
     Write-Host "Cleaning up..." -NoNewline
     Remove-Item -Path $paths.OutputFile
