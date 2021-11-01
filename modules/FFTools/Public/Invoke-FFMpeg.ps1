@@ -137,6 +137,16 @@ function Invoke-FFMpeg {
         [Alias("DI")]
         [switch]$Deinterlace,
 
+        # Skip DV even if present
+        [Parameter(Mandatory = $false)]
+        [Alias("NoDV", "SDV")]
+        [switch]$SkipDolbyVision,
+
+        # Skip HDR10+ even if present
+        [Parameter(Mandatory = $false)]
+        [Alias("NoD10P", "STP")]
+        [switch]$SkipHDR10Plus,
+
         # Enable Verbose output
         [Parameter(Mandatory = $false)]
         [Alias("V")]
@@ -158,7 +168,9 @@ function Invoke-FFMpeg {
 
     #Determine the resolution and fetch metadata if 4K
     if ($CropDimensions[2]) { 
-        $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath
+        $skipDv = ($SkipDolbyVision) ? $true : $false
+        $skip10P = ($SkipHDR10Plus) ? $true : $false
+        $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath $skipDv $skip10P
     }
     else { $HDR = $null }
     
@@ -248,8 +260,6 @@ function Invoke-FFMpeg {
 
         #Two pass x265 encode
         if ($null -ne $dvArgs.x265Args2) {
-            Write-Verbose "DV x265 arguments pass 2 are:`n`n $($dvArgs.x265Args1)`n" 
-
             Write-Host
             Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
             Write-Host "***** STARTING x265 PIPE PASS 1 *****" @progressColors
@@ -292,7 +302,7 @@ function Invoke-FFMpeg {
             $Paths.tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 #cut stream at video frame marker
-                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:v $TestFrames $Paths.tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) $Paths.tmpOut 2>>$Paths.LogPath
             }
             else {
                 ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther $Paths.tmpOut 2>>$Paths.LogPath
