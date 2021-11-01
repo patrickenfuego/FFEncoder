@@ -24,7 +24,14 @@ function Get-HDRMetadata {
         [string]$HDR10PlusPath,
 
         [Parameter(Mandatory = $true, Position = 2)]
-        [string]$DolbyVisionPath
+        [string]$DolbyVisionPath,
+
+        [Parameter(Mandatory = $false, Position = 3)]
+        [bool]$SkipDolbyVision,
+
+        # Skip HDR10+ even if present
+        [Parameter(Mandatory = $false, Position = 4)]
+        [bool]$SkipHDR10Plus
     )
 
     #Constants for mastering display color primaries
@@ -74,10 +81,22 @@ function Get-HDRMetadata {
     #MAx content light level and max frame average light level
     $maxCLL = $metadata.side_data_list[1].max_content
     $maxFAL = $metadata.side_data_list[1].max_average
-    #Check if input has HDR10+ metadata and append the generated json file if present
-    $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
-    #Check if input has Dolby Vision metadata
-    $isDV = Confirm-DolbyVision -InputFile $InputFile -DolbyVisionPath $DolbyVisionPath
+    #Check if input has HDR10+ metadata and generate json if skip not present
+    if (!$SkipHDR10Plus) {
+        $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
+    }
+    else { 
+        Write-Verbose "Skipping HDR10+"
+        $isHDR10Plus = $false 
+    }
+    #Check if input has Dolby Vision metadata and generate rpu if skip not present
+    if (!$SkipDolbyVision) {
+        $isDV = Confirm-DolbyVision -InputFile $InputFile -DolbyVisionPath $DolbyVisionPath
+    }
+    else { 
+        Write-Verbose "Skipping Dolby Vision"
+        $isDV = $false 
+    }
    
     $metadataObj = @{
         PixelFmt       = $pixelFmt
