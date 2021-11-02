@@ -452,21 +452,15 @@ function Set-DVArgs {
     ## Set additional x265 arguments ##
 
     if ($x265ExtraArray) { $x265BaseArray.AddRange($x265ExtraArray) }
-    if ($x265ExtraArray -notcontains '--sao') {
-        $x265BaseArray.Add('--no-sao') > $null
+    
+    switch ($x265ExtraArray) {
+        { $_ -notcontains '--sao' }          { $x265BaseArray.Add('--no-sao') > $null }
+        { $_ -notcontains '--open-gop' }     { $x265BaseArray.Add('--no-open-gop') > $null }
+        { $_ -notcontains '--rc-lookahead' } { $x265BaseArray.AddRange(@('--rc-lookahead', 48)) }
+        { $_ -notcontains '--keyint' }       { $x265BaseArray.AddRange(@('--keyint', 192)) }
+        { $_ -notcontains '--min-keyint' }   { $x265BaseArray.AddRange(@('--min-keyint', 24)) }
     }
-    if ($x265ExtraArray -notcontains '--open-gop') {
-        $x265BaseArray.Add('--no-open-gop') > $null
-    }
-    if ($x265ExtraArray -notcontains '--rc-lookahead') {
-        $x265BaseArray.AddRange(@('--rc-lookahead', 48))
-    }
-    if ($x265ExtraArray -notcontains '--keyint') {
-        $x265BaseArray.AddRange(@('--keyint', 192))
-    }
-    if ($x265ExtraArray -notcontains '--min-keyint') {
-        $x265BaseArray.AddRange(@('--min-keyint', 24))
-    }
+
     if ($PSBoundParameters['FrameThreads']) { 
         $x265BaseArray.AddRange(@('-F', $FrameThreads))
     }
