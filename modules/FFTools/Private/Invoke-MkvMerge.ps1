@@ -40,7 +40,7 @@ function Invoke-MkvMerge {
     }
     else {
         mkvmerge --output "$($Paths.OutputFile)" --language 0:$lang "(" "$($Paths.hevcPath)" ")" `
-            --chapter-language $lang --chapters "$chapterPath"
+            --chapter-language $lang --chapters "$($Paths.ChapterPath)"
     }
     if ($?) {
         Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE. Removing TMP file..."
