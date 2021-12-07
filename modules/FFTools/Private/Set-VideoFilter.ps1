@@ -102,19 +102,21 @@ function Set-VideoFilter {
     }
     
     #Build argument array and join
-    [array]$tmpArray = @()
-    if ($Deinterlace) {
-        $tmpArray += "yadif"
-    }
-    if (!$customCrop) {
-        $tmpArray += "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])"
-    }
-    if ($PSBoundParameters['Scale']) {
-        $tmpArray += "$sType=w=$widthRes`:h=-2:$set=$($Scale.ScaleFilter)"
-    }
-    if ($manVfString) {
-        $tmpArray += $manVfString
-    }
+    [array]$tmpArray = @(
+        if ($Deinterlace) {
+            "yadif"
+        }
+        if (!$customCrop) {
+            "crop=w=$($CropDimensions[0]):h=$($CropDimensions[1])"
+        }
+        if ($PSBoundParameters['Scale']) {
+            "$sType=w=$widthRes`:h=-2:$set=$($Scale.ScaleFilter)"
+        }
+        if ($manVfString) {
+            $manVfString
+        }
+    )
+    
     #If string is not empty, generate array
     if ($tmpArray) {
         $vfString = $tmpArray -join ","
