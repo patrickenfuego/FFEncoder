@@ -62,22 +62,22 @@ function Set-AudioPreference {
 
     Write-Host "**** Audio Stream $($Stream + 1) ****" @emphasisColors
 
-    #Params for downmixing to stereo. Passed to the Convert-ToStereo function
-    $stereoParams = @{
-        Paths       = $Paths
-        Codec       = $UserChoice
-        Bitrate     = $Bitrate
-        AudioFrames = $AudioFrames
-        RemuxStream = $RemuxStream
-    }
     if ($Stereo) {
+        #Params for downmixing to stereo. Passed to the ConvertTo-Stereo function
+        $stereoParams = @{
+            Paths       = $Paths
+            Codec       = $UserChoice
+            Bitrate     = $Bitrate
+            AudioFrames = $AudioFrames
+            RemuxStream = $RemuxStream
+        }
         #If the RemuxStream flag is set (stream copy + filtering selected)
         if ($RemuxStream) { 
-            $temp = Convert-ToStereo @stereoParams 
+            $temp = ConvertTo-Stereo @stereoParams 
             return $temp
         }
         else {
-            $stereoArray = Convert-ToStereo @stereoParams
+            $stereoArray = ConvertTo-Stereo @stereoParams
             if ($null -ne $stereoArray) { return @('-map', '0:a:0', "-c:a:$Stream") + $stereoArray }
             else { return $null }
         }
@@ -164,9 +164,9 @@ function Set-AudioPreference {
             else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
             break
         }
-        { 0..5 -contains $_ } { 
+        { 0..12 -contains $_ } { 
             Write-Host "AUDIO STREAM $UserChoice SELECTED" @progressColors
-            Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in output"
+            Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in the output"
             @('-map', "0:a:$UserChoice`?", "-c:a:$Stream", 'copy')
             break
         }
@@ -182,9 +182,10 @@ function Set-AudioPreference {
         }
         default { Write-Warning "No matching audio preference was found. Audio will not be copied`n"; return '-an' }
     } 
-    #Print relevant info to console based on user choice 
-    if (@('copy', 'c', 'copyall', 'ca', 'none', 'n', 'flac', 'f') -contains $UserChoice) {  } #do nothing
-    elseif (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) {
+    #Print relevant info to console based on user choice
+    $noPrint = @('copy', 'c', 'copyall', 'ca', 'none', 'n', 'flac', 'f') + 0..12
+    if ($UserChoice -in $noPrint) { } #Do nothing
+    elseif (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice -and $UserChoice -notin $noPrint) {
         $channels = Get-ChannelCount
         $bitsPerChannel = "$($Bitrate / 6) kb/s"
         Write-BitrateInfo $channels $bitsPerChannel
