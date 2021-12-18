@@ -111,6 +111,14 @@ function Invoke-FFMpeg {
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,
 
+        # Encoder level to use. Default is unset
+        [Parameter(Mandatory = $false)]
+        [string]$LevelIDC,
+
+        # Encoder level to use. Default is unset
+        [Parameter(Mandatory = $false)]
+        [int[]]$VBV,
+
         [Parameter(Mandatory = $false)]
         [array]$FFMpegExtra,
 
@@ -131,6 +139,11 @@ function Invoke-FFMpeg {
         [Parameter(Mandatory = $false)]
         [Alias("T")]
         [int]$TestFrames,
+
+        # Starting Point for test encodes. Integers are treated as a frame #
+        [Parameter(Mandatory = $false)]
+        [Alias("Start", "TS")]
+        [string]$TestStart,
 
         # Deinterlacing
         [Parameter(Mandatory = $false)]
@@ -154,6 +167,17 @@ function Invoke-FFMpeg {
     )
 
     function Write-Banner {
+        if ($TestFrames) {
+            $startStr = switch -Wildcard ($TestStart) {
+                '*f'    { "Frame $($TestStart -replace 'f', '')" }
+                '*t'    { "$($TestStart -replace 't', '') Seconds" }
+                default { "$TestStart" }
+            }
+            Write-Host ""
+            Write-Host "----- TEST ENCODE -----" @warnColors
+            Write-Host "Start:`t`t$startStr" @warnColors
+            Write-Host "Duration:`t$TestFrames Frames`n" @warnColors
+        }
         Write-Host "To view your progress, run " -NoNewline
         Write-Host "Get-Content `"$($Paths.LogPath)`" -Tail 10" @emphasisColors -NoNewline
         Write-Host " in a different PowerShell session`n`n"
@@ -241,12 +265,15 @@ function Invoke-FFMpeg {
         LimitTu        = $LimitTu
         IntraSmoothing = $IntraSmoothing
         FrameThreads   = $FrameThreads
+        LevelIDC       = $LevelIDC
+        VBV            = $VBV
         FFMpegExtra    = $FFMpegExtra
         x265Extra      = $x265Extra
         HDR            = $HDR
         Paths          = $Paths
         Scale          = $Scale
         TestFrames     = $TestFrames
+        TestStart      = $TestStart
         Deinterlace    = $Deinterlace
         Verbosity      = $Verbosity
     }
@@ -302,10 +329,10 @@ function Invoke-FFMpeg {
             $Paths.tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 #cut stream at video frame marker
-                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) $Paths.tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) -y $Paths.tmpOut 2>>$Paths.LogPath
             }
             else {
-                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther $Paths.tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther -y $Paths.tmpOut 2>>$Paths.LogPath
             }
         }
         else { 
@@ -329,7 +356,7 @@ function Invoke-FFMpeg {
             Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
         }
 
-        Write-Host
+        Write-Host ""
     }
     #Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {

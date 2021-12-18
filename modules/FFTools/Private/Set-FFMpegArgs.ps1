@@ -91,6 +91,14 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,
 
+        # Encoder level to use. Default is unset (encoder decision)
+        [Parameter(Mandatory = $false)]
+        [string]$LevelIDC,
+
+        # Video buffering verifier: (bufsize, maxrate)
+        [Parameter(Mandatory = $false)]
+        [int[]]$VBV,
+
         [Parameter(Mandatory = $false)]
         [array]$FFMpegExtra,
 
@@ -112,6 +120,10 @@ function Set-FFMpegArgs {
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
         [int]$TestFrames,
+
+        #Starting Point for test encodes. Integers are treated as a frame #
+        [Parameter(Mandatory = $false)]
+        [string]$TestStart,
 
         # Switch to enable deinterlacing with yadif
         [Parameter(Mandatory = $false)]
@@ -150,13 +162,8 @@ function Set-FFMpegArgs {
         }
     }
 
-    $skip = @{
-        OpenGop = $false
-        RCL = $false
-        Keyint = $false
-        MinKeyInt = $false
-        Merange = $false
-    }
+    $skip = @{}
+    @('OpenGop', 'RCL', 'Keyint', 'MinKeyInt', 'Merange', 'Sao').ForEach({ $skip.$_ = $false })
     if ($PSBoundParameters['x265Extra']) {
         $x265ExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $x265Extra.GetEnumerator()) {
@@ -211,19 +218,17 @@ function Set-FFMpegArgs {
 
     ## Build Argument Array Lists ##
 
-    #Set test frame args if passed. Insert start time before input
+    #Set test encode arguments
 
     if ($PSBoundParameters['TestFrames']) {
-        $a = @('-frames:v', $TestFrames)
-        if ($ffmpegExtraArray -contains '-ss') {
-            $i = $ffmpegExtraArray.IndexOf('-ss')
-            $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
-            $ffmpegExtraArray.RemoveRange($i, 2)
+        $tParams = @{
+            InputFile        = $Paths.InputFile
+            TestFrames       = $TestFrames
+            TestStart        = $TestStart
+            PrimaryArguments = $ffmpegArgsAL
+            ExtraArguments   = $ffmpegExtraArray
         }
-        else {
-            $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @('-ss', '00:01:30'))
-        }
-        $ffmpegArgsAL.AddRange($a)
+        Set-TestParameters @tParams
     }
     #If TestFrames is not used but a start code is passed
     elseif (!$PSBoundParameters['TestFrames'] -and $ffmpegExtraArray -contains '-ss') {
@@ -238,23 +243,38 @@ function Set-FFMpegArgs {
         $x265BaseArray.Add("frame-threads=$FrameThreads") > $null
     }
 
+    if ($PSBoundParameters['LevelIDC']) {
+        $x265BaseArray.Add("level-idc=$LevelIDC") > $null
+    }
+
+    if ($PSBoundParameters['VBV']) {
+        $x265BaseArray.AddRange(@("vbv-bufsize=$($VBV[0])", "vbv-maxrate=$($VBV[1])"))
+    }
+
     switch ($skip) {
         { $skip.OpenGOP -eq $false }   { $x265BaseArray.Add('open-gop=0') > $null }
         { $skip.RCL -eq $false }       { $x265BaseArray.Add('rc-lookahead=48') > $null }
         { $skip.KeyInt -eq $false }    { $x265BaseArray.Add('keyint=192') > $null }
         { $skip.MinKeyInt -eq $false } { $x265BaseArray.Add('min-keyint=24') > $null }
+        { $skip.Sao -eq $false }       { $x265BaseArray.Add('sao=0') > $null }
     }
     
     #Set video specific filter arguments
 
-    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra $Deinterlace $Verbosity
+    $vfHash = @{
+        CropDimensions = $CropDimensions
+        Scale          = $Scale
+        FFMpegExtra    = $FFMpegExtra
+        Deinterlace    = $Deinterlace
+        Verbosity      = $Verbosity
+    }
+    $vfArray = Set-VideoFilter @vfHash
     if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
 
     #Set res and bit depth related arguments for x265
 
     if ($HDR) {
         $ffmpegArgsAL.AddRange(@('-pix_fmt', $HDR.PixelFmt))
-        $level = (@('1080p', '720p') -contains $Scale.Resolution) ? 4.1 : 5.1
         #Arguments specific to 2160p HDR
         $resArray = @(
             "colorprim=$($HDR.ColorPrimaries)"
@@ -263,14 +283,13 @@ function Set-FFMpegArgs {
             "master-display=$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))"
             "max-cll=$($HDR.MaxCLL),$($HDR.MaxFAL)"
             'chromaloc=2'
-            "level-idc=$level"
             'hdr10-opt=1'
             'aud=1'
             'hrd=1'
+            if ($HDR.HDR10Plus -eq $true) { 
+                "dhdr10-info='$($Paths.HDR10Plus)'"
+            }
         )
-        if ($HDR.HDR10Plus -eq $true) { 
-            $resArray += "dhdr10-info='$($Paths.HDR10Plus)'"
-        }
     }
     else {
         $ffmpegArgsAL.AddRange(@('-pix_fmt', 'yuv420p10le'))

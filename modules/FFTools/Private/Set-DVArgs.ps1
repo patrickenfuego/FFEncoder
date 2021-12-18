@@ -72,6 +72,14 @@ function Set-DVArgs {
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,
 
+        # Encoder level to use. Default is 5.1 for DV only
+        [Parameter(Mandatory = $false)]
+        [string]$LevelIDC,
+
+        # Video buffering verifier: (bufsize, maxrate)
+        [Parameter(Mandatory = $false)]
+        [int[]]$VBV,
+
         [Parameter(Mandatory = $false)]
         [array]$FFMpegExtra,
 
@@ -93,6 +101,10 @@ function Set-DVArgs {
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
         [int]$TestFrames,
+
+        #Starting Point for test encodes. Integers are treated as a frame #
+        [Parameter(Mandatory = $false)]
+        [string]$TestStart,
 
         # Switch to enable deinterlacing with yadif
         [Parameter(Mandatory = $false)]
@@ -356,11 +368,11 @@ function Set-DVArgs {
         '--preset'
         $Preset
         '--level-idc'
-        5.1
+        $PSBoundParameters['LevelIDC'] ? $LevelIDC : 5.1
         '--vbv-bufsize'
-        160000
+        $PSBoundParameters['VBV'] ? $VBV[0] : 160000
         '--vbv-maxrate'
-        160000
+        $PSBoundParameters['VBV'] ? $VBV[1] : 160000
         '--master-display'
         $masterDisplay
         '--max-cll'
@@ -420,19 +432,14 @@ function Set-DVArgs {
 
     #Set test frames if passed. Insert start time before input
     if ($PSBoundParameters['TestFrames']) {
-        $a = @('-frames:v', $TestFrames)
-        if ($ffmpegExtraArray -contains '-ss') {
-            $i = $ffmpegExtraArray.IndexOf('-ss')
-            $ffmpegBaseVideoArray.InsertRange($ffmpegBaseVideoArray.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
-            $ffmpegOtherArray.InsertRange($ffmpegOtherArray.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
-            $ffmpegExtraArray.RemoveRange($i, 2)
+        $tParams = @{
+            InputFile        = $Paths.InputFile
+            TestFrames       = $TestFrames
+            TestStart        = $TestStart
+            PrimaryArguments = $ffmpegBaseVideoArray
+            ExtraArguments   = $ffmpegExtraArray
         }
-        else {
-            $ffmpegBaseVideoArray.InsertRange($ffmpegBaseVideoArray.IndexOf('-i'), @('-ss', '00:01:30'))
-            $ffmpegOtherArray.InsertRange($ffmpegBaseVideoArray.IndexOf('-i'), @('-ss', '00:01:30'))
-        }
-        $ffmpegBaseVideoArray.AddRange($a)
-        $x265BaseArray.AddRange(@('-f', $TestFrames))
+        Set-TestParameters @tParams
     }
     elseif (!$PSBoundParameters['TestFrames'] -and $ffmpegExtraArray -contains '-ss') {
         $i = $ffmpegExtraArray.IndexOf('-ss')
