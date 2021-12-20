@@ -126,8 +126,79 @@ function Set-DVArgs {
     $passType = $RateControl[3]
     $RateControl = $RateControl[0..($RateControl.Length - 3)]
 
+    #Keys for x265 parameters that take no value & not available as a parameter. 
+    #Might be some missing
+    $noArgKeys = @(
+        'rect'
+        'amp'
+        'sao'
+        'cutree'
+        'early-skip'
+        'splitrd-skip'
+        'fast-intra'
+        'tskip-fast'
+        'rd-refine'
+        'dynamic-refine'
+        'tskip'
+        'temporal-mvp'
+        'weightp'
+        'w'
+        'weightb'
+        'constrained-intra'
+        'hist-scenecut'
+        'b-pyramid'
+        'open-gop'
+        'lossless'
+        'cu-lossless'
+        'sao-non-deblock'
+        'limit-sao'
+        'limit-modes'
+        'rc-grain'
+        'hevc-aq'
+        'aq-motion'
+        'analyze-src-pics'
+        'ssim'
+        'psnr'
+        'wpp'
+        'pmode'
+        'pme'
+        'frame-dup'
+        'field'
+        'allow-non-conformance'
+        'ssim-rd'
+        'fades'
+        'svt'
+        'svt-hme'
+        'svt-compressed-ten-bit-format'
+        'svt-speed-control'
+        'multi-pass-opt-analysis'
+        'multi-pass-opt-distortion'
+        'strict-cbr'
+        'const-vbv'
+        'signhide'
+        'cll'
+        'dhdr10-opt'
+        'annexb'
+        'repeat-headers'
+        'aud'
+        'eob'
+        'hrd'
+        'hrd-concat'
+        'info'
+        'temporal-layers'
+        'vui-timing-info'
+        'opt-qp-pps'
+        'opt-ref-list-length-pps'
+        'multi-pass-opt-rps'
+        'opt-cu-delta-qp'
+        'idr-recovery-sei'
+        'single-sei'
+        'svt-fps-in-vps'
+    )
+
     ## Unpack extra parameters ##
 
+    #Add parameters passed via -FFMpeg
     if ($PSBoundParameters['FFMpegExtra']) {
         $ffmpegExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $FFMpegExtra) {
@@ -144,176 +215,25 @@ function Set-DVArgs {
         }
     }
 
+    #Add parameters passed via -x265Extra
     if ($PSBoundParameters['x265Extra']) {
         $x265ExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $x265Extra.GetEnumerator()) {
-            #Convert extra args from ffmpeg format to x265 no-arg format
-            #Looking for a better way to do this...setting these values
-            #based only on (1, 0) causes false positives for some options
-            if ($arg.Name -eq 'limit-modes') {
+            #check if arg in no arg array. Must be exact match
+            if ($arg.Name -in $noArgKeys) {
                 switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--limit-modes') > $null }
-                    0 { $x265ExtraArray.Add('--no-limit-modes') > $null }
+                    1 { $x265ExtraArray.Add("--$($arg.Name)") > $null }
+                    0 { $x265ExtraArray.Add("--no-$($arg.Name)") > $null }
                 }
             }
-            elseif ($arg.Name -eq 'rect') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--rect') > $null }
-                    0 { $x265ExtraArray.Add('--no-rect') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'amp') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--amp') > $null }
-                    0 { $x265ExtraArray.Add('--no-amp') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'early-skip') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--early-skip') > $null }
-                    0 { $x265ExtraArray.Add('--no-early-skip') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'splitrd-skip') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--splitrd-skip') > $null }
-                    0 { $x265ExtraArray.Add('--no-splitrd-skip') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'fast-intra') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--fast-intra') > $null }
-                    0 { $x265ExtraArray.Add('--no-fast-intra') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'cu-lossless') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--cu-lossless') > $null }
-                    0 { $x265ExtraArray.Add('--no-cu-lossless') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'tskip-fast') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--tskip-fast') > $null }
-                    0 { $x265ExtraArray.Add('--no-tskip-fast') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'rd-refine') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--rd-refine') > $null }
-                    0 { $x265ExtraArray.Add('--no-rd-refine') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'dynamic-refine') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--dynamic-refine') > $null }
-                    0 { $x265ExtraArray.Add('--no-dynamic-refine') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'tskip') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--tskip') > $null }
-                    0 { $x265ExtraArray.Add('--no-tskip') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'temporal-mvp') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--temporal-mvp') > $null }
-                    0 { $x265ExtraArray.Add('--no-temporal-mvp') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'weightp' -or $arg.Name -eq 'w') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--weightp') > $null }
-                    0 { $x265ExtraArray.Add('--no-weightp') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'weightb') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--weightb') > $null }
-                    0 { $x265ExtraArray.Add('--no-weightb') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'analyze-src-pics') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--analyze-src-pics') > $null }
-                    0 { $x265ExtraArray.Add('--no-analyze-src-pics') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'hme') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--hme') > $null }
-                    0 { $x265ExtraArray.Add('--no-hme') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'constrained-intra') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--constrained-intra') > $null }
-                    0 { $x265ExtraArray.Add('--no-constrained-intra') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'open-gop') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--open-gop') > $null }
-                    0 { $x265ExtraArray.Add('--no-open-gop') > $null }
-                }
+            elseif ($arg.Name -eq 'copy-pic' -and $arg.Value -eq 0) {
+                $x265ExtraArray.Add('--no-copy-pic') > $null
             }
             elseif ($arg.Name -eq 'scenecut') {
                 switch ($arg.Value) {
                     0 { $x265ExtraArray.Add('--no-scenecut') > $null }
                     default { $x265ExtraArray.AddRange(@('--scenecut', "$($arg.Value)")) }
                 }
-            }
-            elseif ($arg.Name -eq 'hist-scenecut') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--hist-scenecut') > $null }
-                    0 { $x265ExtraArray.Add('--no-hist-scenecut') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'b-pyramid') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--b-pyramid') > $null }
-                    0 { $x265ExtraArray.Add('--no-b-pyramid') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'lossless') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--lossless') > $null }
-                    0 { $x265ExtraArray.Add('--no-lossless') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'aq-motion') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--aq-motion') > $null }
-                    0 { $x265ExtraArray.Add('--no-aq-motion') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'cutree') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--cutree') > $null }
-                    0 { $x265ExtraArray.Add('--no-cutree') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'lossless') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--lossless') > $null }
-                    0 { $x265ExtraArray.Add('--no-lossless') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'rc-grain') {
-                switch ($arg.Value) {
-                    1 { $x265ExtraArray.Add('--rc-grain') > $null }
-                    0 { $x265ExtraArray.Add('--no-rc-grain') > $null }
-                }
-            }
-            elseif ($arg.Name -eq 'aq-motion' -and $arg.Value -eq 1) {
-                $x265BaseArray.Add('--aq-motion') > $null
-            }
-            elseif ($arg.Name -eq 'hevc-aq' -and $arg.Value -eq 1) {
-                $x265ExtraArray.Add('--hevc-aq') > $null
-            }
-            elseif ($arg.Name -eq 'sao' -and $arg.Value -eq 1) {
-                $x265ExtraArray.Add('--sao') > $null
             }
             else {
                 $x265ExtraArray.AddRange(@("--$($arg.Name)", "$($arg.Value)"))
