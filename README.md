@@ -1,3 +1,7 @@
+# FFEncoder
+
+FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress video files for streaming or archiving.
+
 - [FFEncoder](#ffencoder)
   - [About](#about)
   - [Dependencies](#dependencies)
@@ -30,10 +34,6 @@
   - [Subtitle Options](#subtitle-options)
 
 ---
-
-# FFEncoder
-
-FFEncoder is a cross-platform PowerShell script that is meant to make high definition video encoding easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress video files for streaming or archiving.
 
 ## About
 
@@ -237,15 +237,15 @@ The following sections demonstrate features, syntax, and examples on how to use 
 
 FFEncoder supports three options for tuning the **first pass** of a two pass encode:
 
-| Arguments     | Affected Parameters                                                                                                                    | Description                                                                                                                                       |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Default`/`d` | None                                                                                                                                   | Uses the same settings for both passes, and is the slowest option. This is the default setting                                                    |
-| `Fast`/`f`    | `rect=0`<br>`amp=0`<br>`max-merge=1`<br>`fast-intra=1`<br>`fast-intra=1`<br>`early-skip=1`<br>`rd=2`<br>`subme=2`<br>`me=0`<br>`ref=1` | This is essentially equivalent to using the `--no-slow-firstpass` parameter in x265. The following settings are modified for the first pass only: |
-| `Custom`/`c`  | `rect=0`<br>`amp=0`<br>`max-merge=2`<br>`subme=2`                                                                                      | My own custom settings, meant to strike a compromise between the speed of `Fast` and quality of `Default`                                         |
+| Arguments     | Affected Parameters                                                                                                                    | Description                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `Default`/`d` | None                                                                                                                                   | Uses the same settings for both passes, and is the slowest option. This is the default setting            |
+| `Fast`/`f`    | `rect=0`<br>`amp=0`<br>`max-merge=1`<br>`fast-intra=1`<br>`fast-intra=1`<br>`early-skip=1`<br>`rd=2`<br>`subme=2`<br>`me=0`<br>`ref=1` | This is essentially equivalent to using the `--no-slow-firstpass` in x265                                 |
+| `Custom`/`c`  | `rect=0`<br>`amp=0`<br>`max-merge=2`<br>`subme=2`                                                                                      | My own custom settings, meant to strike a compromise between the speed of `Fast` and quality of `Default` |
 
 ### Rescaling Videos
 
-> **NOTE**: Dithering is currently not supported with scaling, as most of the code is written to use the `Main 10` profile; however, I do plan on adding it in a future release
+> **NOTE**: Dithering is currently not supported with scaling, as all of the code is written to use the `Main 10` profile; however, I do plan on adding it in a future release
 
 You can rescale (upscale/downscale) a video with FFEncoder using the three scaling-related parameters:
 
