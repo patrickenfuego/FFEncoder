@@ -25,7 +25,6 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
     - [Rescaling Videos](#rescaling-videos)
     - [Using the Extra Parameter Options](#using-the-extra-parameter-options)
   - [Hard Coded Parameters](#hard-coded-parameters)
-    - [Exclusive to 4K UHD Content](#exclusive-to-4k-uhd-content)
     - [Exclusive to SDR Content 1080p and Below](#exclusive-to-sdr-content-1080p-and-below)
   - [Audio Options](#audio-options)
     - [Using the libfdk_aac Encoder](#using-the-libfdk_aac-encoder)
@@ -266,14 +265,15 @@ The script currently supports three resolutions to which you can scale between: 
 
 You can pass additional arguments not provided by the script to both ffmpeg and x265 using the `-FFMpegExtra` and `-x265Extra` parameters, respectively.
 
-`-FFMpegExtra` accepts a generic array that can receive single and multi-valued arguments. For options that receive no argument, i.e. `stats/nostats`, pass it as a single element; otherwise, use a hashtable. For example:
+`FFMpegExtra` accepts a generic array that can receive single and multi-valued arguments. For options that receive no argument, i.e. `stats/nostats`, pass it as a single element; otherwise, use a hashtable. For example:
 
 ```PowerShell
 #Pass additional arguments to ffmpeg using an array with a hashtable and a single value
-.\FFEncoder.ps1 $InputPath -CRF 18 -FFMpegExtra @{ '-t' = 20; '-stats_period' = 5 }, '-shortest' -o $OutputPath
+.\FFEncoder.ps1 $InputPath -CRF 18 -FFMpegExtra @{ '-t' = 20; '-stats_period' = 5 }, '-shortest' `
+                -o $OutputPath
 ```
 
-`-x265Extra` accepts a hashtable of values as input, in the form of `<key = value>`. For example:
+`x265Extra` accepts a hashtable of values as input, in the form of `<key = value>`. For example:
 
 ```PowerShell
 #Pass additional arguments to the x265 encoder using a hashtable of values
@@ -291,10 +291,6 @@ Video encoding is a subjective process, and I have my own personal preferences. 
 - `keyint=192` - This is personal preference. I like to spend a few extra bits to insert more I-frames into a GOP, which helps with random seeking throughout the video. The bitrate increase is trivial
 - `no-open-gop` - The UHD BD specification recommends that closed GOPs be used. in general, closed GOPs are preferred for streaming content. x264 uses closed GOPs by default
 
-### Exclusive to 4K UHD Content
-
-- `level-idc=5.1` - Pretty much the default these days for 4K content
-
 ### Exclusive to SDR Content 1080p and Below
 
 - `merange=44` - The default value of 57 is a bit much for 1080p content, and it slows the encode with no noticeable gain
@@ -307,9 +303,9 @@ FFEncoder supports the mapping/transcoding of 2 distinct audio streams to the ou
 
 FFEncoder currently supports the following audio options wih the `-Audio`/`-Audio2` parameters. When selecting a named codec (like EAC3, AC3, etc.) the script will go through the following checks:
 
-1.  If either of the `-AudioBitrate` parameters are selected, the corresponding stream will be transcoded to the selected codec, regardless if an existing stream is present in the input file
-2.  If the `-AudioBitrate` parameters are not present, the script will search the input file for a matching stream and stream copy it to the output file if found
-3.  If no bitrate is specified and no existing stream is found, then the script will transcode to the selected codec at the default bitrates listed below:
+1. If either of the `-AudioBitrate` parameters are selected, the corresponding stream will be transcoded to the selected codec, regardless if an existing stream is present in the input file
+2. If the `-AudioBitrate` parameters are not present, the script will search the input file for a matching stream and stream copy it to the output file if found
+3. If no bitrate is specified and no existing stream is found, then the script will transcode to the selected codec at the default bitrates listed below:
 
 | Type         | Values           | Default        | Description                                                                                                                             |
 | ------------ | ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -337,11 +333,11 @@ One of the benefits of the FDK encoder is that it supports variable bitrate (VBR
 
 When running FFEncoder on a Mac computer, you gain access to the AudioToolbox AAC encoder (open source port of Apple's high quality encoder) via the `aac_at` argument. AudioToolbox is, by default, a variable Bitrate (VBR) encoder, but can accept the following values using `-AudioBitrate`/`-AudioBitrate2`:
 
-- -1 - Auto (VBR)
-- 0 - Constant bitrate (CBR)
-- 1 - Long-term Average bitrate (ABR)
-- 2 - Constrained variable bitrate (VBR)
-- 3 - Variable bitrate (VBR)
+- -1  - Auto (VBR)
+- 0   - Constant bitrate (CBR)
+- 1   - Long-term Average bitrate (ABR)
+- 2   - Constrained variable bitrate (VBR)
+- 3   - Variable bitrate (VBR)
 
 ### Downmixing Multi-Channel Audio to Stereo
 
