@@ -220,7 +220,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5)]
+        "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
     [Alias("A2")]
     [string]$Audio2 = "none",
 
