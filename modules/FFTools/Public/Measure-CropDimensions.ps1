@@ -33,9 +33,26 @@ function Measure-CropDimensions
         }
     }
     
+    #Exit script is either or both crop values are 0
     if ($cropWidth -eq 0 -or $cropHeight -eq 0) {
-        throw "One or both of the crop values are equal to 0. Check the input path and try again."
-        exit 2
+        if ($cropWidth -eq 0 -and $cropHeight -eq 0) {
+            $msg = "Both crop values cannot be equal to 0"
+        }
+        elseif ($cropWidth -eq 0 -and $cropHeight -gt 0) {
+            $msg = "Crop width cannot be equal to zero"
+        }
+        else {
+            $msg = "Crop height cannot be equal to zero"
+        }
+        $params = @{
+            Message           = $msg
+            RecommendedAction = "Check the input file and try again"
+            Category          = "InvalidResult"
+            Exception         = [System.ArgumentException]::new()
+            CategoryActivity  = "Crop File Generation"
+            ErrorId           = 7
+        }
+        Write-Error @params -ErrorAction Stop
     }
     elseif ($cropWidth -ge 3000) { $enableHDR = $true }
     else { $enableHDR = $false }

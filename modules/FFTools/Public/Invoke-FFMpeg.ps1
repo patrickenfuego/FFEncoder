@@ -194,7 +194,13 @@ function Invoke-FFMpeg {
     if ($CropDimensions[2]) { 
         $skipDv = ($SkipDolbyVision) ? $true : $false
         $skip10P = ($SkipHDR10Plus) ? $true : $false
-        $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath $skipDv $skip10P
+        #Get HDR metadata. Re-throw any errors from function & exit call stack
+        try {
+            $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath $skipDv $skip10P
+        }
+        catch {
+            $PSCmdlet.ThrowTerminatingError($_)
+        }
     }
     else { $HDR = $null }
     

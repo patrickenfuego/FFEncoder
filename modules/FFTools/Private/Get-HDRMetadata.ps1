@@ -18,6 +18,14 @@ function Get-HDRMetadata {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, Position = 0)]
+        [ValidateScript(
+            {
+                if (Test-Path $_) { $true }
+                else {
+                    Write-Error "Get-HDRMetadata: Input path does not exist" -ErrorAction Stop
+                }
+            }
+        )]
         [string]$InputFile,
 
         [Parameter(Mandatory = $true, Position = 1)]
@@ -38,15 +46,8 @@ function Get-HDRMetadata {
     Set-Variable -Name Display_P3 -Value "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
     Set-Variable -Name BT_2020 -Value "G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
 
-    Write-Host "Retrieving HDR Metadata..." 
+    Write-Host "Retrieving HDR Metadata..."
 
-    #Exit script if the input file is null or empty
-    if (!(Test-Path -Path $InputFile)) {
-        Write-Warning "<$InputFile> could not be found. Check the input path and try again."
-        $ioError = New-Object System.IO.FileNotFoundException
-        throw $ioError
-        exit 2
-    }
     #Gather HDR metadata using ffprobe
     $probe = ffprobe -hide_banner -loglevel error -select_streams V -print_format json `
         -show_frames -read_intervals "%+#5" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
@@ -112,7 +113,15 @@ function Get-HDRMetadata {
         HDR10Plus      = $isHDR10Plus
     }
     if ($null -eq $metadataObj) {
-        throw "HDR object is null. ffprobe may have failed to retrieve the data. Reload the module and try again, or run ffprobe manually to investigate."
+        #Throw a terminating error
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                ([System.ArgumentNullException]'HDR object is null. ffprobe may have failed to retrieve the data'),
+                'metadataObj',
+                [System.Management.Automation.ErrorCategory]::InvalidResult,
+                $metadataObj
+            )
+        )
     }
     else {
         Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **" @progressColors
