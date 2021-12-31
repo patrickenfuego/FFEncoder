@@ -8,6 +8,7 @@ $PSModuleRoot = $PSModule.ModuleBase
 $progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black'}
 $warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black'}
 $emphasisColors = @{ForegroundColor = 'Cyan'; BackgroundColor = 'Black'}
+$errColors = @{ ForegroundColor = 'Red'; BackgroundColor = 'Black'}
 
 ## end module variables ##
 
@@ -53,7 +54,8 @@ New-Alias -Name cropdim -Value Measure-CropDimensions -Force
 
 $ExportModule = @{
     Alias = @("iffmpeg", "itpffmpeg", "ncf", "mcd")
-    Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus', 'Confirm-DolbyVision')
+    Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus', 'Confirm-DolbyVision',
+                 'Confirm-ScaleFilter')
     Variable = @("progressColors", "warnColors", "emphasisColors" )
 }
 Export-ModuleMember @ExportModule
