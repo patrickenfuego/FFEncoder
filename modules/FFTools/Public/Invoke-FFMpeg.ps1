@@ -347,7 +347,10 @@ function Invoke-FFMpeg {
                 Write-Verbose "No additional streams selected. Generating chapter file..."
                 $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')"
                 if (!(Test-Path -Path $Paths.ChapterPath -ErrorAction SilentlyContinue)) {
-                    mkvextract $Paths.InputFile chapters $Paths.ChapterPath
+                    mkvextract "$($Paths.InputFile)" chapters "$($Paths.ChapterPath)"
+                    if (!$?) { 
+                        Write-Host "Extracting chapters FAILED. Verify that the input file contains chapters" @warnColors
+                    }
                 } 
                 else { Write-Verbose "Chapter file already exists. Skipping creation..." }
             }
