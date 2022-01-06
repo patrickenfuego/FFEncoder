@@ -471,7 +471,6 @@ param (
 # Set Console Configuration for Best Experience         #                   
 #########################################################
 
-Clear-Host
 $console = (Get-Host).UI.RawUI 
 $console.ForegroundColor = 'White'
 $console.BackgroundColor = 'Black'
