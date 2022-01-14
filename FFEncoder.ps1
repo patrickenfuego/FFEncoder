@@ -731,7 +731,7 @@ if ($skipCropFile) {
     Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
     Write-Host ""
     #Check if source is 4K for HDR metadata
-    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $InputPath
+    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
     $cropDim = ($res -eq '3840x2160') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
 }
 else {
