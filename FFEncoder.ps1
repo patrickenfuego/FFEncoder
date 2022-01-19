@@ -28,9 +28,6 @@
         ## Copy the primary audio stream and transcode a second audio stream to FDK AAC 2.0 using VBR 5 ##
         .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio c -Audio 2 faac -ABitrate2 5 -Stereo2 -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE 
-        ## Convert primary audio stream to AAC at 112 kb/s per channel ##
-        ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -Audio aac -AacBitrate 112 -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
-    .EXAMPLE 
         ## Encode the video at 25 mb/s using the -VideoBitrate parameter ##
         .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio copy -VideoBitrate 25M -OutputPath "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv" 
     .EXAMPLE 
