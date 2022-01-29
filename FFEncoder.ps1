@@ -592,8 +592,10 @@ function Set-ScriptPaths {
 # Main Script Logic                                     #    
 #########################################################
 
-if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
+#Print help content and exit
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit 0 }
+#Enable verbose logging if passed
+if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
 
 #Verify PowerShell version
 if (!(Get-Command 'pwsh') -or (Get-Command 'pwsh').Version -lt [system.version]'7.0.0.0') { 
@@ -630,10 +632,17 @@ Write-Host "--------------------------------------------------------------------
 Write-Host "Start Time: $startTime`n"
 #Generating paths to various files
 $paths = Set-ScriptPaths
-#if the output path already exists, prompt to delete the existing file or exit script
+#if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
 elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
-#Enable verbose logging if passed
+else { 
+    if (!(Test-Path (Split-Path $paths.OutputFile -Parent))) { 
+        New-Item -Path (Split-Path $paths.OutputFile -Parent) -ItemType Directory
+        if (!$?) { 
+            Write-Error "Could not create the specified output directory" -ErrorAction Stop
+        }
+    }
+}
 
 <#
     Validate Input
@@ -642,6 +651,7 @@ elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.Remux
     TODO: Try dynamic parameters instead?
 #>
 
+#Verify test parameters and prompt if one is missing (unless ExitOnError is present)
 if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
     $params = @{
         Message          = "No test duration was specified using -TestFrames"
@@ -650,12 +660,16 @@ if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
         TargetObject     = $TestFrames
         ErrorId          = 2
     }
-    Write-Error @params
-    #prompt to enter TestFrames. Loop until an integer is entered
-    do {
-        $TestFrames = Read-Host "Enter the number of test frames to use"
-    } until (($TestFrames -as [int]) -is [int])
-    $TestFrames = [int]$TestFrames
+    
+    if (!$PSBoundParameters['ExitOnError']) {
+        Write-Error @params
+        #prompt to enter TestFrames. Loop until an integer is entered
+        do {
+            $TestFrames = Read-Host "Enter the number of test frames to use"
+        } until (($TestFrames -as [int]) -is [int])
+        $TestFrames = [int]$TestFrames
+    }
+    else { Write-Error @params -ErrorAction Stop }
 }
 
 #If scale is used, verify arguments and handle errors
