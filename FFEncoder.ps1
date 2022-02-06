@@ -143,7 +143,7 @@
     .PARAMETER FrameThreads
         Set the number of frame threads used by the encoder. More threads equate to faster encoding, but with decreased quality. If no value is passed, the encoder default
         is used based on the number of logical CPU cores available to the system. If you aren't sure what this does, don't set it
-    .PARAMETER LevelIDC
+    .PARAMETER Level
         Specifies the encoder level to use. For Dolby Vision encodes, default value is 5.1. Otherwise, the default value is unset (let the encoder decide)
     .PARAMETER VBV
         Sets video buffering verifier options. If passed, requires 2 arguments in the following order: (vbv-bufsize, vbv-maxrate). Default is unset (decided by the encoder level)
@@ -393,8 +393,8 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateSet('1', '2', '2.1', '21', '3.1', '4', '4.1', '41', '5', '5.1', '51',
         '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
-    [Alias('Level', 'L')]
-    [string]$LevelIDC,
+    [Alias('L')]
+    [string]$Level,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -828,7 +828,7 @@ $ffmpegParams = @{
     Subme           = $Subme 
     IntraSmoothing  = $StrongIntraSmoothing
     FrameThreads    = $FrameThreads
-    LevelIDC        = $LevelIDC
+    Level           = $Level
     VBV             = $VBV
     FFMpegExtra     = $FFMpegExtra
     x265Extra       = $x265Extra

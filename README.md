@@ -208,8 +208,8 @@ FFEncoder can accept the following parameters from the command line:
 | **NoiseReduction**       | 0, 0       | False     | **NR**           | Fast Noise reduction filter built into x265. The first value represents intra frames, and the second value inter frames; values range from 0-2000                        |
 | **TuDepth**              | 1, 1       | False     | **TU**           | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
 | **LimitTu**              | 0          | False     | **LTU**          | Early exit condition for TU depth recursion. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info                                           |
-| **LevelIDC**             | None       | False     | **Level**, **L** | Specify the encoder level for device compatibility. Default is unset, and will be chosen by x265 based on rate control. Affects `vbv` options (see below)                |
-| **VBV**                  | `LevelIDC` | False     | None             | Video buffering verifier. Default is based on the encoder level (except DV, which defaults to level 5.1). Requires 2 arguments: (`vbv-buffsize`, `vbv-maxrate`)          |
+| **Level**             | None       | False     | **Level**, **L** | Specify the encoder level for device compatibility. Default is unset, and will be chosen by x265 based on rate control. Affects `vbv` options (see below)                |
+| **VBV**                  | `Level` | False     | None             | Video buffering verifier. Default is based on the encoder level (except DV, which defaults to level 5.1). Requires 2 arguments: (`vbv-buffsize`, `vbv-maxrate`)          |
 
 ### **Extra**
 

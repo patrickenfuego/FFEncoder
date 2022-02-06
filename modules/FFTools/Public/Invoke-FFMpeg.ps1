@@ -118,7 +118,7 @@ function Invoke-FFMpeg {
 
         # Encoder level to use. Default is unset
         [Parameter(Mandatory = $false)]
-        [string]$LevelIDC,
+        [string]$Level,
 
         # Encoder level to use. Default is unset
         [Parameter(Mandatory = $false)]
@@ -277,7 +277,7 @@ function Invoke-FFMpeg {
         LimitTu        = $LimitTu
         IntraSmoothing = $IntraSmoothing
         FrameThreads   = $FrameThreads
-        LevelIDC       = $LevelIDC
+        Level          = $Level
         VBV            = $VBV
         FFMpegExtra    = $FFMpegExtra
         x265Extra      = $x265Extra
@@ -291,7 +291,7 @@ function Invoke-FFMpeg {
     }
 
     if ($HDR.DV -eq $true) { $dvArgs = Set-DVArgs @baseArgs } else { $ffmpegArgs = Set-FFMpegArgs @baseArgs }
-    #If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
+    # If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
     if ($dvArgs) {
         if ($IsLinux -or $IsMacOS) { 
             $hevcPath = [regex]::Escape($Paths.hevcPath)  

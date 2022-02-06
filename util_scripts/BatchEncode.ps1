@@ -75,7 +75,7 @@ $validKeys = @(
     'BIntra'
     'Subme'
     'StrongIntraSmoothing'
-    'LevelIDC'
+    'Level'
     'VBV'
     'FrameThreads'
     'FFMpegExtra'

@@ -97,7 +97,7 @@ function Set-FFMpegArgs {
 
         # Encoder level to use. Default is unset (encoder decision)
         [Parameter(Mandatory = $false)]
-        [string]$LevelIDC,
+        [string]$Level,
 
         # Video buffering verifier: (bufsize, maxrate)
         [Parameter(Mandatory = $false)]
@@ -247,8 +247,8 @@ function Set-FFMpegArgs {
         $x265BaseArray.Add("frame-threads=$FrameThreads") > $null
     }
 
-    if ($PSBoundParameters['LevelIDC']) {
-        $x265BaseArray.Add("level-idc=$LevelIDC") > $null
+    if ($PSBoundParameters['Level']) {
+        $x265BaseArray.Add("level-idc=$Level") > $null
     }
 
     if ($PSBoundParameters['VBV']) {

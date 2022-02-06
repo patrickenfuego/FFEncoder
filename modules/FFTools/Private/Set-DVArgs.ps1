@@ -74,7 +74,7 @@ function Set-DVArgs {
 
         # Encoder level to use. Default is 5.1 for DV only
         [Parameter(Mandatory = $false)]
-        [string]$LevelIDC,
+        [string]$Level,
 
         # Video buffering verifier: (bufsize, maxrate)
         [Parameter(Mandatory = $false)]
@@ -198,7 +198,7 @@ function Set-DVArgs {
 
     ## Unpack extra parameters ##
 
-    #Add parameters passed via -FFMpeg
+    # Add parameters passed via -FFMpeg
     if ($PSBoundParameters['FFMpegExtra']) {
         $ffmpegExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $FFMpegExtra) {
@@ -215,7 +215,7 @@ function Set-DVArgs {
         }
     }
 
-    #Add parameters passed via -x265Extra
+    # Add parameters passed via -x265Extra
     if ($PSBoundParameters['x265Extra']) {
         $x265ExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $x265Extra.GetEnumerator()) {
@@ -288,7 +288,7 @@ function Set-DVArgs {
         '--preset'
         $Preset
         '--level-idc'
-        $PSBoundParameters['LevelIDC'] ? $LevelIDC : 5.1
+        $PSBoundParameters['Level'] ? $Level : 5.1
         '--vbv-bufsize'
         $PSBoundParameters['VBV'] ? $VBV[0] : 160000
         '--vbv-maxrate'
