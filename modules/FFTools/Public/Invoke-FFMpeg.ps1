@@ -75,6 +75,11 @@ function Invoke-FFMpeg {
         [Alias("NR")]
         [int[]]$NoiseReduction,
 
+        # Powerful denoising filter
+        [Parameter(Mandatory = $false)]
+        [Alias("NL")]
+        [hashtable]$NLMeans,
+
         #Transform unit recursion depth (intra, inter)
         [Parameter(Mandatory = $false)]
         [Alias("TU")]
@@ -267,6 +272,7 @@ function Invoke-FFMpeg {
         Deblock        = $Deblock
         AqStrength     = $AqStrength
         NoiseReduction = $NoiseReduction
+        NLMeans        = $NLMeans
         TuDepth        = $TuDepth
         LimitTu        = $LimitTu
         IntraSmoothing = $IntraSmoothing

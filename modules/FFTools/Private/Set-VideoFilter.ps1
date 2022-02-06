@@ -22,6 +22,9 @@ function Set-VideoFilter {
         [Parameter(Mandatory = $false, Position = 3)]
         [switch]$Deinterlace,
 
+        [Parameter(Mandatory = $false)]
+        [hashtable]$NLMeans,
+
         [Parameter(Mandatory = $false, Position = 4)]
         [string]$Verbosity
     )
@@ -35,7 +38,28 @@ function Set-VideoFilter {
 
     [array]$vfArray = $null
 
-    #if manual crop dimensions are passed, parse them out
+    # Verify NLMeans if passed or use defaults
+    if ($PSBoundParameters['NLMeans']) {
+        if (!$NLMeans.ContainsKey('s')) {
+            Write-Warning "No NLMeans strength value specified. Using default: 1.0"
+            $NLMeans.s = 1.0
+        }
+        if (!$NLMeans.ContainsKey('p')) {
+            $NLMeans.p = 7
+        }
+        if (!$NLMeans.ContainsKey('pc')) {
+            $NLMeans.pc = 5
+        }
+        if (!$NLMeans.ContainsKey('r')) {
+            $NLMeans.r = 3
+        }
+        if (!$NLMeans.ContainsKey('rc')) {
+            $NLMeans.rc = 3
+        }
+        $nlStr = "nlmeans=$($NLMeans['s']):$($NLMeans['p']):$($NLMeans['pc']):$($NLMeans['r']):$($NLMeans['rc'])"
+    }
+
+    # if manual crop dimensions are passed, parse them out
     if ($CropDimensions -contains -1) {
         [string]$cropStr = $FFMpegExtra.Where({ $_['-vf'] -match "crop" }) | 
             Select-Object -ExpandProperty '-vf'
@@ -49,7 +73,7 @@ function Set-VideoFilter {
         }
     }   
 
-    #Setup scaling related variables
+    # Setup scaling related variables
     if ($PSBoundParameters['Scale']) {
         [int]$scaleRes = $Scale.Resolution -replace 'p', ''
         [string]$sType = $Scale.Scale.ToLower()
@@ -58,7 +82,7 @@ function Set-VideoFilter {
             'scale' { 'flags' }
             'zscale' { 'f' }
         }
-        #Scaling down from 2160p
+        # Scaling down from 2160p
         if ($CropDimensions[0] -gt 3000) {
             $widthRes = switch ($Scale.Resolution) {
                 '1080p' { $CropDimensions[0] / 2 }
@@ -66,12 +90,12 @@ function Set-VideoFilter {
             }
         }
         elseif ($CropDimensions[0] -gt 1300 -and $CropDimensions[0] -lt 3000) {
-            #scale up/down 1080p
+            # scale up/down 1080p
             $widthRes = ($CropDimensions[1] -lt $scaleRes) ?
             ($CropDimensions[0] * 2) : 
             ($CropDimensions[0] / 1.5)
         }
-        #scaling up from 720p
+        # scaling up from 720p
         elseif ($CropDimensions[0] -lt 1300) {
             $widthRes = switch ($Scale.Resolution) {
                 '1080p' { $widthRes = $CropDimensions[0] * 1.5 }
@@ -84,7 +108,7 @@ function Set-VideoFilter {
         }
     }
 
-    #If array contains -1, manual crop params were set via FFMpegExtra parameter
+    # If array contains -1, manual crop params were set via FFMpegExtra parameter
     $customCrop = $false
     if ($CropDimensions -contains -1) {
         $customCrop = $true
@@ -101,7 +125,7 @@ function Set-VideoFilter {
         }
     }
     
-    #Build argument array and join
+    # Build argument array and join
     [array]$tmpArray = @(
         if ($Deinterlace) {
             "yadif"
@@ -115,9 +139,12 @@ function Set-VideoFilter {
         if ($manVfString) {
             $manVfString
         }
+        if ($nlStr) {
+            $nlStr
+        }
     )
     
-    #If string is not empty, generate array
+    # If string is not empty, generate array
     if ($tmpArray) {
         $vfString = $tmpArray -join ","
         $vfArray = @('-vf', "`"$vfString`"")

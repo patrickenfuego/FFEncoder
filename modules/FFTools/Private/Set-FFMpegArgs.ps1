@@ -87,6 +87,10 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [int]$IntraSmoothing,
 
+        # Enable NLMeans denoising filter
+        [Parameter(Mandatory = $false)]
+        [hashtable]$NLMeans,
+
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,
@@ -267,6 +271,7 @@ function Set-FFMpegArgs {
         FFMpegExtra    = $FFMpegExtra
         Deinterlace    = $Deinterlace
         Verbosity      = $Verbosity
+        NLMeans        = $NLMeans
     }
     $vfArray = Set-VideoFilter @vfHash
     if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }

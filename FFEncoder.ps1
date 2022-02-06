@@ -329,6 +329,25 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateScript(
+        {
+            if ($_.Count -eq 0) { throw "NLMeans Hashtable cannot be empty" }
+                $flag = $false
+                foreach ($k in $_.Keys) {
+                    if ($k -notin 's', 'p', 'pc', 'r', 'rc') {
+                        throw "Invalid key. Valid keys are A, B, C"
+                    }
+                    else { $flag = $true }
+                }
+                if ($flag = $true) { $true }
+                else { throw "Invalid NLMeans hashtable. See https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1" }
+        }
+    )]
+    [Alias("NL")]
+    [hashtable]$NLMeans,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(1, 4)]
     [ValidateCount(2, 2)]
     [Alias("TU")]
@@ -800,6 +819,7 @@ $ffmpegParams = @{
     PsyRd           = $PsyRd
     PsyRdoq         = $PsyRdoq
     NoiseReduction  = $NoiseReduction
+    NLMeans         = $NLMeans
     TuDepth         = $TuDepth
     LimitTu         = $LimitTu    
     Qcomp           = $QComp
