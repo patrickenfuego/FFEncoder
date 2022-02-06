@@ -1,5 +1,9 @@
 <#
-
+    .SYNOPSIS
+        Set test related parameter arguments
+    .DESCRIPTION
+        Logic for setting test parameters, such as the number of test frames
+        and the test encode starting point
 #>
 
 function Set-TestParameters {
@@ -32,16 +36,16 @@ function Set-TestParameters {
         $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @($ExtraArguments[$i], $ExtraArguments[$i + 1]))
         $ExtraArguments.RemoveRange($i, 2)
     }
-    #Check for 00:00:00 time format
+    # Check for 00:00:00 time format
     elseif ($TestStart -match "^\d+\:") {
         $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', $TestStart))
     }
-    #check for 1 or 1.11 time format from the t modifier, convert
+    # check for 1 or 1.11 time format from the t modifier, convert
     elseif ($TestStart -match "^(\d+)(\.?)(\d*)t") {
         $TestStart = $Matches[2] ? [double]($TestStart -replace 't', '') : [int]($TestStart -replace 't', '')
         $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', $TestStart))
     }
-    #Check if frame start was specified through the f modifier and calculate starting position
+    # Check if frame start was specified through the f modifier and calculate starting position
     elseif ($TestStart -match "^\d+f") {
         $TestStart = [int]($TestStart -replace 'f', '')
         #Calculate input FPS
@@ -51,7 +55,7 @@ function Set-TestParameters {
         $timestamp = $TestStart / $(Invoke-Expression $fpsStr)
         $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', $timestamp))
     }
-    #Default: Start encode at 00:01:30
+    # Default: Start encode at 00:01:30
     else {
         $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', '00:01:30'))
     }
