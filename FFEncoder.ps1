@@ -332,15 +332,15 @@ param (
     [ValidateScript(
         {
             if ($_.Count -eq 0) { throw "NLMeans Hashtable cannot be empty" }
-                $flag = $false
-                foreach ($k in $_.Keys) {
-                    if ($k -notin 's', 'p', 'pc', 'r', 'rc') {
-                        throw "Invalid key. Valid keys are A, B, C"
-                    }
-                    else { $flag = $true }
+            $flag = $false
+            foreach ($k in $_.Keys) {
+                if ($k -notin 's', 'p', 'pc', 'r', 'rc') {
+                    throw "Invalid key. Valid keys are A, B, C"
                 }
-                if ($flag = $true) { $true }
-                else { throw "Invalid NLMeans hashtable. See https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1" }
+                else { $flag = $true }
+            }
+            if ($flag = $true) { $true }
+            else { throw "Invalid NLMeans hashtable. See https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1" }
         }
     )]
     [Alias("NL")]
