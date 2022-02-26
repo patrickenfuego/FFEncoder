@@ -201,8 +201,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
+    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dee_dd", "dee_ac3", "dd", "dts", "flac", "f",
+        "eac3", "ddp", "dee_ddp", "dee_eac3", "dee_thd", "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
     [Alias("A")]
     [string]$Audio = "copy",
 
@@ -219,8 +219,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dd", "dts", "flac", "f", "eac3", 
-        "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
+    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dee_dd", "dee_ac3", "dd", "dts", "flac", "f",
+        "eac3", "ddp", "dee_ddp", "dee_eac3", "dee_thd", "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
     [Alias("A2")]
     [string]$Audio2 = "none",
 
@@ -362,7 +362,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.5, 1.0)]
-    [Alias("Q")]
+    #[Alias("Q")]
     [double]$QComp = 0.60,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
@@ -487,7 +487,8 @@ param (
 # Set Console Configuration for Best Experience         #                   
 #########################################################
 
-$console = (Get-Host).UI.RawUI 
+$console = (Get-Host).UI.RawUI
+$currentTitle = $console.WindowTitle
 $console.ForegroundColor = 'White'
 $console.BackgroundColor = 'Black'
 $console.WindowTitle = 'FFEncoder'
@@ -561,7 +562,6 @@ function Set-ScriptPaths {
         $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
         $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
         $stereoPath = Join-Path -Path $root -ChildPath "$oTitle`_stereo.$oExt"
-        $remuxPath = Join-Path -Path $oRoot -ChildPath "$oTitle (1).$oExt"
         $reportPath = Join-Path -Path $root -ChildPath "$oTitle.rep"
         $hdr10PlusPath = Join-Path -Path $root -ChildPath "metadata.json"
         $dvPath = Join-Path -Path $root -ChildPath "rpu.bin"
@@ -577,7 +577,6 @@ function Set-ScriptPaths {
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
         $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
         $stereoPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo.mkv"
-        $remuxPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo-remux.mkv"
         $reportPath = Join-Path -Path $os.DefaultPath -ChildPath "report.rep"
         $hdr10PlusPath = Join-Path -Path $os.DefaultPath -ChildPath "metadata.json"
         $dvPath = Join-Path -Path $os.DefaultPath -ChildPath "rpu.bin"
@@ -590,6 +589,7 @@ function Set-ScriptPaths {
     $pathObject = @{
         InputFile  = $InputPath
         Root       = $root
+        Extension  = $oExt
         RemuxPath  = $remuxPath
         StereoPath = $stereoPath
         CropPath   = $cropPath
@@ -611,35 +611,44 @@ function Set-ScriptPaths {
 # Main Script Logic                                     #    
 #########################################################
 
-#Print help content and exit
+<#
+    SETUP
+
+    Help
+    Verbose preference
+    Verify PowerShell version
+    Import Module
+#>
+
+# Print help content and exit
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit 0 }
-#Enable verbose logging if passed
+# Enable verbose logging if passed
 if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
 
-#Verify PowerShell version
+# Verify PowerShell version
 if (!(Get-Command 'pwsh') -or (Get-Command 'pwsh').Version -lt [system.version]'7.0.0.0') { 
     $params = @{
-        Message           = "The script requires PowerShell 7.0 or greater"
-        Category          = "NotInstalled"
-        Exception         = [System.ExecutionEngineException]::new()
-        ErrorId           = -1
+        Message   = "The script requires PowerShell 7.0 or greater"
+        Category  = "NotInstalled"
+        Exception = [System.ExecutionEngineException]::new()
+        ErrorId   = -1
     }
     Write-Error @params -ErrorAction Stop
 }
-#If pwsh 7 is installed, but currently running from Windows PowerShell context
+# If pwsh 7 is installed, but currently running from Windows PowerShell context
 elseif ($PSVersionTable.PSVersion -lt [system.version]'7.0.0.0') {
     $msg = "Currently running with PowerShell $($PSVersionTable.PSVersion.Major). Switch to PowerShell 7"
     $params = @{
-        Message           = $msg
-        Category          = "InvalidOperation"
-        Exception         = [System.ExecutionEngineException]::new()
-        ErrorId           = -2
+        Message   = $msg
+        Category  = "InvalidOperation"
+        Exception = [System.ExecutionEngineException]::new()
+        ErrorId   = -2
     }
     Write-Error @params -ErrorAction Stop
 }
 
-#Import FFTools module
-Import-Module -Name "$PSScriptRoot\modules\FFTools"
+# Import FFTools module
+Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
 
 $stopwatch = [System.Diagnostics.stopwatch]::StartNew()
 $startTime = (Get-Date).ToLocalTime()
@@ -649,14 +658,14 @@ Write-Host $banner -ForegroundColor Magenta -BackgroundColor Black
 Write-Host "----------------------------------------------------------------------------------------------" @emphasisColors
 
 Write-Host "Start Time: $startTime`n"
-#Generating paths to various files
+# Generating paths to various files
 $paths = Set-ScriptPaths
-#if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
+# if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
 if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
-elseif (Test-Path -Path $paths.RemuxPath) { Remove-FilePrompt -Path $paths.RemuxPath -Type "Primary" }
 else { 
-    if (!(Test-Path (Split-Path $paths.OutputFile -Parent))) { 
-        New-Item -Path (Split-Path $paths.OutputFile -Parent) -ItemType Directory
+    if (!(Test-Path (Split-Path $paths.OutputFile -Parent))) {
+        Write-Host "Creating output path directory structure..." @progressColors
+        New-Item -Path (Split-Path $paths.OutputFile -Parent) -ItemType Directory > $null
         if (!$?) { 
             Write-Error "Could not create the specified output directory" -ErrorAction Stop
         }
@@ -664,10 +673,12 @@ else {
 }
 
 <#
-    Validate Input
-    Mimic parameter set behavior
-
-    TODO: Try dynamic parameters instead?
+    VALIDATE INPUT - Check:
+    
+    Parameter combinations
+        - TODO: Too complicated for parameter sets...try dynamic params?
+    Primary audio type if transcoding was selected
+        - Warn if transcoding lossy -> lossy
 #>
 
 #Verify test parameters and prompt if one is missing (unless ExitOnError is present)
@@ -706,14 +717,14 @@ if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -an
     
     if (!$PSBoundParameters['ExitOnError']) {
         Write-Error @params
-        #Loop until a valid entry is entered
+        # Loop until a valid entry is entered
         do {
             $Scale = Read-Host "Enter a scaling method (scale or zscale)"
         } until ($Scale -in "Scale", "Zscale")
     }
     else { Write-Error @params -ErrorAction Stop }
 }
-#Verify the scaling filter passed is compatible with the scale method
+# Verify the scaling filter passed is compatible with the scale method
 elseif ($PSBoundParameters['Scale'] -and $PSBoundParameters['ScaleFilter']) {
     try {
         $ScaleFilter = $PSBoundParameters['ExitOnError'] ? 
@@ -726,19 +737,19 @@ elseif ($PSBoundParameters['Scale'] -and $PSBoundParameters['ScaleFilter']) {
         $PSCmdlet.ThrowTerminatingError($_)
     }
     
-    #warn if no scale filter was passed
+    # Warn if no scale filter was passed
     if (!$PSBoundParameters['ScaleFilter']) {
         Write-Warning "No scaling filter specified for scaling. Using default: bilinear"
         Write-Host ""
     }
-    #warn if no resolution was passed, and set to 1080p
+    # Warn if no resolution was passed, and set to 1080p
     if (!$PSBoundParameters['Resolution']) {
         Write-Warning "No resolution specified for scaling. Using default: 1080p"
         Write-Host ""
         $Resolution = '1080p'
     }
 
-    #collect the arguments into a hashtable
+    # Collect the arguments into a hashtable
     $scaleHash = @{
         Scale       = $Scale
         ScaleFilter = $ScaleFilter
@@ -746,7 +757,27 @@ elseif ($PSBoundParameters['Scale'] -and $PSBoundParameters['ScaleFilter']) {
     }
 }
 
-#Creating the crop file. If crop arguments are passed via FFMpegExtra, don't generate crop file
+# Validate input audio
+$res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 `
+        -show_entries "stream=codec_name,profile" `
+        -i $Paths.InputFile
+
+$lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ? 
+                $true : $false
+$test1 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio -match $_ })
+$test2 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio2 -match $_ })
+if (!$lossless -and (!$test1 -or !$test2)) {
+    $msg = "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended " +
+            "(If you're stream copying a codec by name, you can ignore this)"
+    Write-Warning $msg
+}
+
+<#
+    CROP FILE GENERATION
+
+    If crop arguments are passed via FFMpegExtra, don't generate crop file
+#>
+
 $skipCropFile = $false
 if ($PSBoundParameters['FFMpegExtra']) {
     foreach ($arg in $FFMpegExtra) {
@@ -766,7 +797,7 @@ if ($skipCropFile) {
 }
 else {
     New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
-    #Calculating the crop values. Re-throw terminating error if one occurs
+    # Calculating the crop values. Re-throw terminating error if one occurs
     try {
         $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution
     }
@@ -775,7 +806,12 @@ else {
     }
 }
 
-#Setting the rate control argument array
+<#
+    SET RATE CONTROL
+
+    Set parameter arrays based on input
+#>
+
 if ($PSBoundParameters['CRF']) {
     $rateControl = @('-crf', $CRF, $false, $false)
 }
@@ -789,7 +825,13 @@ else {
     Write-Warning "There was an error verifying rate control. This statement should be unreachable. CRF 18.0 will be used"
     $rateControl = @('-crf', '18.0', $false)
 }
-#Condensing audio parameters
+
+<#
+    FORMAT AUDIO STRUCTURE
+
+    Condense audio parameters so that they can be passed around easily
+#>
+
 $audioHash1 = @{
     Audio   = $Audio
     Bitrate = $AudioBitrate
@@ -805,7 +847,13 @@ if ($PSBoundParameters['Audio2']) {
 else { $audioHash2 = $null }
 $audioArray = @($audioHash1, $audioHash2)
 
-#Building parameters for ffmpeg function
+
+<#
+    FFMPEG PARAMETERS
+
+    Set argument hashtable for encoders
+#>
+
 $ffmpegParams = @{
     CropDimensions  = $cropDim
     AudioInput      = $audioArray
@@ -843,34 +891,155 @@ $ffmpegParams = @{
 
 Invoke-FFMpeg @ffmpegParams
 
-## Post Encode 
+<#
+    POST ENCODE
+    
+    Muxing
+    Results
+    Generate Report
+    Cleanup
 
-#If stream copy and stereo are used, mux the stream back into the container
-if (@('copy', 'c', 'copyall', 'ca') -contains $Audio -and $Stereo2) {
-    Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
-    Start-Sleep -Seconds 1
-    ffmpeg -i $OutputPath -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $paths.RemuxPath
-    Write-Host "Cleaning up..." -NoNewline
-    Remove-Item -Path $paths.OutputFile
-    if ($?) { Write-Host "done!" @progressColors; Write-Host "`n" }
-    else { 
-        Write-Host ""
-        Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors 
-    } 
+    TODO: Refactor this mess
+#>
+
+Start-Sleep -Milliseconds 500
+
+$skipStereo = $false
+$mid = 0
+# Check for running jobs
+$deeRunning = (Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
+$stereoRunning = (Get-Job -Name 'Stereo Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
+# Set the temporary output file
+$output = $Paths.OutputFile -replace '^(.+)\.(.+)', '$1 (1).$2'
+
+# Handle dee encoded audio. If a stereo track was created, add it as well
+if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('mkv')) {
+    # Check for stereo and add it
+    if ((Test-Path $Paths.StereoPath -ErrorAction SilentlyContinue) -and !$stereoRunning) {
+        $skipStereo = $true
+        Stop-Job -Name 'Stereo Encoder' -PassThru | Remove-Job -ErrorAction SilentlyContinue
+    }
+    elseif ((Test-Path $Paths.StereoPath -ErrorAction SilentlyContinue) -and $stereoRunning) {
+        Write-Host "Stereo Encoder background job is still running. Mux the file manually" @warnColors
+    }
+    
+    # Mux in the dee encoded file if job isn't running
+    if ($deeRunning) {
+        Write-Host "Dee Encoder background job is still running. Mux the file manually" @warnColors
+    }
+    else {
+        Stop-Job -Name 'Dee Encoder' -PassThru | Remove-Job
+
+        if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
+            #Find the dee encoded output file
+            $deePath = Get-ChildItem $(Split-Path $Paths.OutputFile -Parent) |
+                           Where-Object { $_ -like '*.*3' -or $_ -like '*.thd' } | 
+                               Select-Object -First 1 -ExpandProperty FullName
+
+            $muxPaths = @{
+                Input    = $paths.OutputFile
+                Output   = $output
+                Audio    = $deePath
+                Title    = $paths.Title
+                Language = $paths.Language
+            }
+            if ($skipStereo) {
+                $muxPaths.Stereo = $paths.StereoPath
+                $mid = 3
+            }
+            else { $mid = 2 }
+
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mid
+        }
+        # If no mkvmerge, mux with ffmpeg
+        else {
+            
+            $fArgs = @(
+                '-i'
+                "$($Paths.OutputFile)"
+                '-i'
+                $deePath
+                if ($skipStereo) {
+                    '-i'
+                    "$($Paths.StereoPath)"
+                }
+                '-loglevel'
+                'error'
+                '-map'
+                0
+                '-map'
+                '1:a'
+                if ($skipStereo) {
+                    '-map'
+                    '2:a'
+                }
+                '-c'
+                'copy'
+                '-y'
+                $output
+            )
+
+            ffmpeg $fArgs
+        }
+
+        if ($PSBoundParameters['RemoveFiles']) { Remove-Item $deePath -Force }
+    }
 }
 
-#Display a quick view of the finished log file, the end time and total encoding time
+# If stream copy and stereo are used, mux the stream back into the container
+if ((@('copy', 'c', 'copyall', 'ca') -contains $Audio) -and $Stereo2 -and !$skipStereo) {
+    if ($stereoRunning) {
+        Write-Host "Stereo encoder background job is still running. Mux the file manually" @warnColors
+    }
+    else {
+        Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
+
+        # If mkvmerge is available, use it instead of ffmpeg
+        if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
+            $muxPaths = @{
+                Input    = $Paths.OutputFile
+                Output   = $output
+                Audio    = $paths.StereoPath
+                Title    = $paths.Title
+                Language = $Paths.Language
+            }
+            $mid = 1
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1
+        }
+        # if not mkv or no mkvmerge, mux with ffmpeg
+        else {
+            ffmpeg -i $paths.OutputFile -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $output
+        }
+    }
+}
+
+# Verify if temp output file exists and delete it if it is at least as large or larger than original output
+if ((Test-Path $output -ErrorAction SilentlyContinue) -and 
+    ((Get-Item $output).Length -ge (Get-Item $Paths.OutputFile).Length)) { 
+
+    Remove-Item $Paths.OutputFile -Force
+
+    if (!$?) { 
+        Write-Host ""
+        Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors 
+    }
+    Rename-Item $output "$($paths.Title).$($paths.Extension)"
+}
+
+# Display a quick view of the finished log file, the end time and total encoding time
 Get-Content -Path $Paths.LogPath -Tail 8
 $endTime = (Get-Date).ToLocalTime()
 Write-Host "`nEnd time: $endTime"
 $stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds`n" -f $stopwatch.Elapsed
-#Generate the report file if parameter is present
+
+# Generate the report file if parameter is present
 if ($PSBoundParameters['GenerateReport']) {
     $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
     Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths -TwoPass $twoPass
 }
-#Delete extraneous files if switch is present
+
+# Delete extraneous files if switch is present
 if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
@@ -878,5 +1047,8 @@ if ($PSBoundParameters['RemoveFiles']) {
         Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin"
     }
 }
-#Run the garbage collector to ensure no memory leaks
+
+# Restore window title
+$console.WindowTitle = $currentTitle
+# Run the garbage collector to ensure no memory leaks
 [System.GC]::Collect()

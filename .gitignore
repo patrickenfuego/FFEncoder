@@ -1,3 +1,7 @@
 sandbox.ps1
 .vscode
+.VSCodeCounter
 *.DS_Store
+**/.idea
+**/__pycache__
+**/config.toml
