@@ -133,7 +133,7 @@ function Set-AudioPreference {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
                 $sChannels = Get-ChannelCount -ID $i
-                Write-Host "Channel count:" $sChannels
+                Write-Host "Channel count: $sChannels`n"
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
@@ -210,7 +210,7 @@ function Set-AudioPreference {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
                 $sChannels = Get-ChannelCount -ID $i
-                Write-Host "Channel count:" $sChannels
+                Write-Host "Channel count: $sChannels`n"
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
@@ -222,7 +222,7 @@ function Set-AudioPreference {
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
                 $sChannels = Get-ChannelCount -ID $i
-                Write-Host "Channel count:" $sChannels
+                Write-Host "Channel count: $sChannels`n"
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
