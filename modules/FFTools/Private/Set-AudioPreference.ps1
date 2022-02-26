@@ -47,9 +47,9 @@ function Set-AudioPreference {
     #>
 
     # Private inner function that returns the number of channels for the primary audio stream
-    function Get-ChannelCount {  
+    function Get-ChannelCount ([int]$ID) {  
         [int]$numOfChannels = ffprobe -i $Paths.InputFile -show_entries stream=channels `
-            -select_streams a:0 -of compact=p=0:nk=1 -v 0
+            -select_streams a:$ID -of compact=p=0:nk=1 -v 0
         return $numOfChannels
     }
     # Private inner function that prints audio data when the -Bitrate parameter is used
@@ -72,7 +72,7 @@ function Set-AudioPreference {
     $split = $dArgs.Length / 2
 
      # Set the track title
-     $channels = Get-ChannelCount
+     $channels = Get-ChannelCount -ID 0
      $channelStr = switch ($channels) {
          1   { '1.0' }
          2   { '2.0' }
@@ -132,6 +132,8 @@ function Set-AudioPreference {
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
+                $sChannels = Get-ChannelCount -ID $i
+                Write-Host "Channel count:" $sChannels
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
@@ -207,6 +209,8 @@ function Set-AudioPreference {
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k") }
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
+                $sChannels = Get-ChannelCount -ID $i
+                Write-Host "Channel count:" $sChannels
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
@@ -217,6 +221,8 @@ function Set-AudioPreference {
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k") }
             $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
             if ($i) {
+                $sChannels = Get-ChannelCount -ID $i
+                Write-Host "Channel count:" $sChannels
                 @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
             }
             else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
@@ -253,7 +259,7 @@ function Set-AudioPreference {
 
     # Print relevant info to console based on user choice
     if ($UserChoice -notin $noPrint) { 
-        if (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice) { 
+        if (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice -and !$i) { 
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
         }
         elseif ($deeDefault) {

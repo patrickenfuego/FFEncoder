@@ -39,7 +39,7 @@ function Get-AudioStream {
         else { $index = $false; $i++ }   
     }
     
-    if ($index) { Write-Host "$codecStr stream found. Bit rate: $($bitrate / 1000) kb/s`n" }
+    if ($index) { Write-Host "$codecStr stream found at index $index. Bit rate: $($bitrate / 1000) kb/s" }
     else { Write-Host "A $codecStr stream could not be found. Audio will be transcoded to the selected format." @warnColors; Write-Host }
     return $index
 }
