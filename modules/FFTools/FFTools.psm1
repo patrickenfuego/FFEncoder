@@ -10,7 +10,22 @@ $warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black'}
 $emphasisColors = @{ForegroundColor = 'Cyan'; BackgroundColor = 'Black'}
 $errColors = @{ ForegroundColor = 'Red'; BackgroundColor = 'Black'}
 
-## end module variables ##
+# Track titles for muxing files with mkvmerge
+$Script:trackTitle = @{
+    AudioTitle1 = $null
+    AudioTitle2 = $null
+    StereoTitle = $null
+    DeeTitle    = $null
+    VideoTitle  = $null
+}
+
+# Arguments for dee encoders and audio
+$Script:dee = @{
+    DeeArgs = @('dee_ddp', 'dee_eac3', 'dee_dd', 'dee_ac3', 'dee_thd')
+    DeeUsed = $false
+}
+
+## End module variables ##
 
 ## region Load Public Functions ##
 try {
@@ -40,7 +55,7 @@ try {
         $function = Split-Path $_ -Leaf
         . $_
     }
-} 
+}
 catch {
     Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
     continue
@@ -53,9 +68,9 @@ New-Alias -Name cropdim -Value Measure-CropDimensions -Force
 
 
 $ExportModule = @{
-    Alias = @("iffmpeg", "itpffmpeg", "ncf", "mcd")
-    Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus', 'Confirm-DolbyVision',
-                 'Confirm-ScaleFilter')
-    Variable = @("progressColors", "warnColors", "emphasisColors" )
+    Alias    = @('iffmpeg', 'cropfile', 'cropdim')
+    Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus',
+                    'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge')
+    Variable = @('progressColors', 'warnColors', 'emphasisColors' )
 }
 Export-ModuleMember @ExportModule

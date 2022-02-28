@@ -68,6 +68,10 @@ function Set-DVArgs {
         [Parameter(Mandatory = $false)]
         [int]$IntraSmoothing,
 
+        # Enable NLMeans denoising filter
+        [Parameter(Mandatory = $false)]
+        [hashtable]$NLMeans,
+
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
         [int]$FrameThreads,

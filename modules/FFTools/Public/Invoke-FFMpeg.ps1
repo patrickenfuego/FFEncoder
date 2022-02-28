@@ -195,7 +195,13 @@ function Invoke-FFMpeg {
         $VerbosePreference = 'SilentlyContinue'
     }
 
-    #Determine the resolution and fetch metadata if 4K
+    # Infer primary language based on streams (for muxing)
+    $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language -select_streams a -v 0 -of compact=p=0:nk=1 
+    [string]$lang = $streams -replace '\d\|', '' | Group-Object | Sort-Object -Property Count -Descending | 
+        Select-Object -First 1 -ExpandProperty Name
+    $Paths.Language = $lang
+
+    # Determine the resolution and fetch metadata if 4K
     if ($CropDimensions[2]) { 
         $skipDv = ($SkipDolbyVision) ? $true : $false
         $skip10P = ($SkipHDR10Plus) ? $true : $false
@@ -216,12 +222,14 @@ function Invoke-FFMpeg {
         Bitrate     = $AudioInput[0].Bitrate
         Stream      = 0
         Stereo      = $AudioInput[0].Stereo
+        AudioFrames = $TestFrames
+        TestStart   = $TestStart
         RemuxStream = $false
     }
     $audio = Set-AudioPreference @audioParam1
     if ($null -ne $AudioInput[1]) {
         #Verify if stream copying and a named codec are used together
-        $copyOpt = @('copy', 'c', 'copyall', 'ca', 0, 1, 2, 3, 4, 5)
+        $copyOpt = @('copy', 'c', 'copyall', 'ca') + 1..12
         if ($AudioInput[1].Stereo -and 
             $copyOpt -contains $AudioInput[0].Audio -and 
             $copyOpt -notcontains $AudioInput[1].Audio) {
@@ -237,12 +245,18 @@ function Invoke-FFMpeg {
             Stream      = 1
             Stereo      = $AudioInput[1].Stereo
             AudioFrames = $TestFrames
+            TestStart   = $TestStart
             RemuxStream = $remuxStream
         }
         $audio2 = Set-AudioPreference @audioParam2
 
-        if ($null -ne $audio2) { $audio = $audio + $audio2 }
     }
+    else { $audio2 = $null }
+
+    if ($null -eq $audio -and $null -eq $audio2) { $audio = '-an' }
+    elseif ($null -eq $audio -and $null -ne $audio2) { $audio = $audio2 }
+    elseif ($null -ne $audio2) { $audio = $audio + $audio2 }
+    
     Write-Verbose "AUDIO ARGUMENTS:`n$($audio -join " ")`n"
     
     #Set args to preset default if not modified by the user via parameters
@@ -294,7 +308,7 @@ function Invoke-FFMpeg {
     # If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
     if ($dvArgs) {
         if ($IsLinux -or $IsMacOS) { 
-            $hevcPath = [regex]::Escape($Paths.hevcPath)  
+            $hevcPath = [regex]::Escape($Paths.HevcPath)
         }
 
         #Two pass x265 encode
@@ -338,7 +352,7 @@ function Invoke-FFMpeg {
         #Mux/convert audio and subtitle streams separately from elementary hevc stream
         if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
             Write-Host "Converting audio/subtitles..."
-            $Paths.tmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
+            $Paths.TmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 #cut stream at video frame marker
                 ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) -y $Paths.tmpOut 2>>$Paths.LogPath
@@ -356,6 +370,7 @@ function Invoke-FFMpeg {
                     mkvextract "$($Paths.InputFile)" chapters "$($Paths.ChapterPath)"
                     if (!$?) { 
                         Write-Host "Extracting chapters FAILED. Verify that the input file contains chapters" @warnColors
+                        $Paths.ChapterPath = $null
                     }
                 } 
                 else { Write-Verbose "Chapter file already exists. Skipping creation..." }
@@ -365,7 +380,24 @@ function Invoke-FFMpeg {
 
         #If mkvmerge is available and output stream is mkv, mux streams back together
         if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
-            Invoke-MkvMerge -Paths $Paths -Verbosity $Verbosity
+            # Set the paths needed for mkvmerge
+            $muxPaths = @{
+                Input    = $Paths.HevcPath
+                Output   = $Paths.OutputFile
+                Title    = $Paths.Title
+                Language = $Paths.Language
+            }
+            if ($Paths.ChapterPath) {
+                $muxPaths.Temp = $Paths.ChapterPath
+                $muxPaths.Chapters = $true
+            }
+            elseif (!$Paths.ChapterPath -and !$Paths.TmpOut) { 
+                $muxPaths.VideoOnly = $true 
+            }
+            else {
+                $muxPaths.Temp = $Paths.TmpOut
+            }
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'dv' -Verbosity $Verbosity
         }
         else {
             Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
