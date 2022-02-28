@@ -171,12 +171,14 @@ FFEncoder can accept the following parameters from the command line:
 
 ### **Video Filtering**
 
-| Parameter Name  | Default  | Mandatory     | Alias                    | Description                                                                                                                                 |
-| --------------- | -------- | ------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Scale**       | None     | <b>\*</b>True | **Resize**, **Resample** | Scaling library to use. Options are `scale` (ffmpeg default) and `zscale` (requires libzimg). Required parameter for rescaling content      |
-| **ScaleFilter** | bilinear | False         | **ScaleType**, **SF**    | Scaling filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info |
-| **Resolution**  | 1080p    | False         | **Res**, **R**           | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info    |
-| **Deinterlace** | Disabled | False         | **DI**                   | Switch to enable deinterlacing of interlaced content using yadif                                                                            |
+| Parameter Name  | Default  | Mandatory     | Alias                    | Description                                                                                                                                        |
+| --------------- | -------- | ------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scale**       | None     | <b>\*</b>True | **Resize**, **Resample** | Scaling library to use. Options are `scale` (ffmpeg default) and `zscale` (requires libzimg). Required parameter for rescaling content             |
+| **ScaleFilter** | bilinear | False         | **ScaleType**, **SF**    | Scaling filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info        |
+| **Resolution**  | 1080p    | False         | **Res**, **R**           | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info           |
+| **Deinterlace** | Disabled | False         | **DI**                   | Switch to enable deinterlacing of interlaced content using yadif                                                                                   |
+| **NLMeans**     | Disabled | False         | **NL**                   | High quality denoising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info |
+
 
 ### **Encoder Config**
 
@@ -190,25 +192,25 @@ FFEncoder can accept the following parameters from the command line:
 
 ### **x265 Settings**
 
-| Parameter Name           | Default    | Mandatory | Alias            | Description                                                                                                                                                              |
-| ------------------------ | ---------- | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Preset**               | Slow       | False     | **P**            | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset options                                 |
-| **Pass**                 | 2          | False     | None             | The number of passes the encoder will perform on ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                                 |
-| **Deblock**              | -2, -2     | False     | **DBF**          | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                                    |
-| **AqMode**               | 2          | False     | **AQM**          | x265 Adaptive Quantization setting. Ranges from 0 - 4. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info on AQ Modes and how they work   |
-| **AqStrength**           | 1.00       | False     | **AQS**          | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates                 |
-| **PsyRd**                | 2.00       | False     | **PRD**          | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                                          |
-| **PsyRdoq**              | Preset     | False     | **PRDQ**         | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info                      |
-| **QComp**                | 0.60       | False     | **Q**            | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                                      |
-| **BFrames**              | Preset     | False     | **B**            | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use                            |
-| **BIntra**               | Preset     | False     | **BINT**         | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                                     |
-| **StrongIntraSmoothing** | 1 (on)     | False     | **SIS**          | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                                            |
-| **FrameThreads**         | System     | False     | **FT**           | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores                    |
-| **Subme**                | Preset     | False     | **SM**, **SPM**  | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact                       |
-| **NoiseReduction**       | 0, 0       | False     | **NR**           | Fast Noise reduction filter built into x265. The first value represents intra frames, and the second value inter frames; values range from 0-2000                        |
-| **TuDepth**              | 1, 1       | False     | **TU**           | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
-| **LimitTu**              | 0          | False     | **LTU**          | Early exit condition for TU depth recursion. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info                                           |
-| **Level**             | None       | False     | **Level**, **L** | Specify the encoder level for device compatibility. Default is unset, and will be chosen by x265 based on rate control. Affects `vbv` options (see below)                |
+| Parameter Name           | Default | Mandatory | Alias            | Description                                                                                                                                                              |
+| ------------------------ | ------- | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Preset**               | Slow    | False     | **P**            | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset options                                 |
+| **Pass**                 | 2       | False     | None             | The number of passes the encoder will perform on ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                                 |
+| **Deblock**              | -2, -2  | False     | **DBF**          | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                                    |
+| **AqMode**               | 2       | False     | **AQM**          | x265 Adaptive Quantization setting. Ranges from 0 - 4. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info on AQ Modes and how they work   |
+| **AqStrength**           | 1.00    | False     | **AQS**          | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates                 |
+| **PsyRd**                | 2.00    | False     | **PRD**          | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                                          |
+| **PsyRdoq**              | Preset  | False     | **PRDQ**         | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info                      |
+| **QComp**                | 0.60    | False     | **Q**            | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                                      |
+| **BFrames**              | Preset  | False     | **B**            | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use                            |
+| **BIntra**               | Preset  | False     | **BINT**         | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                                     |
+| **StrongIntraSmoothing** | 1 (on)  | False     | **SIS**          | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                                            |
+| **FrameThreads**         | System  | False     | **FT**           | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores                    |
+| **Subme**                | Preset  | False     | **SM**, **SPM**  | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact                       |
+| **NoiseReduction**       | 0, 0    | False     | **NR**           | Fast Noise reduction filter built into x265. The first value represents intra frames, and the second value inter frames; values range from 0-2000                        |
+| **TuDepth**              | 1, 1    | False     | **TU**           | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
+| **LimitTu**              | 0       | False     | **LTU**          | Early exit condition for TU depth recursion. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info                                           |
+| **Level**                | None    | False     | **Level**, **L** | Specify the encoder level for device compatibility. Default is unset, and will be chosen by x265 based on rate control. Affects `vbv` options (see below)                |
 | **VBV**                  | `Level` | False     | None             | Video buffering verifier. Default is based on the encoder level (except DV, which defaults to level 5.1). Requires 2 arguments: (`vbv-buffsize`, `vbv-maxrate`)          |
 
 ### **Extra**
