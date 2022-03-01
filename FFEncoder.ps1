@@ -331,11 +331,11 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateScript(
         {
-            if ($_.Count -eq 0) { throw "NLMeans Hashtable cannot be empty" }
+            if ($_.Count -eq 0) { throw "NLMeans Hashtable must contain at least 1 value" }
             $flag = $false
             foreach ($k in $_.Keys) {
                 if ($k -notin 's', 'p', 'pc', 'r', 'rc') {
-                    throw "Invalid key. Valid keys are A, B, C"
+                    throw "Invalid key. Valid keys are 's', 'p', 'pc', 'r', 'rc'"
                 }
                 else { $flag = $true }
             }
