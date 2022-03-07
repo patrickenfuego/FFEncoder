@@ -109,7 +109,7 @@ function Invoke-MkvMerge {
             $trackOrder
         )
 
-        mkvmerge $remuxArgs 1>$log
+        mkvmerge $remuxArgs
         
         # Ensure output exists and file size is correct before deleting and renaming
         if ((Test-Path $Paths.Output) -and ((Get-Item $Paths.Output).Length -ge (Get-Item $Paths.Input).Length)) {
@@ -177,7 +177,7 @@ function Invoke-MkvMerge {
             )
         }
 
-        mkvmerge $remuxArgs 1>$log
+        mkvmerge $remuxArgs
 
         if ($?) {
             Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE. Removing TMP file..."
@@ -202,7 +202,7 @@ function Invoke-MkvMerge {
             ')'
         )
         
-        mkvmerge $remuxArgs 1>$log
+        mkvmerge $remuxArgs
     }
     else {
         Write-Warning "Unknown mode used in Invoke-MkvMerge"
