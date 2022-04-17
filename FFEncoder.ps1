@@ -793,7 +793,7 @@ if ($skipCropFile) {
     Write-Host ""
     #Check if source is 4K for HDR metadata
     $res = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
-    $cropDim = ($res -eq '3840x2160') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
+    $cropDim = ($res -like '3840x2160?') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
 }
 else {
     New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
