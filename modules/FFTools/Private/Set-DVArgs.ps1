@@ -147,6 +147,7 @@ function Set-DVArgs {
         'temporal-mvp'
         'weightp'
         'w'
+        'hme'
         'weightb'
         'constrained-intra'
         'hist-scenecut'
@@ -202,7 +203,7 @@ function Set-DVArgs {
 
     ## Unpack extra parameters ##
 
-    # Add parameters passed via -FFMpeg
+    # Add parameters passed via -FFMpegExtra
     if ($PSBoundParameters['FFMpegExtra']) {
         $ffmpegExtraArray = [System.Collections.ArrayList]@()
         foreach ($arg in $FFMpegExtra) {
