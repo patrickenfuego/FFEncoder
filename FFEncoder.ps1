@@ -762,14 +762,16 @@ $res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=nopr
         -show_entries "stream=codec_name,profile" `
         -i $Paths.InputFile
 
-$lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ? 
+if ($res) {
+    $lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ? 
                 $true : $false
-$test1 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio -match $_ })
-$test2 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio2 -match $_ })
-if (!$lossless -and (!$test1 -or !$test2)) {
-    $msg = "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended " +
-            "(If you're stream copying a codec by name, you can ignore this)"
-    Write-Warning $msg
+    $test1 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio -match $_ })
+    $test2 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio2 -match $_ })
+    if (!$lossless -and (!$test1 -or !$test2)) {
+        $msg = "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended " +
+                "(If you're stream copying a codec by name, you can ignore this)"
+        Write-Warning $msg
+    }
 }
 
 <#
@@ -823,7 +825,7 @@ elseif ($PSBoundParameters['VideoBitrate']) {
 }
 else {
     Write-Warning "There was an error verifying rate control. This statement should be unreachable. CRF 18.0 will be used"
-    $rateControl = @('-crf', '18.0', $false)
+    $rateControl = @('-crf', '18.0', $false, $false)
 }
 
 <#
