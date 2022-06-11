@@ -165,6 +165,11 @@ function Invoke-FFMpeg {
         [Alias("NoD10P", "STP")]
         [switch]$SkipHDR10Plus,
 
+        # Skip HDR10+ even if present
+        [Parameter(Mandatory = $false)]
+        [Alias("NoProgressBar")]
+        [switch]$DisableProgress,
+
         # Enable Verbose output
         [Parameter(Mandatory = $false)]
         [Alias("V")]
@@ -336,7 +341,7 @@ function Invoke-FFMpeg {
                 cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>>$Paths.LogPath
             }
         }
-        #CRF/One pass x265 encode
+        # CRF/One pass x265 encode
         else {
             Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
             Write-Host "***** STARTING x265 PIPE *****" @progressColors
@@ -349,12 +354,12 @@ function Invoke-FFMpeg {
                 cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
             }
         }
-        #Mux/convert audio and subtitle streams separately from elementary hevc stream
+        # Mux/convert audio and subtitle streams separately from elementary hevc stream
         if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
             Write-Host "Converting audio/subtitles..."
             $Paths.TmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
-                #cut stream at video frame marker
+                # Cut stream at video frame marker
                 ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) -y $Paths.tmpOut 2>>$Paths.LogPath
             }
             else {
@@ -363,7 +368,7 @@ function Invoke-FFMpeg {
         }
         else { 
             if ((Get-Command 'mkvextract') -and $Paths.InputFile.EndsWith('mkv')) {
-                #Extract chapters if no other streams are copied
+                # Extract chapters if no other streams are copied
                 Write-Verbose "No additional streams selected. Generating chapter file..."
                 $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')"
                 if (!(Test-Path -Path $Paths.ChapterPath -ErrorAction SilentlyContinue)) {
@@ -378,7 +383,7 @@ function Invoke-FFMpeg {
             else { $Paths.ChapterPath = $null }
         }
 
-        #If mkvmerge is available and output stream is mkv, mux streams back together
+        # If mkvmerge is available and output stream is mkv, mux streams back together
         if ((Get-Command 'mkvmerge') -and $Paths.OutputFile.EndsWith('mkv')) {
             # Set the paths needed for mkvmerge
             $muxPaths = @{
@@ -405,46 +410,131 @@ function Invoke-FFMpeg {
 
         Write-Host ""
     }
-    #Two pass encode
+    # Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
-        Write-Host "***** STARTING FFMPEG PASS 1 *****" @progressColors
+        Write-Host "***** STARTING FFMPEG PASS 1 - $Encoder *****" @progressColors
         Write-Host "Generating 1st pass encoder metrics..."
         Write-Banner
 
-        if ((Test-Path $Paths.X265Log) -and [int]([math]::Round((Get-Item $Paths.X265Log).Length / 1MB, 2)) -gt 10) {
+        if (([math]::Round(([System.IO.FileInfo]($Paths.X265Log)).Length / 1MB, 2)) -gt 10) {
             Write-Host "A full x265 first pass log already exists. Proceeding to second pass...`n" @warnColors
         }
         else {
-            ffmpeg $ffmpegArgs[0] -f null - 2>$Paths.LogPath
+            if ($DisableProgress) {
+                ffmpeg $ffmpegArgs[0] -f null - 2>$Paths.LogPath
+            }
+            else {
+                $ffArgsPass1 = $ffmpegArgs[0]
+                $ffArgsPass2 = $ffmpegArgs[1]
+                $log = $Paths.LogPath
+                $out = $Paths.OutputFile
+
+                Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $ffArgsPass1, $log -ScriptBlock {
+                    param ($ffArgsPass1, $log)
+
+                    ffmpeg $ffArgsPass1 -f null - 2>$log
+                } | Out-Null
+
+                $params = @{
+                    InputFile  = $Paths.InputFile
+                    LogPath    = $Paths.LogPath
+                    TestFrames = $TestFrames
+                    JobName    = 'ffmpeg 1st Pass'
+                    SecondPass = $false
+                }
+                Write-EncodeProgress @params
+            } 
         }
 
-        Write-Host
-        Write-Host "***** STARTING FFMPEG PASS 2 *****" @progressColors
+        Write-Host "***** STARTING FFMPEG PASS 2 - $Encoder *****" @progressColors
         Write-Banner
 
-        ffmpeg $ffmpegArgs[1] $Paths.OutputFile 2>>$Paths.LogPath
+        if ($DisableProgress) {
+            ffmpeg $ffmpegArgs[1] $Paths.OutputFile 2>>$Paths.LogPath
+        }
+        else {
+            Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $ffArgsPass2, $out, $log -ScriptBlock {
+                param ($ffArgsPass2, $out, $log)
+    
+                ffmpeg $ffArgsPass2 $out 2>>$log
+            } | Out-Null
+    
+            $params = @{
+                InputFile  = $Paths.InputFile
+                LogPath    = $Paths.LogPath
+                TestFrames = $TestFrames
+                JobName    = 'ffmpeg 2nd Pass'
+                SecondPass = $true
+            }
+            Write-EncodeProgress @params
+        }  
     }
-    #CRF encode
+    # CRF encode
     elseif ($RateControl[0] -eq '-crf') {
         Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
-        Write-Host "***** STARTING FFMPEG *****" @progressColors
+        Write-Host "***** STARTING FFMPEG - $Encoder *****" @progressColors
         Write-Banner
 
-        ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+        if ($DisableProgress) {
+            ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+        }
+        else {
+            Start-ThreadJob -Name ffmpeg -ArgumentList $ffmpegArgs, $Paths.OutputFile, $Paths.LogPath -ScriptBlock {
+                param ($ffmpegArgs, $out, $log)
+    
+                ffmpeg $ffmpegArgs $out 2>$log
+            } | Out-Null
+        }    
     }
-    #One pass encode
+    # One pass encode
     elseif ($RateControl[0] -eq '-b:v') {
         Write-Host "**** 1 Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
-        Write-Host "***** STARTING FFMPEG *****" @progressColors
+        Write-Host "***** STARTING FFMPEG - $Encoder *****" @progressColors
         Write-Banner
 
-        ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+        if ($DisableProgress) {
+            ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+        }
+        else {
+            Start-ThreadJob -Name ffmpeg -ArgumentList $ffmpegArgs, $Paths.OutputFile, $Paths.LogPath -ScriptBlock {
+                param ($ffmpegArgs, $out, $log)
+    
+                ffmpeg $ffmpegArgs $out 2>$log
+            } | Out-Null
+        } 
     }
-    #Should be unreachable. Throw error and exit script if rate control cannot be detected
+    # Should be unreachable. Throw error and exit script if rate control cannot be detected
     else {
-        throw "Rate control method could not be determined from input parameters"
-        exit 2
+        $params = @{
+            Message      = "Rate control method could not be determined from input parameters"
+            TargetObject = $RateControl
+            ErrorId      = 101
+        }
+        Write-Error @params -ErrorAction Stop
     }
+
+    <#
+        TRACK ENCODING PROGRESS
+
+        Periodically grab current frame from log
+        Display progress bar based on total frame count
+        2-pass is called separately
+        TODO: Find a way to call function once for all modes
+    #>
+
+    if ($ffmpegArgs.Count -ne 2 -and !$DisableProgress) {
+        $params = @{
+            InputFile  = $Paths.InputFile
+            LogPath    = $Paths.LogPath
+            TestFrames = $TestFrames
+            JobName    = 'ffmpeg'
+            SecondPass = $false
+        }
+        Write-EncodeProgress @params
+    }
+
+    # Remove ffmpeg jobs
+    Get-Job -State Completed | Remove-Job
 }
 
