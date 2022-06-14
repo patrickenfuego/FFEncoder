@@ -28,16 +28,25 @@ function New-CropFile {
         [int]$Count
     )
 
-    function Get-Duration {
-        $duration = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 `
-            -i $InputPath
-        $duration = $duration / 60
-        if ($duration) { return $duration } else { return $null }
+    # Get the source file duration
+    $duration = ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 `
+        -i $InputPath
+
+    if (!$duration) {
+        $msg = "Null Exception: Could not determine source duration"
+        $params = @{
+            RecommendedAction = "Check source file for corruption"
+            Category          = "InvalidResult"
+            Exception         = [System.ArgumentNullException]::new($msg)
+            CategoryActivity  = "Crop File Generation"
+            TargetObject      = $duration
+            ErrorId           = 11
+        }
+        Write-Error @params -ErrorAction Stop
     }
+    else { $duration = $duration / 60 }
 
-    $duration = Get-Duration
-
-    if (Test-Path -Path $CropFilePath) { 
+    if ([File]::Exists($CropFilePath)) {
         Write-Host "Crop file already exists. Skipping crop file generation..." @warnColors
         return
     }
@@ -88,16 +97,16 @@ function New-CropFile {
             @{ Start = '03:30:00'; Length = '00:00:25'; Duration = 211 }
 
         )
-        #Determine the number of threads based on duration
+        # Determine the number of threads based on duration
         $threadCount = 0
         foreach ($entry in $segments) {
             if ($duration -gt $entry.Duration) { $threadCount++ } else { break }
         }
-        #Create queue and synchronize it for thread safety
+        # Create queue and synchronize it for thread safety
         $queue = [System.Collections.Queue]::new()
         1..$threadCount | ForEach-Object { $queue.Enqueue($_) }
         $syncQueue = [System.Collections.Queue]::Synchronized($queue)
-        #Run the crop jobs
+        # Run the crop jobs
         $cropJob = $segments | ForEach-Object -AsJob -ThrottleLimit 6 -Parallel {
             $sqCopy = $Using:syncQueue
             if ($Using:duration -gt $_.Duration) {
@@ -107,7 +116,7 @@ function New-CropFile {
                 $sqCopy.Dequeue()
             } 
         } 
-        #Update status bar
+        # Update status bar
         while ($cropJob.State -eq 'Running') {
             if ($syncQueue.Count -gt 0) {
                 $status = ((1 / $syncQueue.Count) * 100)
@@ -117,7 +126,8 @@ function New-CropFile {
         }
 
         Write-Progress -Activity "Sending Data to Crop File" -Status "Writing..."
-        $cropJob | Wait-Job | Receive-Job | Out-File -FilePath $CropFilePath -Append | Stop-Job
+        $cropJob | Wait-Job | Receive-Job | 
+            Out-File -FilePath $CropFilePath -Append | Stop-Job -PassThru | Remove-Job
         Write-Progress -Activity "Cropping Complete!" -Completed
     }
 
@@ -125,18 +135,17 @@ function New-CropFile {
     if ((Get-Content $CropFilePath).Count -gt 10) {
         Write-Host "`n** CROP FILE SUCCESSFULLY GENERATED **" @progressColors
     }
-    #If the crop file fails to generate, sleep for 5 seconds and perform a recursive call to try again
+    # If the crop file fails to generate, sleep for 5 seconds and perform a recursive call to try again
     else {
         #base case
         if ($Count -eq 0) { 
             throw "There was an issue creating the crop file. Check the input path and try again."
-            exit 2
         }
         else {
             Write-Host "`nAn error occurred while generating the crop file contents. Retrying in 5 seconds..." @warnColors
             Start-Sleep -Seconds 5
             $Count--
-            if (Test-Path $CropFilePath) { Remove-Item -Path $CropFilePath -Force }
+            if ([System.IO.File]::Exists($CropFilePath)) { Remove-Item -Path $CropFilePath -Force }
             New-CropFile -InputPath $InputPath -CropFilePath $CropFilePath -Count $Count
         }
     }

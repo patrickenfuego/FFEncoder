@@ -42,13 +42,13 @@ function Get-HDRMetadata {
         [bool]$SkipHDR10Plus
     )
 
-    #Constants for mastering display color primaries
+    # Constants for mastering display color primaries
     Set-Variable -Name Display_P3 -Value "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
     Set-Variable -Name BT_2020 -Value "G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
 
     Write-Host "Retrieving HDR Metadata..."
 
-    #Gather HDR metadata using ffprobe
+    # Gather HDR metadata using ffprobe
     $probe = ffprobe -hide_banner -loglevel error -select_streams V -print_format json `
         -show_frames -read_intervals "%+#5" -show_entries "frame=color_space,color_primaries,color_transfer,side_data_list,pix_fmt" `
         -i $InputFile
@@ -66,7 +66,7 @@ function Get-HDRMetadata {
     [string]$colorSpace = $metadata.color_space
     [string]$colorPrimaries = $metadata.color_primaries
     [string]$colorTransfer = $metadata.color_transfer
-    #Compares the red coordinates to determine the mastering display color primaries
+    # Compares the red coordinates to determine the mastering display color primaries
     if ($metadata.side_data_list[0].red_x -match "35400/\d+" -and 
         $metadata.side_data_list[0].red_y -match "14600/\d+") {
         $masterDisplayStr = $BT_2020
@@ -76,13 +76,13 @@ function Get-HDRMetadata {
         $masterDisplayStr = $Display_P3
     }
     else { throw "Unknown mastering display colors found. Only BT.2020 and Display P3 are supported." }
-    #HDR min and max luminance values
+    # HDR min and max luminance values
     [int]$minLuma = $metadata.side_data_list[0].min_luminance -replace "/.*", ""
     [int]$maxLuma = $metadata.side_data_list[0].max_luminance -replace "/.*", ""
-    #MAx content light level and max frame average light level
+    # MAx content light level and max frame average light level
     $maxCLL = $metadata.side_data_list[1].max_content
     $maxFAL = $metadata.side_data_list[1].max_average
-    #Check if input has HDR10+ metadata and generate json if skip not present
+    # Check if input has HDR10+ metadata and generate json if skip not present
     if (!$SkipHDR10Plus) {
         $isHDR10Plus = Confirm-HDR10Plus -InputFile $InputFile -HDR10PlusPath $HDR10PlusPath
     }
@@ -90,7 +90,7 @@ function Get-HDRMetadata {
         Write-Verbose "Skipping HDR10+"
         $isHDR10Plus = $false 
     }
-    #Check if input has Dolby Vision metadata and generate rpu if skip not present
+    # Check if input has Dolby Vision metadata and generate rpu if skip not present
     if (!$SkipDolbyVision) {
         $isDV = Confirm-DolbyVision -InputFile $InputFile -DolbyVisionPath $DolbyVisionPath
     }
@@ -113,10 +113,11 @@ function Get-HDRMetadata {
         HDR10Plus      = $isHDR10Plus
     }
     if ($null -eq $metadataObj) {
-        #Throw a terminating error
+        # Throw a function terminating error
+        $msg = 'HDR object is null - ffprobe may have failed to retrieve the data. Results might be incorrect'
         $PSCmdlet.ThrowTerminatingError(
             [System.Management.Automation.ErrorRecord]::new(
-                ([System.ArgumentNullException]'HDR object is null. ffprobe may have failed to retrieve the data'),
+                ([System.ArgumentNullException]$msg),
                 'metadataObj',
                 [System.Management.Automation.ErrorCategory]::InvalidResult,
                 $metadataObj
@@ -125,7 +126,7 @@ function Get-HDRMetadata {
     }
     else {
         Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **" @progressColors
-        Write-Host
+        Write-Host ""
         return $metadataObj
     }
 }

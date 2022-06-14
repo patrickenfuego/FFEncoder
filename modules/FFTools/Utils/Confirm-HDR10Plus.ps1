@@ -1,3 +1,5 @@
+using namespace System.IO
+
 <#
     .SYNOPSIS 
         Utility function to check for HDR10+ metadata and generate a json file if found
@@ -19,49 +21,48 @@ function Confirm-HDR10Plus {
         [string]$HDR10PlusPath
     )
 
-
-    #Load parser path for UNIX systems
+    # Load parser path for UNIX systems
     if ($IsLinux -or $IsMacOS) {
         $parserPath = $IsLinux ?
-        (Join-Path ((Get-Item $PSScriptRoot).Parent.Parent.Parent) -ChildPath "bin/linux/hdr10plus_tool") :
-        (Join-Path ((Get-Item $PSScriptRoot).Parent.Parent.Parent) -ChildPath "bin/mac/hdr10plus_tool")
-        
-        #Verify that the parser path exists
-        if (!(Test-Path -Path $parserPath)) {
+        ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/linux/hdr10plus_tool")) :
+        ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/mac/hdr10plus_tool"))
+
+        # Verify that the parser path exists
+        if (![File]::Exists($parserPath)) {
             Write-Warning "Could not verify path to hdr10plus_parser. Metadata will be skipped"
             return $false
         }
-        #Change permissions and escape UNIX path
+        # Change permissions and escape UNIX path
         bash -c "chmod u+x '$parserPath'"
         $parserPath = [regex]::Escape($parserPath)
     }
-    #Add parser to PATH on Windows systems
+    # Add parser to PATH on Windows systems
     else {
-        $path = Join-Path ((Get-Item $PSScriptRoot).Parent.Parent.Parent) -ChildPath "bin\windows"
+        $path = [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin\windows")
         $env:PATH += ";$path"
 
-        #Verify that the parser is available via PATH
+        # Verify that the parser is available via PATH
         if (!(Get-Command 'hdr10plus_tool' -ErrorAction Ignore)) {
             Write-Warning "hdr10plus_parser parser not found in PATH. Metadata will be skipped"
             return $false
         }
     }
 
-    #UNIX platforms. Escape meta characters for bash shell
-    #Verifies if the source is HDR10 compatible
+    # *NIX platforms. Escape meta characters for bash shell
+    # Verifies if the source is HDR10+ compatible
     if ($IsLinux -or $IsMacOS) {
         $InputFile = [regex]::Escape($InputFile)
-        $res = bash -c "ffmpeg -loglevel panic -i $InputFile -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath extract -"
+        $res = bash -c "ffmpeg -loglevel panic -i $InputFile -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath extract -" 2>&1
     }
-    #Windows platform. Requires cmd
-    #Verifies if the source is HDR10+ compatible
+    # Windows platform. Requires cmd
+    # Verifies if the source is HDR10+ compatible
     else {
-        $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -"
+        $res = cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -" 2>&1
     }
-    #If last command completed successfully and found metadata, generate json file
-    if ($? -and $res -eq "Dynamic HDR10+ metadata detected.") {
+    # If last command completed successfully and found metadata, generate json file
+    if ($res -eq "Dynamic HDR10+ metadata detected.") {
         Write-Host "HDR10+ SEI metadata found..." -NoNewline
-        if (Test-Path -Path $HDR10PlusPath) { Write-Host "JSON metadata file already exists" @warnColors }
+        if ([File]::Exists($HDR10PlusPath)) { Write-Host "JSON metadata file already exists" @warnColors }
         else {
             Write-Host "Generating JSON file" @emphasisColors
             if ($IsLinux -or $IsMacOS) {
