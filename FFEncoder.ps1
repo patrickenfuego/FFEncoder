@@ -1,3 +1,5 @@
+using namespace System.IO
+
 <#
     .SYNOPSIS
         Cross-platform script for encoding HD/FHD/UHD video content using ffmpeg and x265
@@ -115,36 +117,54 @@
     .PARAMETER Pass
         The number of passes to perform when running an average bitrate encode using the VIdeoBitrate parameter
     .PARAMETER FirstPassType
-        Tuning option for the first pass of a two pass encode. Accepted values (from slowest to fastest): Default/d, Custom/c, Fast/f. Default value is 'Default'/'d'
+        Tuning option for the first pass of a two pass encode. Accepted values (from slowest to fastest): Default/d, Custom/c, Fast/f. Default value is 'Default'/'d'.
+        x265 only, as x264 automatically reduces certain settings during the first pass unless the slow-firstpass parameter is used
     .PARAMETER Deblock
         Deblock filter settings. The first value represents strength, and the second value represents frequency
     .PARAMETER AqMode
-        x265 AQ mode setting. Ranges from 0 (disabled) - 4. See x265 documentation for more info on AQ Modes and how they work
+        x265 AQ mode setting. Ranges from 0 (disabled) - 3 (x264) / 4 (x265). See encoder documentation for more info on AQ Modes and how they work
     .PARAMETER AqStrength
         Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates
     .PARAMETER PsyRd
-        Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info
+        Psycho-visual enhancement. Higher values of PsyRd/PsyRDO strongly favor similar energy over blur.
+        x265: Expects a decimal value
+            ex: 1.00
+        x264: You may pass psy-rdo and psy-trellis as one value like you normally would (MUST be quoted or errors will occur), or pass only psy-rdo
+            ex: '1.00,0.05' - Passing both psy-rdo and psy-trellis
+            ex: 1.00        - Passing only psy-rdo
     .PARAMETER PsyRdoq
-        Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info
+        Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd.
+        x264: This parameter can also be used for psy-trellis
     .PARAMETER NoiseReduction
-        ScaleFilter to help reduce high frequency noise (such as film grain). First value represents intra frames, and the second value represents inter frames
+        Filter to help reduce high frequency noise (such as film grain). 
+        x265: First value represents intra frames, and the second value represents inter frames
+        x264: Pass a single integer value
     .PARAMETER TuDepth
-        Recursion depth for transform units (TU). Accepted values are 1-4. First value represents intra depth, and the second value represents inter depth. Default values are 1, 1
+        Recursion depth for transform units (TU). Accepted values are 1-4. First value represents intra depth, and the second value represents inter depth. 
+        Default values are 1, 1 (x265 only)
     .PARAMETER LimitTu
-        Early exit condition for TU depth recursion. Accepted values are 0-4. Default is 0
+        Early exit condition for TU depth recursion. Accepted values are 0-4. Default is 0 (x265 only)
     .PARAMETER BFrames
         The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use
     .PARAMETER BIntra 
-        Enables the evaluation of intra modes in B slices. Accepted values are 0 (off) or 1 (on). Has a minor impact on performance 
+        Enables the evaluation of intra modes in B slices. Accepted values are 0 (off) or 1 (on). Has a minor impact on performance (x265 only)
     .PARAMETER Subme
-        The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a large performance impact 
+        The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a large performance impact
+    .PARAMETER Merange
+        Sets the motion estimation range. Higher values result in a more thorough motion vector search during inter-frame prediction
+    .PARAMETER Ref
+        Sets the number of reference frames used. Default value is based on the preset used. For x264, this may affect hardware compatibility
+    .PARAMETER Tree
+        Enable or disable encoder-specific motion vector lookahead algorithm. 1 is enabled, 0 is disabled
     .PARAMETER StrongIntraSmoothing
-        Enables/disables strong-intra-smoothing. Default enabled
-    .PARAMETER FrameThreads
-        Set the number of frame threads used by the encoder. More threads equate to faster encoding, but with decreased quality. If no value is passed, the encoder default
+        Enables/disables strong-intra-smoothing. Default enabled (x265 only)
+    .PARAMETER RCLookahead
+        Sets the rate control lookahead size. Higher values will use more memory, but provide better compression efficiency
+    .PARAMETER Threads
+        Set the number of threads used by the encoder. More threads equate to faster encoding, but with slightly decreased quality. If no value is passed, the encoder default
         is used based on the number of logical CPU cores available to the system. If you aren't sure what this does, don't set it
     .PARAMETER Level
-        Specifies the encoder level to use. For Dolby Vision encodes, default value is 5.1. Otherwise, the default value is unset (let the encoder decide)
+        Specifies the encoder level to use. Default value is unset (let the encoder decide)
     .PARAMETER VBV
         Sets video buffering verifier options. If passed, requires 2 arguments in the following order: (vbv-bufsize, vbv-maxrate). Default is unset (decided by the encoder level)
     .PARAMETER QComp
@@ -154,8 +174,8 @@
     .PARAMETER FFMpegExtra
         Pass additional settings to ffmpeg that are not supplied by the script. Accepts single array arguments or hashtables in the form of <key = value>.
         WARNING: The script does not check for valid syntax, and assumes you know what you're doing
-    .PARAMETER x265Extra
-        Pass additional settings to the x265 encoder that are not supplied by the script. Settings must be passed as a hashtable in the form of <key = value>.
+    .PARAMETER EncoderExtra
+        Pass additional settings to the encoders that are not supplied by the script. Settings must be passed as a hashtable in the form of <key = value>.
         WARNING: The script does not check for valid syntax, and assumes you know what you're doing
     .PARAMETER Scale
         Upscale/downscale input to a different resolution. Compatible arguments are scale (ffmpeg default) or zscale (requires libzimg library)
@@ -166,12 +186,14 @@
     .PARAMETER Resolution
         Upscale/downscale resolution used with the -Scale parameter. Default value is 1080p (1920 x 1080)
     .PARAMETER SkipDolbyVision
-        Skip DV encoding, even if metadata is present
+        Skip Dolby Vision encoding, even if metadata is present
     .PARAMETER SkipHDR10Plus
         Skip HDR10+ encoding, even if metadata is present
     .PARAMETER ExitOnError
-        Converts some non-terminating errors to terminating ones, such as input validation prompts. This can prevent blocking on automation when one
+        Converts certain non-terminating errors to terminating ones, such as input validation prompts. This can prevent blocking on automation when one
         running instance encounters an error
+    .PARAMETER DisableProgress
+        Switch to disable the progress bar during encoding
     .PARAMETER RemoveFiles
         Switch to delete extraneous files generated by the script (crop file, log file, etc.). The input, output, and report files will not be deleted
     .PARAMETER Deinterlace
@@ -192,6 +214,12 @@ param (
     [Parameter(Mandatory = $true, ParameterSetName = "Help")]
     [Alias("H", "/?", "?")]
     [switch]$Help,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateSet("x264", "x265")]
+    [Alias("Enc")]
+    [string]$Encoder = "x265",
 
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "Pass")]
@@ -237,8 +265,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("all", "a", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", "pol", 
-        "chi", "kor", "gre", "rum", "rus", "swe")]
+    [ValidateSet("all", "a", "copyall", "ca", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", 
+        "pol", "chi", "kor", "gre", "rum", "rus", "swe")]
     [Alias("S", "Subs")]
     [string]$Subtitles = "default",
 
@@ -310,20 +338,36 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0.0, 5.0)]
-    [Alias("PRD")]
-    [double]$PsyRd = 2.00,
+    [Alias("PRD", "PsyRDO")]
+    [string]$PsyRd,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0.0, 50.0)]
-    [Alias("PRQ")]
+    [Alias("PRQ", "PsyTrellis")]
     [double]$PsyRdoq,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(1, 16)]
+    [int]$Ref,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(0, 1)]
+    [Alias("MBTree", "CUTree")]
+    [int]$Tree = 1,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(1, 32768)]
+    [Alias("MR")]
+    [int]$Merange,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateRange(0, 2000)]
-    [ValidateCount(2, 2)]
+    [ValidateCount(1, 2)]
     [Alias("NR")]
     [int[]]$NoiseReduction = @(0, 0),
 
@@ -361,7 +405,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0.5, 1.0)]
+    [ValidateRange(0.0, 1.0)]
     #[Alias("Q")]
     [double]$QComp = 0.60,
 
@@ -379,7 +423,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0, 7)]
+    [ValidateRange(0, 11)]
     [Alias("SM", "Subpel")]
     [int]$Subme,
 
@@ -391,7 +435,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet('1', '2', '2.1', '21', '3.1', '4', '4.1', '41', '5', '5.1', '51',
+    [ValidateSet('1', '1b', '2', '1.1', '1.2', '1.3', '2.1', '21', '2.2', '3.1', '3.2', '4', '4.1', '4.2', '41', '5', '5.1', '51',
         '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
     [Alias('L')]
     [string]$Level,
@@ -403,9 +447,15 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(1, 8)]
-    [Alias("FT")]
-    [int]$FrameThreads,
+    [ValidateRange(1, 64)]
+    [Alias("FrameThreads")]
+    [int]$Threads,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateRange(0, 250)]
+    [Alias("RCL", "Lookahead")]
+    [int]$RCLookahead,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -414,8 +464,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("XE", "x265")]
-    [hashtable]$x265Extra,
+    [Alias("Extra")]
+    [hashtable]$EncoderExtra,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
@@ -476,6 +526,11 @@ param (
     [alias("Exit")]
     [switch]$ExitOnError,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [alias("NoProgressBar")]
+    [switch]$DisableProgress,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
@@ -497,51 +552,40 @@ $console.WindowTitle = 'FFEncoder'
 # Define Variables                                      #                   
 #########################################################
 
-#Change these to modify the default path for generated files when a regex match cannot be made
-$macDefaultPath = '~/Movies'
-$linuxDefaultPath = '~/Videos'
-$windowsDefaultPath = [Environment]::GetFolderPath('MyVideos')
+# $banner_old = @'
+# _____  _      _               _   _         _____ _____ _____                     _           
+# |  ___(_)_ __(_)_ __   __ _  | | | |_ __   |  ___|  ___| ____|_ __   ___ ___   __| | ___ _ __ 
+# | |_  | | '__| | '_ \ / _` | | | | | '_ \  | |_  | |_  |  _| | '_ \ / __/ _ \ / _` |/ _ \ '__|
+# |  _| | | |  | | | | | (_| | | |_| | |_) | |  _| |  _| | |___| | | | (_| (_) | (_| |  __/ |   
+# |_|   |_|_|  |_|_| |_|\__, |  \___/| .__/  |_|   |_|   |_____|_| |_|\___\___/ \__,_|\___|_|   
+#                       |___/        |_|     
+# '@
 
-$banner = @'
-_____  _      _               _   _         _____ _____ _____                     _           
-|  ___(_)_ __(_)_ __   __ _  | | | |_ __   |  ___|  ___| ____|_ __   ___ ___   __| | ___ _ __ 
-| |_  | | '__| | '_ \ / _` | | | | | '_ \  | |_  | |_  |  _| | '_ \ / __/ _ \ / _` |/ _ \ '__|
-|  _| | | |  | | | | | (_| | | |_| | |_) | |  _| |  _| | |___| | | | (_| (_) | (_| |  __/ |   
-|_|   |_|_|  |_|_| |_|\__, |  \___/| .__/  |_|   |_|   |_____|_| |_|\___\___/ \__,_|\___|_|   
-                      |___/        |_|     
+$banner1 = @'
+             _____  _      _               _   _                   
+             |  ___(_)_ __(_)_ __   __ _  | | | |_ __    
+             | |_  | | '__| | '_ \ / _` | | | | | '_ \  
+             |  _| | | |  | | | | | (_| | | |_| | |_) |    
+             |_|   |_|_|  |_|_| |_|\__, |  \___/| .__/   
+                                   |___/        |_|         
+
+'@
+
+$banner2 = @'
+███████ ███████ ███████ ███    ██  ██████  ██████  ██████  ███████ ██████  
+██      ██      ██      ████   ██ ██      ██    ██ ██   ██ ██      ██   ██ 
+█████   █████   █████   ██ ██  ██ ██      ██    ██ ██   ██ █████   ██████  
+██      ██      ██      ██  ██ ██ ██      ██    ██ ██   ██ ██      ██   ██ 
+██      ██      ███████ ██   ████  ██████  ██████  ██████  ███████ ██   ██ 
+
 '@
 
 #########################################################
 # Function Definitions                                  #        
 #########################################################
 
-#Returns an object with OS related information
-function Get-OperatingSystem {
-    if ($isMacOs) {
-        $osInfo = @{
-            OperatingSystem = "MacOS"
-            DefaultPath     = $macDefaultPath
-        } 
-    }
-    elseif ($isLinux) {
-        $osInfo = @{
-            OperatingSystem = "Linux"
-            DefaultPath     = $linuxDefaultPath
-        }
-    }
-    elseif ($env:OS -match "Windows") {
-        $osInfo = @{
-            OperatingSystem = "Windows"
-            DefaultPath     = $windowsDefaultPath
-        }
-    }
-    else { throw "Fatal error...could not detect operating system." }
-
-    return $osInfo
-}
-
-#Returns an object containing the paths needed throughout the script
-function Set-ScriptPaths {
+# Returns an object containing the paths needed throughout the script
+function Set-ScriptPaths ([hashtable]$OS) {
     if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.(?<ext>[a-z 2 4]+)") {
         $root = $Matches.root
         $title = $Matches.title
@@ -551,28 +595,27 @@ function Set-ScriptPaths {
             $oTitle = $Matches.oTitle
             $oExt = $Matches.oExt
         }
-        #If regex match can't be made on the output path, use input matches instead
+        # If regex match can't be made on the output path, use input matches instead
         else {
             $oRoot = $root
             $oTitle = $title
             $oExt = $ext
         }
-        #Creating path strings used throughout the script
-        $cropPath = Join-Path -Path $root -ChildPath "$title`_crop.txt"
-        $logPath = Join-Path -Path $root -ChildPath "$title`_encode.log"
-        $x265Log = Join-Path -Path $root -ChildPath "x265_2pass.log"
-        $stereoPath = Join-Path -Path $root -ChildPath "$oTitle`_stereo.$oExt"
-        $reportPath = Join-Path -Path $root -ChildPath "$oTitle.rep"
-        $hdr10PlusPath = Join-Path -Path $root -ChildPath "metadata.json"
-        $dvPath = Join-Path -Path $root -ChildPath "rpu.bin"
-        $hevcPath = Join-Path -Path $oRoot -ChildPath "$oTitle.hevc"
+        # Creating path strings used throughout the script
+        $cropPath = [Path]::Join($root, "$title`_crop.txt")
+        $logPath = [Path]::Join($root, "$title`_encode.log")
+        $x265Log = [Path]::Join($root, "x265_2pass.log")
+        $stereoPath = [Path]::Join($root, "$oTitle`_stereo.$oExt")
+        $reportPath = [Path]::Join($root, "$oTitle.rep")
+        $hdr10PlusPath = [Path]::Join($root, "metadata.json")
+        $dvPath = [Path]::Join($root, "rpu.bin")
+        $hevcPath = [Path]::Join($oRoot, "$oTitle.hevc")
     }
-    #Regex match could not be made on the folder pattern
+    # Regex match could not be made on the folder pattern
     else {
         Write-Host "Could not match root folder pattern. Using OS default path instead..."
-        $os = Get-OperatingSystem
         Write-Host $os.OperatingSystem "detected. Using path: <$($os.DefaultPath)>"
-        #Creating path strings used throughout the script
+        # Creating path strings if regex match fails - use OS default
         $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
         $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
         $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
@@ -583,8 +626,15 @@ function Set-ScriptPaths {
         $hevcPath = Join-Path -Path $os.DefaultPath -ChildPath "hevc.hevc"
     }
 
-    Write-Host "Crop file path is: " -NoNewline 
-    Write-Host "<$cropPath>" @emphasisColors
+    if ($psReq) {
+        Write-Host "Crop file path is: $($PSStyle.Foreground.Cyan+$PSStyle.Underline)$cropPath"
+        Write-Host ""
+    }
+    else {
+        Write-Host "Crop file path is: " -NoNewline
+        Write-Host "<$cropPath>" @emphasisColors
+        Write-Host ""
+    }
 
     $pathObject = @{
         InputFile  = $InputPath
@@ -626,46 +676,59 @@ if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit 0 }
 if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
 
 # Verify PowerShell version
-if (!(Get-Command 'pwsh') -or (Get-Command 'pwsh').Version -lt [system.version]'7.0.0.0') { 
+if (!(Get-Command 'pwsh') -or (Get-Command 'pwsh').Version -lt [version]'7.0.0.0') { 
     $params = @{
-        Message   = "The script requires PowerShell 7.0 or greater"
         Category  = "NotInstalled"
-        Exception = [System.ExecutionEngineException]::new()
+        Exception = [System.ExecutionEngineException]::new("The script requires PowerShell 7.0 or greater")
         ErrorId   = -1
     }
     Write-Error @params -ErrorAction Stop
 }
 # If pwsh 7 is installed, but currently running from Windows PowerShell context
-elseif ($PSVersionTable.PSVersion -lt [system.version]'7.0.0.0') {
+elseif ($PSVersionTable.PSVersion -lt [version]'7.0.0.0') {
     $msg = "Currently running with PowerShell $($PSVersionTable.PSVersion.Major). Switch to PowerShell 7"
     $params = @{
-        Message   = $msg
         Category  = "InvalidOperation"
-        Exception = [System.ExecutionEngineException]::new()
+        Exception = [System.ExecutionEngineException]::new($msg)
         ErrorId   = -2
     }
     Write-Error @params -ErrorAction Stop
 }
 
-# Import FFTools module
-Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
+# Check if system meets requirements for $PSStyle
+$Global:psReq = ($PSVersionTable.PSVersion -ge [version]'7.2.0.0') ? $true : $false
 
-$stopwatch = [System.Diagnostics.stopwatch]::StartNew()
+# Import FFTools module
+Import-Module -Name "$PSScriptRoot\modules\FFTools"
+
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $startTime = (Get-Date).ToLocalTime()
 
+# Write the welcome banner
 Write-Host "----------------------------------------------------------------------------------------------" @emphasisColors
-Write-Host $banner -ForegroundColor Magenta -BackgroundColor Black
+if ($psReq) {
+    Write-Host "$($PSStyle.Foreground.FromRGB(92, 255, 114))$($PSStyle.Bold)$($banner1)$($PSStyle.Reset)"
+    Write-Host "$($PSStyle.Foreground.FromRGB(97, 30, 164))$($PSStyle.Bold)$($banner2)$($PSStyle.Reset)"
+}
+else {
+    $bColors = @{ ForegroundColor = 'Magenta'; BackgroundColor = 'Black' }
+    Write-Host $banner1 @bColors
+    Write-Host $banner2 @bColors
+}
 Write-Host "----------------------------------------------------------------------------------------------" @emphasisColors
 
 Write-Host "Start Time: $startTime`n"
+
 # Generating paths to various files
-$paths = Set-ScriptPaths
+$paths = Set-ScriptPaths -OS $osInfo
 # if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
-if (Test-Path -Path $paths.OutputFile) { Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" }
+if ([File]::Exists($paths.OutputFile)) { 
+    Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" 
+}
 else { 
-    if (!(Test-Path (Split-Path $paths.OutputFile -Parent))) {
+    if (![Directory]::Exists($(Split-Path $paths.OutputFile -Parent))) {
         Write-Host "Creating output path directory structure..." @progressColors
-        New-Item -Path (Split-Path $paths.OutputFile -Parent) -ItemType Directory > $null
+        [Directory]::CreateDirectory($(Split-Path $paths.OutputFile -Parent)) > $null
         if (!$?) { 
             Write-Error "Could not create the specified output directory" -ErrorAction Stop
         }
@@ -679,9 +742,10 @@ else {
         - TODO: Too complicated for parameter sets...try dynamic params?
     Primary audio type if transcoding was selected
         - Warn if transcoding lossy -> lossy
+    x264 or x265 settings that use different value ranges
 #>
 
-#Verify test parameters and prompt if one is missing (unless ExitOnError is present)
+# Verify test parameters and prompt if one is missing (unless ExitOnError is present)
 if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
     $params = @{
         Message          = "No test duration was specified using -TestFrames"
@@ -693,7 +757,7 @@ if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
     
     if (!$PSBoundParameters['ExitOnError']) {
         Write-Error @params
-        #prompt to enter TestFrames. Loop until an integer is entered
+        # Prompt to enter TestFrames. Loop until an integer is entered
         do {
             $TestFrames = Read-Host "Enter the number of test frames to use"
         } until (($TestFrames -as [int]) -is [int])
@@ -702,7 +766,7 @@ if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
     else { Write-Error @params -ErrorAction Stop }
 }
 
-#If scale is used, verify arguments and handle errors
+# If scale is used, verify arguments and handle errors
 if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and 
     !$PSBoundParameters['Scale']) {
 
@@ -759,25 +823,32 @@ elseif ($PSBoundParameters['Scale'] -and $PSBoundParameters['ScaleFilter']) {
 
 # Validate input audio
 $res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 `
-        -show_entries "stream=codec_name,profile" `
-        -i $Paths.InputFile
+    -show_entries "stream=codec_name,profile" `
+    -i $Paths.InputFile
 
 if ($res) {
     $lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ? 
-                $true : $false
+    $true : $false
     $test1 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio -match $_ })
     $test2 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio2 -match $_ })
     if (!$lossless -and (!$test1 -or !$test2)) {
         $msg = "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended " +
-                "(If you're stream copying a codec by name, you can ignore this)"
+        "(If you're stream copying a codec by name, ignore this)"
         Write-Warning $msg
     }
+}
+elseif (!$res -and ($PSBoundParameters['Audio'] -or $PSBoundParameters['Audio2'])) {
+    Write-Warning "No audio streams were found in the source file. Audio parameters will be ignored"
+    $Audio = 'none'
+    $Audio2 = 'none'
 }
 
 <#
     CROP FILE GENERATION
+    HDR ELIGIBILITY VERIFICATION
 
     If crop arguments are passed via FFMpegExtra, don't generate crop file
+    If HDR metadata is present but x264 is selected, exit on error (not supported)
 #>
 
 $skipCropFile = $false
@@ -793,19 +864,14 @@ if ($PSBoundParameters['FFMpegExtra']) {
 if ($skipCropFile) {
     Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
     Write-Host ""
-    #Check if source is 4K for HDR metadata
-    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
+    # Check if source is 4K for HDR metadata
+    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $InputPath
     $cropDim = ($res -like '3840x2160?') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
 }
 else {
     New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
     # Calculating the crop values. Re-throw terminating error if one occurs
-    try {
-        $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution
-    }
-    catch {
-        $PSCmdlet.ThrowTerminatingError($_)
-    }
+    $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution
 }
 
 <#
@@ -857,6 +923,7 @@ $audioArray = @($audioHash1, $audioHash2)
 #>
 
 $ffmpegParams = @{
+    Encoder         = $Encoder
     CropDimensions  = $cropDim
     AudioInput      = $audioArray
     Subtitles       = $Subtitles
@@ -871,17 +938,21 @@ $ffmpegParams = @{
     NoiseReduction  = $NoiseReduction
     NLMeans         = $NLMeans
     TuDepth         = $TuDepth
-    LimitTu         = $LimitTu    
+    LimitTu         = $LimitTu
+    Tree            = $Tree
+    Merange         = $Merange
+    Ref             = $Ref 
     Qcomp           = $QComp
     BFrames         = $BFrames
     BIntra          = $BIntra
     Subme           = $Subme 
     IntraSmoothing  = $StrongIntraSmoothing
-    FrameThreads    = $FrameThreads
+    Threads         = $Threads
+    RCLookahead     = $RCLookahead
     Level           = $Level
     VBV             = $VBV
     FFMpegExtra     = $FFMpegExtra
-    x265Extra       = $x265Extra
+    EncoderExtra    = $EncoderExtra
     Scale           = $scaleHash
     Paths           = $paths
     Verbosity       = $vLevel
@@ -889,9 +960,24 @@ $ffmpegParams = @{
     TestStart       = $TestStart
     SkipDolbyVision = $SkipDolbyVision
     SkipHDR10Plus   = $SkipHDR10Plus
+    DisableProgress = $DisableProgress
 }
 
-Invoke-FFMpeg @ffmpegParams
+try {
+    Invoke-FFMpeg @ffmpegParams
+}
+catch {
+    $params = @{
+        Message           = "An error occurred before ffmpeg could be invoked. Message:`n$($_.Exception.Message)"
+        RecommendedAction = 'Correct the Error Message'
+        Category          = "InvalidArgument"
+        CategoryActivity  = "FFmpeg Function Invocation"
+        TargetObject      = $ffmpegParams
+        ErrorId           = 55
+    }
+
+    Write-Error @params -ErrorAction Stop
+}
 
 <#
     POST ENCODE
@@ -907,7 +993,7 @@ Invoke-FFMpeg @ffmpegParams
 Start-Sleep -Milliseconds 500
 
 $skipStereo = $false
-$mid = 0
+$mId = 0
 # Check for running jobs
 $deeRunning = (Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
 $stereoRunning = (Get-Job -Name 'Stereo Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
@@ -917,11 +1003,11 @@ $output = $Paths.OutputFile -replace '^(.+)\.(.+)', '$1 (1).$2'
 # Handle dee encoded audio. If a stereo track was created, add it as well
 if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('mkv')) {
     # Check for stereo and add it
-    if ((Test-Path $Paths.StereoPath -ErrorAction SilentlyContinue) -and !$stereoRunning) {
+    if ([File]::Exists($Paths.StereoPath) -and !$stereoRunning) {
         $skipStereo = $true
-        Stop-Job -Name 'Stereo Encoder' -PassThru | Remove-Job -ErrorAction SilentlyContinue
+        Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
     }
-    elseif ((Test-Path $Paths.StereoPath -ErrorAction SilentlyContinue) -and $stereoRunning) {
+    elseif ([File]::Exists($Paths.StereoPath) -and $stereoRunning) {
         Write-Host "Stereo Encoder background job is still running. Mux the file manually" @warnColors
     }
     
@@ -930,13 +1016,13 @@ if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('
         Write-Host "Dee Encoder background job is still running. Mux the file manually" @warnColors
     }
     else {
-        Stop-Job -Name 'Dee Encoder' -PassThru | Remove-Job
+        Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
 
         if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
             #Find the dee encoded output file
             $deePath = Get-ChildItem $(Split-Path $Paths.OutputFile -Parent) |
-                           Where-Object { $_ -like '*.*3' -or $_ -like '*.thd' } | 
-                               Select-Object -First 1 -ExpandProperty FullName
+                Where-Object { $_ -like '*.*3' -or $_ -like '*.thd' } | 
+                    Select-Object -First 1 -ExpandProperty FullName
 
             $muxPaths = @{
                 Input    = $paths.OutputFile
@@ -947,11 +1033,11 @@ if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('
             }
             if ($skipStereo) {
                 $muxPaths.Stereo = $paths.StereoPath
-                $mid = 3
+                $mId = 3
             }
-            else { $mid = 2 }
+            else { $mId = 2 }
 
-            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mid
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mId
         }
         # If no mkvmerge, mux with ffmpeg
         else {
@@ -1005,7 +1091,7 @@ if ((@('copy', 'c', 'copyall', 'ca') -contains $Audio) -and $Stereo2 -and !$skip
                 Title    = $paths.Title
                 Language = $Paths.Language
             }
-            $mid = 1
+            $mId = 1
             Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1
         }
         # if not mkv or no mkvmerge, mux with ffmpeg
@@ -1016,8 +1102,8 @@ if ((@('copy', 'c', 'copyall', 'ca') -contains $Audio) -and $Stereo2 -and !$skip
 }
 
 # Verify if temp output file exists and delete it if it is at least as large or larger than original output
-if ((Test-Path $output -ErrorAction SilentlyContinue) -and 
-    ((Get-Item $output).Length -ge (Get-Item $Paths.OutputFile).Length)) { 
+if ([File]::Exists($output) -and 
+    (([FileInfo]($output)).Length -ge ([FileInfo]($Paths.OutputFile)).Length)) {
 
     Remove-Item $Paths.OutputFile -Force
 
@@ -1025,11 +1111,12 @@ if ((Test-Path $output -ErrorAction SilentlyContinue) -and
         Write-Host ""
         Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors 
     }
+    #[File]::Move($output, "$($paths.Title).$($paths.Extension)")
     Rename-Item $output "$($paths.Title).$($paths.Extension)"
 }
 
 # Display a quick view of the finished log file, the end time and total encoding time
-Get-Content -Path $Paths.LogPath -Tail 8
+($Encoder -eq 'x265') ? (Get-Content -Path $Paths.LogPath -Tail 8) : (Get-Content -Path $Paths.LogPath -Tail 19)
 $endTime = (Get-Date).ToLocalTime()
 Write-Host "`nEnd time: $endTime"
 $stopwatch.Stop()
@@ -1038,7 +1125,14 @@ $stopwatch.Stop()
 # Generate the report file if parameter is present
 if ($PSBoundParameters['GenerateReport']) {
     $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
-    Write-Report -DateTimes @($startTime, $endTime) -Duration $stopwatch -Paths $paths -TwoPass $twoPass
+    $params = @{
+        DateTimes = @($startTime, $endTime)
+        Duration  = $stopwatch
+        Paths     = $paths
+        TwoPass   = $twoPass
+        Encoder   = $Encoder
+    }
+    Write-Report @params
 }
 
 # Delete extraneous files if switch is present
@@ -1046,7 +1140,7 @@ if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
     Get-ChildItem -Path $paths.Root | ForEach-Object { 
-        Remove-Item -LiteralPath $_.Fullname -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin"
+        Remove-Item -LiteralPath $_.FullName -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin"
     }
 }
 

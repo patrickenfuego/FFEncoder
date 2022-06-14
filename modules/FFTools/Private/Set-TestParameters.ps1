@@ -4,6 +4,8 @@
     .DESCRIPTION
         Logic for setting test parameters, such as the number of test frames
         and the test encode starting point
+    .NOTES
+        Accepts input arrays as a reference
 #>
 
 function Set-TestParameters {
@@ -19,10 +21,10 @@ function Set-TestParameters {
         [string]$TestStart,
 
         [Parameter(Mandatory = $true, Position = 3)]
-        [System.Collections.ArrayList]$PrimaryArguments,
+        [ArrayList]$PrimaryArguments,
 
         [Parameter(Mandatory = $false, Position = 4)]
-        [System.Collections.ArrayList]$ExtraArguments
+        [ArrayList]$ExtraArguments
     )
 
     $a = @('-frames:v', $TestFrames, '-shortest')

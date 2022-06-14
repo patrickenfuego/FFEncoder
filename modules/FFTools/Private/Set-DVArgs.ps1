@@ -1,3 +1,5 @@
+using namespace System.Collections
+
 <#
     .SYNOPSIS
         Private function that sets encoding array arguments for Dolby Vision
@@ -5,13 +7,14 @@
         This function translates ffmpeg type syntax to x265 syntax to keep a consistent feel throughout the script.
         This function is a proxy function for Set-FFMpegArgs
     .NOTES
-        This function is needed because ffmpeg does not currently support RPU files for DV encoding
+        This function is needed because ffmpeg still does not fully support DV encoding.
+        Requires x265 executable
 #>
 
 function Set-DVArgs {
     [CmdletBinding()]
     param (
-        # Audo parameters
+        # Audio parameters
         [Parameter(Mandatory = $true)]
         [array]$Audio,
 
@@ -28,11 +31,11 @@ function Set-DVArgs {
         [Parameter(Mandatory = $true)]
         [int[]]$CropDimensions,
 
-        # Parameter help description
+        # Rate control options
         [Parameter(Mandatory = $true)]
         [array]$RateControl,
 
-        # Parameter help description
+        # Preset Parameter options
         [Parameter(Mandatory = $true)]
         [hashtable]$PresetParams,
 
@@ -56,11 +59,11 @@ function Set-DVArgs {
         [Parameter(Mandatory = $false)]
         [int[]]$NoiseReduction,
 
-        #Transform unit recursion depth (intra, inter)
+        # Transform unit recursion depth (intra, inter)
         [Parameter(Mandatory = $false)]
         [int[]]$TuDepth,
  
-        #Early exit setting for tu recursion depth
+        # Early exit setting for tu recursion depth
         [Parameter(Mandatory = $false)]
         [int]$LimitTu,
 
@@ -68,13 +71,17 @@ function Set-DVArgs {
         [Parameter(Mandatory = $false)]
         [int]$IntraSmoothing,
 
+        # Enable tree algorithm
+        [Parameter(Mandatory = $false)]
+        [int]$Tree,
+
         # Enable NLMeans denoising filter
         [Parameter(Mandatory = $false)]
         [hashtable]$NLMeans,
 
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
-        [int]$FrameThreads,
+        [int]$Threads,
 
         # Encoder level to use. Default is 5.1 for DV only
         [Parameter(Mandatory = $false)]
@@ -88,9 +95,9 @@ function Set-DVArgs {
         [array]$FFMpegExtra,
 
         [Parameter(Mandatory = $false)]
-        [hashtable]$x265Extra,
+        [hashtable]$EncoderExtra,
 
-        # Parameter help description
+        # HDR properties
         [Parameter(Mandatory = $false)]
         [hashtable]$HDR,
 
@@ -125,18 +132,17 @@ function Set-DVArgs {
         $VerbosePreference = 'SilentlyContinue'
     }
 
-    #Split rate control array
+    # Split rate control array
     $twoPass = $RateControl[2]
     $passType = $RateControl[3]
     $RateControl = $RateControl[0..($RateControl.Length - 3)]
 
-    #Keys for x265 parameters that take no value & not available as a parameter. 
-    #Might be some missing
+    # Keys for x265 parameters that take no value & not available as a parameter. 
+    # Might be some missing
     $noArgKeys = @(
         'rect'
         'amp'
         'sao'
-        'cutree'
         'early-skip'
         'splitrd-skip'
         'fast-intra'
@@ -205,7 +211,7 @@ function Set-DVArgs {
 
     # Add parameters passed via -FFMpegExtra
     if ($PSBoundParameters['FFMpegExtra']) {
-        $ffmpegExtraArray = [System.Collections.ArrayList]@()
+        $ffmpegExtraArray = [ArrayList]@()
         foreach ($arg in $FFMpegExtra) {
             if ($arg -is [hashtable]) {
                 foreach ($entry in $arg.GetEnumerator()) {
@@ -221,10 +227,10 @@ function Set-DVArgs {
     }
 
     # Add parameters passed via -x265Extra
-    if ($PSBoundParameters['x265Extra']) {
-        $x265ExtraArray = [System.Collections.ArrayList]@()
-        foreach ($arg in $x265Extra.GetEnumerator()) {
-            #check if arg in no arg array. Must be exact match
+    if ($PSBoundParameters['EncoderExtra']) {
+        $x265ExtraArray = [ArrayList]@()
+        foreach ($arg in $EncoderExtra.GetEnumerator()) {
+            # Check if arg is in the no arg array. Must be exact match
             if ($arg.Name -in $noArgKeys) {
                 switch ($arg.Value) {
                     1 { $x265ExtraArray.Add("--$($arg.Name)") > $null }
@@ -259,7 +265,7 @@ function Set-DVArgs {
         $masterDisplay = "`"$($HDR.MasterDisplay)L($($HDR.MaxLuma),$($HDR.MinLuma))`""
     }
 
-    $ffmpegBaseVideoArray = [System.Collections.ArrayList]@(
+    $ffmpegBaseVideoArray = [ArrayList]@(
         '-i'
         $inputPath
         '-f'
@@ -270,7 +276,7 @@ function Set-DVArgs {
         'yuv420p10le'
     )
     
-    $ffmpegOtherArray = [System.Collections.ArrayList]@(
+    $ffmpegOtherArray = [ArrayList]@(
         '-probesize'
         '100MB'
         '-i'
@@ -282,7 +288,7 @@ function Set-DVArgs {
         $Subtitles
     )
 
-    $x265BaseArray = [System.Collections.ArrayList]@(
+    $x265BaseArray = [ArrayList]@(
         '--input'
         '-'
         '--output-depth'
@@ -327,6 +333,12 @@ function Set-DVArgs {
         "$($PresetParams.PsyRdoq)"
         '--aq-mode'
         "$($PresetParams.AqMode)"
+        '--ref'
+        "$($PresetParams.Ref)"
+        '--merange'
+        "$($PresetParams.Merange)"
+        '--rc-lookahead'
+        "$($PresetParams.RCLookahead)"
         '--aq-strength'
         $AqStrength
         '--min-keyint'
@@ -347,6 +359,13 @@ function Set-DVArgs {
         "$($NoiseReduction[1])"
         '--deblock'
         "$($Deblock[0]):$($Deblock[1])"
+        if ($PSBoundParameters['Tree'] -eq 0) {
+            '--no-cutree'
+        }
+        if ($PSBoundParameters['Threads']) { 
+            '-F'
+            $Threads
+        }
     )
 
     ## Set additional ffmpeg arguments ##
@@ -388,14 +407,10 @@ function Set-DVArgs {
     switch ($x265ExtraArray) {
         { $_ -notcontains '--sao' }          { $x265BaseArray.Add('--no-sao') > $null }
         { $_ -notcontains '--open-gop' }     { $x265BaseArray.Add('--no-open-gop') > $null }
-        { $_ -notcontains '--rc-lookahead' } { $x265BaseArray.AddRange(@('--rc-lookahead', 48)) }
         { $_ -notcontains '--keyint' }       { $x265BaseArray.AddRange(@('--keyint', 192)) }
         { $_ -notcontains '--min-keyint' }   { $x265BaseArray.AddRange(@('--min-keyint', 24)) }
     }
 
-    if ($PSBoundParameters['FrameThreads']) { 
-        $x265BaseArray.AddRange(@('-F', $FrameThreads))
-    }
 
     ($PresetParams.BIntra -eq 1) ? 
     ($x265BaseArray.Add('--b-intra') > $null) : 
@@ -428,7 +443,7 @@ function Set-DVArgs {
 
     #Set remaining two pass arguments
     if ($twoPass) {
-        [System.Collections.ArrayList]$x265FirstPassArray = switch -Regex ($passType) {
+        [ArrayList]$x265FirstPassArray = switch -Regex ($passType) {
             "^d[efault]*$" {
                 @(
                     $x265BaseArray
