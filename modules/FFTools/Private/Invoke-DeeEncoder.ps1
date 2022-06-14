@@ -1,6 +1,21 @@
+Using namespace System.IO
+
 <#
     .SYNOPSIS
-        Setup scripting and execution of the Dolby Encoding Engine
+        Invoke the Dolby Encoding Engine (DEE)
+    .DESCRIPTION
+        Provides an alternative option for encoding audio with Dolby codecs. Wrapper executable is invoked
+        as a background job parallel to the primary script
+    .PARAMETER Paths
+        Paths and titles for input and output files
+    .PARAMETER Codec
+        Codec used for audio encoding
+    .PARAMETER ChannelCount
+        The number of channels in the output file (i.e. 8 for 7.1 audio)
+    .PARAMETER Bitrate
+        Output audio bitrate in kb/s
+    .NOTES
+        Requires the Dolby Encoding Engine executable. Wrapper executable only makes using dee easier
 #>
 function Invoke-DeeEncoder {
     [CmdletBinding()]
@@ -19,7 +34,7 @@ function Invoke-DeeEncoder {
     )
 
     if (!(Get-Command 'dee')) {
-        Write-Host "Could not find dee executable in PATH. Returning" @warnColors
+        Write-Warning "Could not find dee executable in PATH. Returning"
         return
     }
 
@@ -31,13 +46,8 @@ function Invoke-DeeEncoder {
         'dee_thd'                          { 'thd' }
     }
 
-    # Mux out audio if not already present
-    if ($Paths.InputFile.EndsWith('mkv')) { 
-        $Paths.AudioPath = Join-Path (Split-Path $Paths.InputFile -Parent) -ChildPath "$($Paths.Title)_audio.mka"
-    }
-    elseif ($Paths.InputFile.EndsWith('mp4')) {
-        $Paths.AudioPath = Join-Path (Split-Path $Paths.InputFile -Parent) -ChildPath "$($Paths.Title)_audio.m4a"
-    }
+    $audioBase = ($Paths.InputFile.EndsWith('mkv')) ? ("$($Paths.Title)_audio.mka") : ("$($Paths.Title)_audio.m4a")
+    $Paths.AudioPath = [Path]::Join($(Split-Path $Paths.InputFile -Parent), $audioBase)
 
     if (!(Test-Path $Paths.AudioPath -ErrorAction SilentlyContinue)) {
         Write-Host "Multiplexing audio..." @progressColors
@@ -55,46 +65,36 @@ function Invoke-DeeEncoder {
             ffmpeg -i $Paths.InputFile -map 0:a:0 -c:a:0 copy -map -0:t? -map_chapters -1 $Paths.AudioPath
         }
 
-        if ((Test-Path $Paths.AudioPath) -and (Get-Item $Paths.AudioPath).Length -lt 10) {
-            Write-Host "There was an issue extracting the audio" @warnColors
+        if ([File]::Exists($Paths.AudioPath) -and ([FileInfo]($Paths.AudioPath)).Length -lt 10) {
+            Write-Host "There was an issue extracting the audio track for dee" @warnColors
+            return
         }
         Start-Sleep -Milliseconds 750
     }
 
     # Create the directory structure
-    $tmpPath = Join-Path (Split-Path $Paths.InputFile -Parent) -ChildPath 'dee_tmp'
-    if (![System.IO.Directory]::Exists($tmpPath)) {
-        [System.IO.Directory]::CreateDirectory($tmpPath) > $null
+    $tmpPath = [Path]::Join($(Split-Path $Paths.InputFile -Parent), 'dee_tmp')
+    if (![Directory]::Exists($tmpPath)) {
+        [Directory]::CreateDirectory($tmpPath) > $null
     }
 
     # Modify toml file with temporary path set to the input file directory
-    $deeRoot = Join-Path (Get-Item $PSScriptRoot).Parent.Parent.Parent -ChildPath 'util_scripts\deew'
-    $deeScript = Join-Path $deeRoot -ChildPath 'deew.py'
-    $deeToml = Join-Path $deeRoot -ChildPath 'config.toml'
+    $binRoot = [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'bin')
+    $deePath = switch ($osInfo.OperatingSystem) {
+        'Windows' { [Path]::Join($binRoot, 'windows\dee_wrapper\deew.exe') }
+        'Linux'   { [Path]::Join($binRoot, 'linux/dee_wrapper/deew') }
+        'Mac'     { [Path]::Join($binRoot, 'mac/dee_wrapper/deew')  }
+    }
+    if (!$deePath) {
+        return
+    }
+    
+    $deeToml = [Path]::Join($($deePath -replace 'deew.*', ''), 'config.toml')
     (Get-Content $deeToml -Raw) -replace 'temp_path.*', "temp_path = '$tmpPath'" | 
         Set-Content $deeToml
-    
-    # Verify Python requirements and install missing packages if necessary
-    $reqPkgs = @('rich', 'toml', 'xmltodict')
-    $installedPkgs = pip list --format json | ConvertFrom-Json | Select-Object -ExpandProperty Name
-    $diff = [System.Linq.Enumerable]::Except([string[]] $reqPkgs, [string[]] $installedPkgs)
-    if (![System.Linq.Enumerable]::Any($diff)) { Write-Verbose "All python packages installed" }
-    else {
-        Write-Host "Installing python dependencies..." @progressColors
-        try {
-            $pkgs = $diff -join ' ' && pip install $pkgs
-        }
-        catch {
-            $msg = "An error occurred installing python dependencies for dee. Exception:`n  $($_.Exception.Message)`n" +
-                   "Manually install the required packages from requirements.txt"
-            Write-Host $msg @errColors
-            exit -1
-        }
-    }
 
     # Setup encoder array
     $deeArgs = @(
-        $deeScript
         '-i'
         $Paths.AudioPath
         '-o'
@@ -107,12 +107,13 @@ function Invoke-DeeEncoder {
         }
     )
     # Run the encoder
-    python $deeArgs
+    & $deePath $deeArgs
 
     # Delete the temp file
     if ($?) { 
-        Start-Sleep -Seconds 5
-        Remove-Item $tmpPath -Force
+        Start-Sleep -Seconds 2
+        [Directory]::Delete($tmpPath)
+        #Remove-Item $tmpPath -Force
     }
 }
 

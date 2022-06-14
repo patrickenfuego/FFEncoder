@@ -282,7 +282,12 @@ function Set-AudioPreference {
     #>
 
     # Start a background job to run Dolby Encoder if selected
-    if (($UserChoice -like '*dee*') -and (Get-Command 'python')) {
+    if ($UserChoice -like '*dee*') {
+        # Throw warning and exit until dee nonsense is fixed on *NIX systems
+        if ($os.OperatingSystem -in 'Linux', 'Mac') {
+            Write-Warning "DEE XML parsing is currently broken on *NIX systems. Skipping audio..."
+            return $null
+        }
         Write-Host "Spawning dee encoder in a separate process`n" @emphasisColors
         # Create environment vars for thread scope
         [Environment]::SetEnvironmentVariable('PrivFunctionPath', $(Resolve-Path $PSScriptRoot))
@@ -299,19 +304,17 @@ function Set-AudioPreference {
             Bitrate      = $Bitrate
         }
 
-        Start-Job -Name 'Dee Encoder' -InitializationScript $init -ScriptBlock {
-            $params = $Using:deeParams
-            Invoke-DeeEncoder @params
+        Start-Job -Name 'Dee Encoder' -InitializationScript $init -ArgumentList $deeParams, $osInfo -ScriptBlock {
+            param ($deeParams, $OS)
+            
+            $Global:osInfo = $OS
+            Invoke-DeeEncoder @deeParams
         } | Out-Null
 
         # Remove the temp environment variables
-        [Environment]::SetEnvironmentVariable('PrivFunctionPath', $null)
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $null)
+        [Environment]::SetEnvironmentVariable('PrivFunctionPath', $null, 'User')
+        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $null, 'User')
 
-        return $null
-    }
-    elseif (($UserChoice -like '*dee*') -and !(Get-Command 'python')) {
-        Write-Host "Dee encoder requires Python. Skipping audio track" @warnColors
         return $null
     }
     elseif (!$RemuxStream -and $Stereo) {
@@ -367,7 +370,7 @@ function Set-AudioPreference {
         $audioArgs[$index] = '-c:a:0'
         $fullArgs = $audioArgs + $stereoArgs
         # Setup environment variable and init script for job scope
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $(Join-Path (Get-Item $PSScriptRoot).Parent -ChildPath 'Utils'))      
+        [Environment]::SetEnvironmentVariable('UtilFunctionPath', [Path]::Join($(Get-Item $PSScriptRoot).Parent, 'Utils') )  
         [scriptblock]$init = {
             . $(Join-Path $([Environment]::GetEnvironmentVariable('UtilFunctionPath')) -ChildPath 'Invoke-MkvMerge.ps1')
         }
@@ -382,7 +385,7 @@ function Set-AudioPreference {
                     ffmpeg -hide_banner -i $Using:Paths.InputFile -loglevel error -map 0:a:0 -c:a copy `
                         -map -0:t? -map_chapters -1 -vn -sn $Using:Paths.AudioPath
                 }
-                default { Write-Verbose "Could not determine extraction method"; exit -2 }
+                default { Write-Verbose "Could not determine extraction method"; exit -10 }
             }
             
             # Encode the stereo track
@@ -391,7 +394,7 @@ function Set-AudioPreference {
         } | Out-Null
 
         # Remove temp environment variable
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $null)
+        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $null, 'User')
 
         return $null
     }
