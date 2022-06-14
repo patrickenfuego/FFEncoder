@@ -1,6 +1,14 @@
+<a href="https://github.com/patrickenfuego/FFEncoder"><img src="https://img.shields.io/badge/pwsh-v7.0%2B-blue"><a/>
+<a href="https://github.com/patrickenfuego/FFEncoder"><img alt="GitHub release (latest SemVer)" src="https://img.shields.io/github/v/release/patrickenfuego/FFEncoder"><a/>
+<a href="https://github.com/patrickenfuego/FFEncoder"><img src="https://img.shields.io/badge/platform-win | linux | mac-eeeeee"><a/>
+<a href="https://github.com/patrickenfuego/FFEncoder"><img alt="GitHub" src="https://img.shields.io/github/license/patrickenfuego/FFEncoder?color=yellow"><a/>
+<a href="https://github.com/patrickenfuego/FFEncoder"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/patrickenfuego/FFEncoder"><a/>
+<a href="https://github.com/patrickenfuego/FFEncoder"><img alt="GitHub issues" src="https://img.shields.io/github/issues-raw/patrickenfuego/FFEncoder"><a/>
+<a href="https://github.com/patrickenfuego/FFEncoder"><img alt="Encoder" src="https://img.shields.io/badge/encoder-x264%20%7C%20x265-blueviolet"><a/>
+
 # FFEncoder
 
-FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress video files for streaming or archiving.
+FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress video files for streaming or archiving.
 
 - [FFEncoder](#ffencoder)
   - [About](#about)
@@ -18,7 +26,8 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
     - [**Audio & Subtitles**](#audio--subtitles)
     - [**Video Filtering**](#video-filtering)
     - [**Encoder Config**](#encoder-config)
-    - [**x265 Settings**](#x265-settings)
+    - [**Universal Encoder Settings**](#universal-encoder-settings)
+    - [**x265 Only Settings**](#x265-only-settings)
     - [**Extra**](#extra)
 
 ---
@@ -33,14 +42,16 @@ Check out the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki) for addit
 
 ## Dependencies
 
+> For Windows users, PowerShell 7 is a supplemental installation and will will be installed alongside PowerShell 5.1
+
 - ffmpeg / ffprobe
 - PowerShell v. 7.0 or newer
 
-The script requires PowerShell Core 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change.
+The script requires PowerShell 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change. 
+
+For users with PowerShell 7.2 or newer, the script uses ANSI output in certain situations to enhance the console experience (although this is not required).
 
 `mkvmerge` and `mkvextract` from [Mkvtoolnix](https://mkvtoolnix.download/) are **recommended**, but not required.
-
-> For Windows users, PowerShell Core is a supplemental installation and will will be installed alongside PowerShell 5.1
 
 ---
 
@@ -52,7 +63,7 @@ The script requires PowerShell Core 7.0 or newer on all systems as it utilizes n
 
 To download ffmpeg, navigate to the [ffmpeg downloads page](https://ffmpeg.org/download.html#build-windows) and install one of the prebuilt Windows exe packages. I recommend the builds provided by Gyan.
 
-To install the latest version of PowerShell Core, follow the instructions provided by Microsoft [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-windows?view=powershell-7.1).
+To install the latest version of PowerShell 7, follow the instructions provided by Microsoft [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-windows?view=powershell-7.1).
 
 ### Linux
 
@@ -62,11 +73,11 @@ You can install ffmpeg using your distro's package manager (apt/yum/pacman/zyppe
 apt install ffmpeg
 ```
 
-To install PowerShell, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
+To install PowerShell 7, see Microsoft's instructions for your distribution [here](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.1).
 
 ### macOS
 
-The easiest way to install ffmpeg and PowerShell core is through the [Homebrew](https://brew.sh/) package manager:
+The easiest way to install ffmpeg and PowerShell 7 is through the [Homebrew](https://brew.sh/) package manager:
 
 ```shell
 brew install ffmpeg
@@ -147,13 +158,14 @@ FFEncoder can accept the following parameters from the command line:
 
 ### **Utility**
 
-| Parameter Name     | Default | Mandatory | Alias              | Description                                                                                                                             |
-| ------------------ | ------- | --------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **Help**           | False   | False     | **H**, **?**       | Switch to display help information, including examples and parameter descriptions                                                       |
-| **RemoveFiles**    | False   | False     | **Del**, **RM**    | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files |
-| **GenerateReport** | False   | False     | **Report**, **GR** | Switch that generates a report file of the encode. Data is pulled from the log file and written in a reading friendly format            |
-| **Verbose**        | False   | False     | None               | `CmdletBinding` switch to enable verbose logging - cascaded down to relevant functions for additional information. Useful for debugging |
-| **ExitOnError**    | False   | False     | **Exit**           | Forcibly exit script on certain non-terminating errors that prompt for re-input. Can be used to prevent blocking during automation      |
+| Parameter Name      | Default | Mandatory | Alias              | Description                                                                                                                                         |
+| ------------------- | ------- | --------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Help**            | False   | False     | **H**, **?**       | Switch to display help information, including examples and parameter descriptions                                                                   |
+| **RemoveFiles**     | False   | False     | **Del**, **RM**    | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files             |
+| **GenerateReport**  | False   | False     | **Report**, **GR** | Switch that generates a report file of the encode. Data is pulled from the log file and written in a reading friendly format                        |
+| **Verbose**         | False   | False     | None               | `CmdletBinding` switch to enable verbose logging - cascaded down to relevant functions for additional information. Useful for debugging             |
+| **ExitOnError**     | False   | False     | **Exit**           | Switch that forcibly exits the script on certain non-terminating errors that prompt for re-input. Can be used to prevent blocking during automation |
+| **DisableProgress** | False   | False     | **NoProgressBar**  | Switch to disable the progress bar during encoding                                                                                                  |
 
 ### **Audio & Subtitles**
 
@@ -173,51 +185,62 @@ FFEncoder can accept the following parameters from the command line:
 
 | Parameter Name  | Default  | Mandatory     | Alias                    | Description                                                                                                                                        |
 | --------------- | -------- | ------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deinterlace** | Disabled | False         | **DI**                   | Switch to enable deinterlacing of interlaced content using yadif                                                                                   |
+| **NLMeans**     | Disabled | False         | **NL**                   | High quality denoising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info |
 | **Scale**       | None     | <b>\*</b>True | **Resize**, **Resample** | Scaling library to use. Options are `scale` (ffmpeg default) and `zscale` (requires libzimg). Required parameter for rescaling content             |
 | **ScaleFilter** | bilinear | False         | **ScaleType**, **SF**    | Scaling filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info        |
 | **Resolution**  | 1080p    | False         | **Res**, **R**           | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info           |
-| **Deinterlace** | Disabled | False         | **DI**                   | Switch to enable deinterlacing of interlaced content using yadif                                                                                   |
-| **NLMeans**     | Disabled | False         | **NL**                   | High quality denoising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info |
-
 
 ### **Encoder Config**
 
 | Parameter Name      | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
 | ------------------- | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **TestFrames**      | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
-| **TestStart**       | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
+| **Encoder**         | x265         | False     | **Enc**               | Specifies which encoder to use - x264 or x265                                                                                                                                |
 | **FirstPassType**   | Default      | False     | **PassType**, **FTP** | Tuning option for two pass encoding. See [Two Pass Encoding Options](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#two-pass-encoding-options) for more info |
 | **SkipDolbyVision** | False        | False     | **NoDV**, **SDV**     | Switch to disable Dolby Vision encoding, even if metadata is present                                                                                                         |
 | **SkipHDR10Plus**   | False        | False     | **No10P**, **NTP**    | Switch to disable HDR10+ encoding, even if metadata is present                                                                                                               |
+| **TestFrames**      | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
+| **TestStart**       | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
 
-### **x265 Settings**
+### **Universal Encoder Settings**
 
-| Parameter Name           | Default | Mandatory | Alias            | Description                                                                                                                                                              |
-| ------------------------ | ------- | --------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Preset**               | Slow    | False     | **P**            | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset options                                 |
-| **Pass**                 | 2       | False     | None             | The number of passes the encoder will perform on ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                                 |
-| **Deblock**              | -2, -2  | False     | **DBF**          | Deblock filter. The first value controls strength, and the second value controls the frequency of use                                                                    |
-| **AqMode**               | 2       | False     | **AQM**          | x265 Adaptive Quantization setting. Ranges from 0 - 4. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info on AQ Modes and how they work   |
-| **AqStrength**           | 1.00    | False     | **AQS**          | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates                 |
-| **PsyRd**                | 2.00    | False     | **PRD**          | Psycho-visual enhancement. Higher values of PsyRd strongly favor similar energy over blur. See x265 documentation for more info                                          |
-| **PsyRdoq**              | Preset  | False     | **PRDQ**         | Psycho-visual enhancement. Favors high AC energy in the reconstructed image, but it less efficient than PsyRd. See x265 documentation for more info                      |
-| **QComp**                | 0.60    | False     | **Q**            | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                                      |
-| **BFrames**              | Preset  | False     | **B**            | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use                            |
-| **BIntra**               | Preset  | False     | **BINT**         | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                                     |
-| **StrongIntraSmoothing** | 1 (on)  | False     | **SIS**          | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                                            |
-| **FrameThreads**         | System  | False     | **FT**           | Set frame threads. More threads equate to faster encoding, but with a decrease in quality. System default is based on the number of logical CPU cores                    |
-| **Subme**                | Preset  | False     | **SM**, **SPM**  | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact                       |
-| **NoiseReduction**       | 0, 0    | False     | **NR**           | Fast Noise reduction filter built into x265. The first value represents intra frames, and the second value inter frames; values range from 0-2000                        |
-| **TuDepth**              | 1, 1    | False     | **TU**           | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
-| **LimitTu**              | 0       | False     | **LTU**          | Early exit condition for TU depth recursion. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info                                           |
-| **Level**                | None    | False     | **Level**, **L** | Specify the encoder level for device compatibility. Default is unset, and will be chosen by x265 based on rate control. Affects `vbv` options (see below)                |
-| **VBV**                  | `Level` | False     | None             | Video buffering verifier. Default is based on the encoder level (except DV, which defaults to level 5.1). Requires 2 arguments: (`vbv-buffsize`, `vbv-maxrate`)          |
+> **NOTE**: *Encoder* means the default is specific to the encoder used. *System* is based on system hardware
+
+| Parameter Name     | Default     | Mandatory | Alias                  | Description                                                                                                                                                            |
+| ------------------ | ----------- | --------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **AqMode**         | 2           | False     | **AQM**                | x265 Adaptive Quantization setting. Ranges from 0 - 4. See the [x265 Docs](https://x265.readthedocs.io/en/master/cli.html) for more info on AQ Modes and how they work |
+| **AqStrength**     | 1.00        | False     | **AQS**                | Adjusts the adaptive quantization offsets for AQ. Raising AqStrength higher than 2 will drastically affect the QP offsets, and can lead to high bitrates               |
+| **Deblock**        | -2, -2      | False     | **DBF**                | Deblock filter. The first value controls strength, and the second value controls threshold. Passed as an array in the form (alpha, beta)                               |
+| **BFrames**        | Preset      | False     | **B**                  | The number of consecutive B-Frames within a GOP. This is especially helpful for test encodes to determine the ideal number of B-Frames to use                          |
+| **Level**          | None        | False     | **Level**, **L**       | Specify the encoder level for device compatibility. Default is unset, and will be chosen by the encoder based on rate control. Affects `VBV` options (see below)       |
+| **Merange**        | Preset      | False     | **MR**                 | Sets the motion estimation search range. Higher values result in a better motion vector search during inter-frame prediction                                           |
+| **NoiseReduction** | Encoder     | False     | **NR**                 | Fast Noise reduction filter. For x265, the first value represents intra frames, and the second value inter frames; values range from 0-2000                            |
+| **Pass**           | 2           | False     | None                   | The number of passes the encoder will perform on ABR encodes. Used with the `-VideoBitrate` parameter. Default is 2-Pass                                               |
+| **Preset**         | Slow        | False     | **P**                  | The x265 preset to be used. Ranges from placebo (slowest) to ultrafast (fastest). See x265 documentation for more info on preset options                               |
+| **PsyRd**          | Encoder     | False     | **PsyRDO**             | Psycho-visual enhancement. Strongly favor similar energy over blur. For x264, you can set `psy-RDO` & `psy-trellis` (i.e. `1.00,0.04`) or `psyRDO` only                |
+| **PsyRdoq**        | Preset      | False     | **PsyTrellis**         | Psycho-visual enhancement. Favors high AC energy in the reconstructed image. For x264, this can be used to set `psy-trellis` separately from `psy-RDO`                 |
+| **QComp**          | 0.60        | False     | **Q**                  | Sets the quantizer curve compression factor, which effects the bitrate variance throughout the encode. Must be between 0.50 and 1.0                                    |
+| **RCLookahead**    | Preset      | False     | **RCL**, **Lookahead** | Sets the rate control lookahead option. Larger values use more memory, but can improve compression efficiency                                                          |
+| **Ref**            | Preset      | False     | None                   | Sets the number of reference frames to use. Default value is based on the encoder preset. For x264, this might affect hardware compatibility                           |
+| **Subme**          | Preset      | False     | **Subpel**, **SPM**    | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact                     |
+| **Threads**        | System      | False     | **FrameThreads**       | Set the number of threads. More threads equate to faster encoding. System default is based on the number of logical CPU cores                                          |
+| **Tree**           | 1 (Enabled) | False     | **CUTree**, **MBTree** | Enable or disable encoder-specific motion vector lookahead algorithm. 1 is enabled, 0 is disabled                                                                      |
+| **VBV**            | `Level`     | False     | None                   | Video buffering verifier. Default is based on the encoder level (except DV, which defaults to level 5.1). Requires 2 arguments: (`vbv-bufsize`, `vbv-maxrate`)         |
+
+### **x265 Only Settings**
+
+| Parameter Name           | Default | Mandatory | Alias    | Description                                                                                                                                                              |
+| ------------------------ | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **BIntra**               | Preset  | False     | **BINT** | Enables the evaluation of intra modes in B slices. Has a minor impact on performance                                                                                     |
+| **LimitTU**              | 0       | False     | **LTU**  | Limits the TU recursion depth based on the value passed. Acceptable values are 0 - 4. Settings are not linear, and have different impacts                                |
+| **TuDepth**              | 1, 1    | False     | **TU**   | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
+| **StrongIntraSmoothing** | 1 (on)  | False     | **SIS**  | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                                            |
 
 ### **Extra**
 
 > See [here](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#using-the-extra-parameter-options) for examples of how to use these parameters
 
-| Parameter Name  | Default | Mandatory | Alias  | Description                                                                                                                                   |
-| --------------- | ------- | --------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **FFMpegExtra** | N/A     | False     | **FE** | Pass additional settings to ffmpeg as a generic array of single and multi-valued elements. Useful for options not covered by other parameters |
-| **x265Extra**   | N/A     | False     | **XE** | Pass additional settings to the x265 encoder as a hashtable of values. Useful for options not covered by other parameters                     |
+| Parameter Name   | Default | Mandatory | Alias  | Description                                                                                                                                   |
+| ---------------- | ------- | --------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FFMpegExtra**  | N/A     | False     | **FE** | Pass additional settings to ffmpeg as a generic array of single and multi-valued elements. Useful for options not covered by other parameters |
+| **EncoderExtra** | N/A     | False     | **XE** | Pass additional settings to the specified encoder as a hashtable of values. Useful for options not covered by other parameters                |
