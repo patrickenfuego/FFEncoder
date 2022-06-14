@@ -10,6 +10,24 @@ $warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black'}
 $emphasisColors = @{ForegroundColor = 'Cyan'; BackgroundColor = 'Black'}
 $errColors = @{ ForegroundColor = 'Red'; BackgroundColor = 'Black'}
 
+# Ansi colors
+$aYellow = $PSStyle.Foreground.BrightYellow
+$aRed = $PSStyle.Foreground.Red
+$aBlue = $PSStyle.Foreground.Blue
+$aGreen = $PSStyle.Foreground.Green
+$aCyan = $PSStyle.Foreground.Cyan
+$aBrightBlack = $PSStyle.Foreground.BrightBlack
+
+# Ansi fonts
+$boldOn = $PSStyle.Bold
+$boldOff = $PSStyle.BoldOff
+
+$ul = $PSStyle.Underline
+$ulOff = $PSStyle.UnderlineOff
+
+$reset = $PSStyle.Reset
+
+
 # Track titles for muxing files with mkvmerge
 $Script:trackTitle = @{
     AudioTitle1 = $null
@@ -25,7 +43,34 @@ $Script:dee = @{
     DeeUsed = $false
 }
 
+# Detect operating system info
+if ($isMacOs) {
+    $osInfo = @{
+        OperatingSystem = "Mac"
+        DefaultPath     = '~/Movies'
+    } 
+}
+elseif ($isLinux) {
+    $osInfo = @{
+        OperatingSystem = "Linux"
+        DefaultPath     = '~/Videos'
+    }
+}
+elseif ($env:OS -like "*Windows*") {
+    $osInfo = @{
+        OperatingSystem = "Windows"
+        DefaultPath     = [Environment]::GetFolderPath('MyVideos')
+    }
+}
+else { 
+    Write-Error "Failed to load module. Could not detect operating system." -ErrorAction Stop 
+}
+
 ## End module variables ##
+
+<#
+    LOAD MODULE FUNCTIONS
+#>
 
 ## region Load Public Functions ##
 try {
@@ -71,6 +116,6 @@ $ExportModule = @{
     Alias    = @('iffmpeg', 'cropfile', 'cropdim')
     Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus',
                     'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge')
-    Variable = @('progressColors', 'warnColors', 'emphasisColors' )
+    Variable = @('progressColors', 'warnColors', 'emphasisColors', 'osInfo' )
 }
 Export-ModuleMember @ExportModule

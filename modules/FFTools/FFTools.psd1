@@ -76,7 +76,7 @@ FunctionsToExport = 'Invoke-FFMpeg', 'Invoke-TwoPassFFMpeg', 'New-CropFile', 'Me
 # CmdletsToExport = @()
 
 # Variables to export from this module
-VariablesToExport = 'progressColors', 'warnColors', 'emphasisColors'
+VariablesToExport = 'progressColors', 'warnColors', 'emphasisColors', 'errColors', 'osInfo'
 
 # Aliases to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no aliases to export.
 AliasesToExport = 'iffmpeg', 'cropfile', 'cropdim'
@@ -91,8 +91,8 @@ AliasesToExport = 'iffmpeg', 'cropfile', 'cropdim'
 FileList = 'FFTools.psd1', 'FFTools.psm1', 'Private\Set-AudioPreference.ps1', 'Private\Get-SubtitleStream', 'Private\Set-SubtitlePreference',
 'Private\Get-HDRMetadata.ps1', 'Public\Invoke-FFMpeg.ps1', 'Public\Invoke-TwoPassFFMpeg.ps1', 'Public\New-CropFile.ps1', 'Public\Measure-CropDimensions.ps1',
 'Private\ConvertTo-Stereo.ps1', 'Private\Set-PresetParameters.ps1', 'Private\Set-FFMPegArgs.ps1', 'Private\Set-VideoFilter.ps1', 'Private\Set-TestParameters.ps1',
-'Private\Set-DVArgs.ps1', 'Private\Invoke-DeeEncoder.ps1','Utils\Confirm-ScaleFilter.ps1','Utils\Write-Report.ps1', 'Utils\Invoke-MkvMerge.ps1',
-'Utils\Confirm-HDR10Plus.ps1', 'Utils\Confirm-DolbyVision.ps1', 'Utils\Remove-FilePrompt.ps1'
+'Private\Confirm-Parameters.ps1', 'Private\Set-DVArgs.ps1', 'Private\Invoke-DeeEncoder.ps1','Utils\Confirm-ScaleFilter.ps1','Utils\Write-Report.ps1',
+'Utils\Invoke-MkvMerge.ps1', 'Utils\Confirm-HDR10Plus.ps1', 'Utils\Confirm-DolbyVision.ps1', 'Utils\Remove-FilePrompt.ps1'
 
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
