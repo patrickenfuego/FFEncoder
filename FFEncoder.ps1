@@ -212,7 +212,7 @@ using namespace System.IO
 [CmdletBinding(DefaultParameterSetName = "CRF")]
 param (
     [Parameter(Mandatory = $true, ParameterSetName = "Help")]
-    [Alias("H", "/?", "?")]
+    [Alias("H", "?")]
     [switch]$Help,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
@@ -222,15 +222,17 @@ param (
     [string]$Encoder = "x265",
 
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "VMAF")]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "Pass")]
     [ValidateScript( { if (Test-Path $_) { $true } else { throw 'Input path does not exist' } } )]
-    [Alias("I")]
+    [Alias("I", "Reference", "Source")]
     [string]$InputPath,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dee_dd", "dee_ac3", "dd", "dts", "flac", "f",
-        "eac3", "ddp", "dee_ddp", "dee_eac3", "dee_thd", "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
+    [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
+        'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
     [Alias("A")]
     [string]$Audio = "copy",
 
@@ -247,8 +249,9 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("copy", "c", "copyall", "ca", "aac", "none", "n", "ac3", "dee_dd", "dee_ac3", "dd", "dts", "flac", "f",
-        "eac3", "ddp", "dee_ddp", "dee_eac3", "dee_thd", "fdkaac", "faac", "aac_at", 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
+    [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
+        'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
     [Alias("A2")]
     [string]$Audio2 = "none",
 
@@ -265,8 +268,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("all", "a", "copyall", "ca", "none", "default", "d", "n", "eng", "fre", "ger", "spa", "dut", "dan", "fin", "nor", "cze", 
-        "pol", "chi", "kor", "gre", "rum", "rus", "swe")]
+    [ValidateSet('all', 'a', 'copyall', 'ca', 'none', 'default', 'd', 'n', 'eng', 'fre', 'ger', 'spa', 'dut', 'dan', 'fin', 'nor', 'cze', 
+        'pol', 'chi', 'kor', 'gre', 'rum', 'rus', 'swe')]
     [Alias("S", "Subs")]
     [string]$Subtitles = "default",
 
@@ -313,7 +316,7 @@ param (
     [int]$Pass = 2,
 
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("Default", "d", "Fast", "f", "Custom", "c")]
+    [ValidateSet('Default', 'd', 'Fast', 'f', 'Custom', 'c')]
     [Alias("FPT", "PassType")]
     [string]$FirstPassType = "Default",
 
@@ -435,8 +438,8 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet('1', '1b', '2', '1.1', '1.2', '1.3', '2.1', '21', '2.2', '3.1', '3.2', '4', '4.1', '4.2', '41', '5', '5.1', '51',
-        '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
+    [ValidateSet('1', '1b', '2', '1.1', '1.2', '1.3', '2.1', '21', '2.2', '3.1', '3.2', '4', '4.1', '4.2', '41',
+    '5', '5.1', '51', '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
     [Alias('L')]
     [string]$Level,
 
@@ -489,20 +492,14 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("Scale", "ZScale")]
-    [Alias("Resize", "Resample")]
-    [string]$Scale,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("point", "spline16", "spline36", "bilinear", "bicubic", "lanczos",
-        "fast_bilinear", "neighbor", "area", "gauss", "sinc", "spline", "bicublin")]
+    [ValidateSet('point', 'spline16', 'spline36', 'bilinear', 'bicubic', 'lanczos',
+        'fast_bilinear', 'neighbor', 'area', 'gauss', 'sinc', 'spline', 'bicublin')]
     [Alias("SF", "ResizeType")]
-    [string]$ScaleFilter = "bilinear",
+    [string]$Scale = "bilinear",
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("2160p", "1080p", "720p")]
+    [ValidateSet('2160p', '1080p', '720p')]
     [Alias("Res", "R")]
     [string]$Resolution,
 
@@ -513,7 +510,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("NoDV", "SDV")]
+    [Alias("NoDV", "SDV")]
     [switch]$SkipDolbyVision,
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
@@ -526,15 +523,51 @@ param (
     [alias("Exit")]
     [switch]$ExitOnError,
 
+    [Parameter(Mandatory = $true, ParameterSetName = "VMAF")]
+    [Alias("VMAF")]
+    [switch]$CompareVMAF,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
+    [alias("SSIM")]
+    [switch]$EnableSSIM,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
+    [alias("PSNR")]
+    [switch]$EnablePSNR,
+
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [alias("NoProgressBar")]
     [switch]$DisableProgress,
 
+    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [ValidateScript(
+        {
+            if ($_.Count -eq 0) { throw "MKV Tag Generator Hashtable cannot be empty" }
+            $flag = $false
+            if ($null -eq $_['APIKey']) {
+                throw "MKV Tag Hashtable must include an APIKey"
+                $false
+            }
+            foreach ($k in $_.Keys) {
+                if ($k -notin 'APIKey', 'Path', 'Title', 'Year', 'Properties', 'SkipProperties', 'NoMux', 'AllowClobber') {
+                    throw "Invalid key. Valid keys are 'APIKey', 'Path', 'Title', 'Year', 'Properties', 'SkipProperties', 'NoMux'"
+                }
+                else { $flag = $true }
+            }
+            if ($flag = $true) { $true }
+            else { throw "Invalid NLMeans hashtable. See https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1" }
+        }
+    )]
+    [Alias("CreateTagFile")]
+    [hashtable]$GenerateMKVTagFile,
+
     [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $true, ParameterSetName = "VMAF")]
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
-    [Alias("O")]
+    [Alias("O", "Encode", "Distorted")]
     [string]$OutputPath
 )
 
@@ -547,38 +580,6 @@ $currentTitle = $console.WindowTitle
 $console.ForegroundColor = 'White'
 $console.BackgroundColor = 'Black'
 $console.WindowTitle = 'FFEncoder'
-
-#########################################################
-# Define Variables                                      #                   
-#########################################################
-
-# $banner_old = @'
-# _____  _      _               _   _         _____ _____ _____                     _           
-# |  ___(_)_ __(_)_ __   __ _  | | | |_ __   |  ___|  ___| ____|_ __   ___ ___   __| | ___ _ __ 
-# | |_  | | '__| | '_ \ / _` | | | | | '_ \  | |_  | |_  |  _| | '_ \ / __/ _ \ / _` |/ _ \ '__|
-# |  _| | | |  | | | | | (_| | | |_| | |_) | |  _| |  _| | |___| | | | (_| (_) | (_| |  __/ |   
-# |_|   |_|_|  |_|_| |_|\__, |  \___/| .__/  |_|   |_|   |_____|_| |_|\___\___/ \__,_|\___|_|   
-#                       |___/        |_|     
-# '@
-
-$banner1 = @'
-             _____  _      _               _   _                   
-             |  ___(_)_ __(_)_ __   __ _  | | | |_ __    
-             | |_  | | '__| | '_ \ / _` | | | | | '_ \  
-             |  _| | | |  | | | | | (_| | | |_| | |_) |    
-             |_|   |_|_|  |_|_| |_|\__, |  \___/| .__/   
-                                   |___/        |_|         
-
-'@
-
-$banner2 = @'
-███████ ███████ ███████ ███    ██  ██████  ██████  ██████  ███████ ██████  
-██      ██      ██      ████   ██ ██      ██    ██ ██   ██ ██      ██   ██ 
-█████   █████   █████   ██ ██  ██ ██      ██    ██ ██   ██ █████   ██████  
-██      ██      ██      ██  ██ ██ ██      ██    ██ ██   ██ ██      ██   ██ 
-██      ██      ███████ ██   ████  ██████  ██████  ██████  ███████ ██   ██ 
-
-'@
 
 #########################################################
 # Function Definitions                                  #        
@@ -613,17 +614,17 @@ function Set-ScriptPaths ([hashtable]$OS) {
     }
     # Regex match could not be made on the folder pattern
     else {
-        Write-Host "Could not match root folder pattern. Using OS default path instead..."
+        Write-Host "Could not match root folder pattern. Using OS default path instead..." @warnColors
         Write-Host $os.OperatingSystem "detected. Using path: <$($os.DefaultPath)>"
         # Creating path strings if regex match fails - use OS default
-        $cropPath = Join-Path -Path $os.DefaultPath -ChildPath "crop.txt"
-        $logPath = Join-Path -Path $os.DefaultPath -ChildPath "encode.log"
-        $x265Log = Join-Path -Path $os.DefaultPath -ChildPath "x265_2pass.log"
-        $stereoPath = Join-Path -Path $os.DefaultPath -ChildPath "stereo.mkv"
-        $reportPath = Join-Path -Path $os.DefaultPath -ChildPath "report.rep"
-        $hdr10PlusPath = Join-Path -Path $os.DefaultPath -ChildPath "metadata.json"
-        $dvPath = Join-Path -Path $os.DefaultPath -ChildPath "rpu.bin"
-        $hevcPath = Join-Path -Path $os.DefaultPath -ChildPath "hevc.hevc"
+        $cropPath = [Path]::Join($os.DefaultPath, "crop.txt")
+        $logPath = [Path]::Join($os.DefaultPath, "encode.log")
+        $x265Log = [Path]::Join($os.DefaultPath, "x265_2pass.log")
+        $stereoPath = [Path]::Join($os.DefaultPath, "stereo.mkv")
+        $reportPath = [Path]::Join($os.DefaultPath, "$InputPath.rep")
+        $hdr10PlusPath = [Path]::Join($os.DefaultPath, "metadata.json")
+        $dvPath = [Path]::Join($os.DefaultPath, "rpu.bin")
+        $hevcPath = [Path]::Join($os.DefaultPath, "$InputPath.hevc")
     }
 
     if ($psReq) {
@@ -672,34 +673,26 @@ function Set-ScriptPaths ([hashtable]$OS) {
 
 # Print help content and exit
 if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit 0 }
-# Enable verbose logging if passed
-if ($PSBoundParameters['Verbose']) { $vLevel = 'Continue' }
-
-# Verify PowerShell version
-if (!(Get-Command 'pwsh') -or (Get-Command 'pwsh').Version -lt [version]'7.0.0.0') { 
-    $params = @{
-        Category  = "NotInstalled"
-        Exception = [System.ExecutionEngineException]::new("The script requires PowerShell 7.0 or greater")
-        ErrorId   = -1
-    }
-    Write-Error @params -ErrorAction Stop
+# Enable verbose logging if passed. Cascade down setVerbose
+if ($PSBoundParameters['Verbose']) {
+    $VerbosePreference = 'Continue'
+    $Global:setVerbose = $true
 }
-# If pwsh 7 is installed, but currently running from Windows PowerShell context
-elseif ($PSVersionTable.PSVersion -lt [version]'7.0.0.0') {
-    $msg = "Currently running with PowerShell $($PSVersionTable.PSVersion.Major). Switch to PowerShell 7"
-    $params = @{
-        Category  = "InvalidOperation"
-        Exception = [System.ExecutionEngineException]::new($msg)
-        ErrorId   = -2
-    }
-    Write-Error @params -ErrorAction Stop
+else { 
+    $VerbosePreference = 'SilentlyContinue'
+    $Global:setVerbose = $false 
 }
-
-# Check if system meets requirements for $PSStyle
-$Global:psReq = ($PSVersionTable.PSVersion -ge [version]'7.2.0.0') ? $true : $false
 
 # Import FFTools module
-Import-Module -Name "$PSScriptRoot\modules\FFTools"
+Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
+Write-Verbose "`n`n---------------------------------------"
+
+# Source version functions
+. $([Path]::Join($ScriptsDirectory, 'VerifyVersions.ps1')).toString()
+# Verify the current version of pwsh & exit if version not satisfied
+$Global:psReq = Confirm-PoshVersion
+# Check for updates to FFencoder and prompt to download if git is available
+Update-FFEncoder -CurrentRelease $release -Verbose:$setVerbose
 
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 $startTime = (Get-Date).ToLocalTime()
@@ -711,16 +704,37 @@ if ($psReq) {
     Write-Host "$($PSStyle.Foreground.FromRGB(97, 30, 164))$($PSStyle.Bold)$($banner2)$($PSStyle.Reset)"
 }
 else {
-    $bColors = @{ ForegroundColor = 'Magenta'; BackgroundColor = 'Black' }
-    Write-Host $banner1 @bColors
-    Write-Host $banner2 @bColors
+    Write-Host $banner1 -ForegroundColor 'Green' -BackgroundColor 'Black'
+    Write-Host $banner2 -ForegroundColor 'Magenta' -BackgroundColor 'Black'
 }
 Write-Host "----------------------------------------------------------------------------------------------" @emphasisColors
 
 Write-Host "Start Time: $startTime`n"
 
+if ($PSBoundParameters['CompareVMAF']) {
+    Write-Host "** VMAF Selected **" @emphasisColors
+    Write-Host ""
+
+    $params = @{
+        Source     = $InputPath
+        Encode     = $OutputPath
+        SSIM       = $EnableSSIM
+        PSNR       = $EnablePSNR
+    }
+
+    try {
+        Invoke-VMAF @params
+        exit 0
+    }
+    catch {
+        Write-Error "An exception occurred during VMAF: $($_.Exception.Message)"
+        exit 43
+    }
+}
+
 # Generating paths to various files
 $paths = Set-ScriptPaths -OS $osInfo
+
 # if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
 if ([File]::Exists($paths.OutputFile)) { 
     Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" 
@@ -736,8 +750,9 @@ else {
 }
 
 <#
-    VALIDATE INPUT - Check:
+    VALIDATE - Check:
     
+    Source resolution
     Parameter combinations
         - TODO: Too complicated for parameter sets...try dynamic params?
     Primary audio type if transcoding was selected
@@ -745,79 +760,58 @@ else {
     x264 or x265 settings that use different value ranges
 #>
 
+# Check the source resolution
+$sourceResolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
+
 # Verify test parameters and prompt if one is missing (unless ExitOnError is present)
 if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
+    Write-Host 'The -TestStart parameter was passed without a frame count duration' @errColors
     $params = @{
-        Message          = "No test duration was specified using -TestFrames"
-        Category         = "InvalidArgument"
-        CategoryActivity = "Test Encode"
-        TargetObject     = $TestFrames
-        ErrorId          = 2
+        Prompt   = 'Enter the number of test frames to use: '
+        Timeout  = 25000
+        Mode     = 'Integer'
+        Count    = 3
     }
-    
-    if (!$PSBoundParameters['ExitOnError']) {
-        Write-Error @params
-        # Prompt to enter TestFrames. Loop until an integer is entered
-        do {
-            $TestFrames = Read-Host "Enter the number of test frames to use"
-        } until (($TestFrames -as [int]) -is [int])
-        $TestFrames = [int]$TestFrames
+    try {
+        $TestFrames = Read-TimedInput @params -Verbose:$setVerbose
     }
-    else { Write-Error @params -ErrorAction Stop }
+    catch {
+        Write-Host "`u{203C} $($_.Exception.Message). Setting default test case: 2000 frames" @errColors
+        $TestFrames = 2000
+    }
 }
 
 # If scale is used, verify arguments and handle errors
-if (($PSBoundParameters['ScaleFilter'] -or $PSBoundParameters['Resolution']) -and 
-    !$PSBoundParameters['Scale']) {
-
-    $params = @{
-        Message           = "Scaling parameters were passed, but no scaling method was specified"
-        RecommendedAction = 'Enter a value for $Scale'
-        Category          = "InvalidArgument"
-        CategoryActivity  = "Scale Parameter"
-        TargetObject      = $Scale
-        ErrorId           = 3
-    }
-    
-    if (!$PSBoundParameters['ExitOnError']) {
-        Write-Error @params
-        # Loop until a valid entry is entered
-        do {
-            $Scale = Read-Host "Enter a scaling method (scale or zscale)"
-        } until ($Scale -in "Scale", "Zscale")
-    }
-    else { Write-Error @params -ErrorAction Stop }
-}
-# Verify the scaling filter passed is compatible with the scale method
-elseif ($PSBoundParameters['Scale'] -and $PSBoundParameters['ScaleFilter']) {
+if ($PSBoundParameters['Scale']) {
+    $isScale = $true
     try {
-        $ScaleFilter = $PSBoundParameters['ExitOnError'] ? 
-        (Confirm-ScaleFilter -Scale $Scale -ScaleFilter $ScaleFilter -ExitOnError:$true) :
-        (Confirm-ScaleFilter -Scale $Scale -ScaleFilter $ScaleFilter -ExitOnError:$false)
-
-        Write-Verbose "Scale filter is: $ScaleFilter"
+        $scaleType, $filter = Confirm-ScaleFilter -Filter $Scale -Verbose:$setVerbose
     }
     catch {
-        $PSCmdlet.ThrowTerminatingError($_)
+        Write-Host "`u{203C} $($_.Exception.Message). The output will not be scaled`n" @errColors
+        $isScale = $false
     }
-    
-    # Warn if no scale filter was passed
-    if (!$PSBoundParameters['ScaleFilter']) {
-        Write-Warning "No scaling filter specified for scaling. Using default: bilinear"
-        Write-Host ""
-    }
-    # Warn if no resolution was passed, and set to 1080p
+}
+else { $isScale = $false }
+
+# If scaling is used, check if Resolution was passed & set hashtable
+if ($isScale) {
+    # Warn if no resolution was passed, and set to a default
     if (!$PSBoundParameters['Resolution']) {
-        Write-Warning "No resolution specified for scaling. Using default: 1080p"
+        $defaultResolution = switch -Wildcard ($sourceResolution) {
+            '*3840x2160*'  { '1080p' }
+            '*1920x1080*'  { '2160p' }
+            '*1280x720*'   { '1080p' }
+        }
+        Write-Warning "No resolution specified for scaling. Using a default based on source: $defaultResolution"
         Write-Host ""
-        $Resolution = '1080p'
     }
 
     # Collect the arguments into a hashtable
     $scaleHash = @{
-        Scale       = $Scale
-        ScaleFilter = $ScaleFilter
-        Resolution  = $Resolution
+        Scale       = $scaleType
+        ScaleFilter = $filter 
+        Resolution  = $defaultResolution
     }
 }
 
@@ -837,7 +831,7 @@ if ($res) {
         Write-Warning $msg
     }
 }
-elseif (!$res -and ($PSBoundParameters['Audio'] -or $PSBoundParameters['Audio2'])) {
+elseif (!$res) {
     Write-Warning "No audio streams were found in the source file. Audio parameters will be ignored"
     $Audio = 'none'
     $Audio2 = 'none'
@@ -865,13 +859,12 @@ if ($skipCropFile) {
     Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
     Write-Host ""
     # Check if source is 4K for HDR metadata
-    $res = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $InputPath
-    $cropDim = ($res -like '3840x2160?') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
+    $cropDim = ($sourceResolution -like '3840x2160?') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
 }
 else {
-    New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1
+    New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1 -Verbose:$setVerbose
     # Calculating the crop values. Re-throw terminating error if one occurs
-    $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution
+    $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution -Verbose:$setVerbose
 }
 
 <#
@@ -955,7 +948,7 @@ $ffmpegParams = @{
     EncoderExtra    = $EncoderExtra
     Scale           = $scaleHash
     Paths           = $paths
-    Verbosity       = $vLevel
+    Verbose         = $setVerbose
     TestFrames      = $TestFrames
     TestStart       = $TestStart
     SkipDolbyVision = $SkipDolbyVision
@@ -982,29 +975,30 @@ catch {
 <#
     POST ENCODE
     
-    Muxing
+    Jobs Muxing
     Results
     Generate Report
+    Generate MKV Tag File
     Cleanup
 
     TODO: Refactor this mess
 #>
 
-Start-Sleep -Milliseconds 500
+Start-Sleep -Milliseconds 750
 
-$skipStereo = $false
+$skipStereoMux = $false
 $mId = 0
 # Check for running jobs
 $deeRunning = (Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
 $stereoRunning = (Get-Job -Name 'Stereo Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
 # Set the temporary output file
-$output = $Paths.OutputFile -replace '^(.+)\.(.+)', '$1 (1).$2'
+$output = $paths.OutputFile -replace '^(.+)\.(.+)', '$1 (1).$2'
 
 # Handle dee encoded audio. If a stereo track was created, add it as well
-if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('mkv')) {
+if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
     # Check for stereo and add it
     if ([File]::Exists($Paths.StereoPath) -and !$stereoRunning) {
-        $skipStereo = $true
+        $skipStereoMux = $true
         Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
     }
     elseif ([File]::Exists($Paths.StereoPath) -and $stereoRunning) {
@@ -1016,12 +1010,13 @@ if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('
         Write-Host "Dee Encoder background job is still running. Mux the file manually" @warnColors
     }
     else {
+        Write-Host "Multiplexing DEE track back into the output file..." @progressColors
         Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
 
         if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
             #Find the dee encoded output file
             $deePath = Get-ChildItem $(Split-Path $Paths.OutputFile -Parent) |
-                Where-Object { $_ -like '*.*3' -or $_ -like '*.thd' } | 
+                Where-Object { $_.Name -like "$($paths.Title)_audio.*3" -or $_.Name -like "$($paths.Title)_audio.thd" } |
                     Select-Object -First 1 -ExpandProperty FullName
 
             $muxPaths = @{
@@ -1030,26 +1025,27 @@ if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('
                 Audio    = $deePath
                 Title    = $paths.Title
                 Language = $paths.Language
+                LogPath  = $paths.LogPath
             }
-            if ($skipStereo) {
+            if ($skipStereoMux) {
                 $muxPaths.Stereo = $paths.StereoPath
                 $mId = 3
             }
             else { $mId = 2 }
 
-            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mId
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mId -Verbose:$setVerbose
         }
         # If no mkvmerge, mux with ffmpeg
         else {
             
             $fArgs = @(
                 '-i'
-                "$($Paths.OutputFile)"
+                "$($paths.OutputFile)"
                 '-i'
                 $deePath
-                if ($skipStereo) {
+                if ($skipStereoMux) {
                     '-i'
-                    "$($Paths.StereoPath)"
+                    "$($paths.StereoPath)"
                 }
                 '-loglevel'
                 'error'
@@ -1057,7 +1053,7 @@ if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('
                 0
                 '-map'
                 '1:a'
-                if ($skipStereo) {
+                if ($skipStereoMux) {
                     '-map'
                     '2:a'
                 }
@@ -1070,29 +1066,31 @@ if (($Audio -like '*dee*' -or $Audio2 -like '*dee*') -and $OutputPath.EndsWith('
             ffmpeg $fArgs
         }
 
+        # Remove the DEE audio file if switch is present
         if ($PSBoundParameters['RemoveFiles']) { Remove-Item $deePath -Force }
     }
 }
 
 # If stream copy and stereo are used, mux the stream back into the container
-if ((@('copy', 'c', 'copyall', 'ca') -contains $Audio) -and $Stereo2 -and !$skipStereo) {
+if (($Audio -in 'copy', 'c', 'copyall', 'ca') -and $Stereo2 -and !$skipStereoMux) {
     if ($stereoRunning) {
         Write-Host "Stereo encoder background job is still running. Mux the file manually" @warnColors
     }
     else {
-        Write-Host "`nMultiplexing stereo track back into the output file..." @progressColors
+        Write-Host "Multiplexing stereo track back into the output file..." @progressColors
 
         # If mkvmerge is available, use it instead of ffmpeg
         if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
             $muxPaths = @{
-                Input    = $Paths.OutputFile
+                Input    = $paths.OutputFile
                 Output   = $output
                 Audio    = $paths.StereoPath
                 Title    = $paths.Title
-                Language = $Paths.Language
+                Language = $paths.Language
+                LogPath  = $paths.LogPath
             }
             $mId = 1
-            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1 -Verbose:$setVerbose
         }
         # if not mkv or no mkvmerge, mux with ffmpeg
         else {
@@ -1103,16 +1101,31 @@ if ((@('copy', 'c', 'copyall', 'ca') -contains $Audio) -and $Stereo2 -and !$skip
 
 # Verify if temp output file exists and delete it if it is at least as large or larger than original output
 if ([File]::Exists($output) -and 
-    (([FileInfo]($output)).Length -ge ([FileInfo]($Paths.OutputFile)).Length)) {
+    (([FileInfo]($output)).Length -ge ([FileInfo]($paths.OutputFile)).Length)) {
 
-    Remove-Item $Paths.OutputFile -Force
+    Remove-Item $paths.OutputFile -Force
 
     if (!$?) { 
         Write-Host ""
         Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors 
     }
-    #[File]::Move($output, "$($paths.Title).$($paths.Extension)")
-    Rename-Item $output "$($paths.Title).$($paths.Extension)"
+    # Rename the new output file and assign the name for reference
+    $paths.OutputFile = (Rename-Item $output -NewName "$($paths.Title).$($paths.Extension)" -PassThru).FullName
+}
+elseif ([File]::Exists($output) -and 
+        (([FileInfo]($output)).Length -le ([FileInfo]($Paths.OutputFile)).Length)) {
+
+    Write-Host "The new output file is smaller than the input file. A muxing issue may have occurred" @warnColors
+}
+
+# Generate tag file if passed
+if ($PSBoundParameters['GenerateMKVTagFile']) {
+    try {
+        & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).toString() @GenerateMKVTagFile -Path $paths.OutputFile
+    }
+    catch {
+        Write-Host "An error occurred while generating the tag file: $($_.Exception.Message)" @errColors
+    }
 }
 
 # Display a quick view of the finished log file, the end time and total encoding time
@@ -1126,11 +1139,12 @@ $stopwatch.Stop()
 if ($PSBoundParameters['GenerateReport']) {
     $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
     $params = @{
-        DateTimes = @($startTime, $endTime)
-        Duration  = $stopwatch
-        Paths     = $paths
-        TwoPass   = $twoPass
-        Encoder   = $Encoder
+        DateTimes   = @($startTime, $endTime)
+        Duration    = $stopwatch
+        Paths       = $paths
+        TwoPass     = $twoPass
+        Encoder     = $Encoder
+        Verbose     = $setVerbose
     }
     Write-Report @params
 }
@@ -1139,8 +1153,9 @@ if ($PSBoundParameters['GenerateReport']) {
 if ($PSBoundParameters['RemoveFiles']) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
+    $delArray = @("*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin", "*_audio.*")
     Get-ChildItem -Path $paths.Root | ForEach-Object { 
-        Remove-Item -LiteralPath $_.FullName -Include "*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin"
+        Remove-Item -LiteralPath $_.FullName -Include $delArray -Force
     }
 }
 
