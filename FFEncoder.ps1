@@ -548,16 +548,15 @@ param (
             $flag = $false
             if ($null -eq $_['APIKey']) {
                 throw "MKV Tag Hashtable must include an APIKey"
-                $false
             }
             foreach ($k in $_.Keys) {
                 if ($k -notin 'APIKey', 'Path', 'Title', 'Year', 'Properties', 'SkipProperties', 'NoMux', 'AllowClobber') {
-                    throw "Invalid key. Valid keys are 'APIKey', 'Path', 'Title', 'Year', 'Properties', 'SkipProperties', 'NoMux'"
+                    throw "Invalid key. Valid keys are 'APIKey', 'Path', 'Title', 'Year', 'Properties', 'SkipProperties', 'NoMux', 'AllowClobber'"
                 }
                 else { $flag = $true }
             }
-            if ($flag = $true) { $true }
-            else { throw "Invalid NLMeans hashtable. See https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1" }
+            if ($flag) { $true }
+            else { throw "Invalid MKV Tag hashtable" }
         }
     )]
     [Alias("CreateTagFile")]
@@ -1167,6 +1166,18 @@ if ($PSBoundParameters['RemoveFiles']) {
     $delArray = @("*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin", "*_audio.*")
     Get-ChildItem -Path $paths.Root | ForEach-Object { 
         Remove-Item -LiteralPath $_.FullName -Include $delArray -Force
+    }
+}
+
+# If deew log exists, copy content to main log and delete
+if ($Audio -like 'dee*' -or $Audio2 -like 'dee*') {
+    $deeLog = [Path]::Join($(Split-Path $InputPath -Parent), 'dee.log')
+    if ([File]::Exists($deeLog)) {
+        Add-Content $paths.LogPath -Value "`n`n-------- Deew Encoder Log --------`n`n"
+        Add-Content $paths.LogPath -Value (Get-Content -Path $deeLog)
+    }
+    if ($?) {
+        [File]::Delete($deeLog)
     }
 }
 
