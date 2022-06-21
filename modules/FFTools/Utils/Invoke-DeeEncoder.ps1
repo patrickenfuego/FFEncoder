@@ -153,9 +153,13 @@ function Invoke-DeeEncoder {
     }
    
     # Delete the temp directory
-    if ($LASTEXITCODE) { 
+    if ($LASTEXITCODE) {
         Start-Sleep -Seconds 3
-        Remove-Item $tmpPath -Force -Recurse
+        Remove-Item $tmpPath -Recurse -Force
+        # sometimes the dee_tmp folder just won't die
+        if ([Directory]::Exists($tmpPath)) {
+            [Directory]::Delete($tmpPath)
+        }
     }
 }
 

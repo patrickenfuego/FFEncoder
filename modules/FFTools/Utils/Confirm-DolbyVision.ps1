@@ -40,7 +40,6 @@ function Confirm-DolbyVision {
     if ([File]::Exists($DolbyVisionPath)) {
         if ([math]::round(([FileInfo]($DolbyVisionPath)).Length / 1MB, 2) -gt 12) {
             Write-Host "Existing Dolby Vision RPU file found" @emphasisColors
-            Write-Host "If the RPU file was generated during a test encode (i.e. not a full frame count), exit the script NOW, delete the file, and regenerate" @warnColors
             return $true
         }
     }
