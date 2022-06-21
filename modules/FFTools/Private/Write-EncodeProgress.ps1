@@ -4,6 +4,9 @@
     .DESCRIPTION
         Quickly scans the source file for the total number of frames (no demuxing) and retrieves the 
         current frame from the log to form a progress bar. The status is updated every 2 seconds.
+    .NOTES
+        This function has an inner function that doubles as a trap for CTRL+C, as it runs after all of the big
+        ThreadJobs start
 #>
 
 function Write-EncodeProgress {
@@ -28,9 +31,38 @@ function Write-EncodeProgress {
         [bool]$DolbyVision
     )
 
+    <#
+        .SYNOPSIS
+            Watches for CTRL+C interrupts and clean exits all running jobs and scripts
+    #>
+    function Watch-ScriptTerminated ([string]$Message) {
+        if ($Host.UI.RawUI.KeyAvailable -and ($Key = $Host.UI.RawUI.ReadKey("AllowCtrlC,NoEcho,IncludeKeyUp"))) {
+            # If user hits Ctrl+C
+            if ([int]$Key.Character -eq 3) {
+                Write-Progress "Terminated" -Completed
+                Write-Warning "CTRL+C was detected - shutting down all running jobs before exiting the script"
+                # Clean up all running jobs before exiting
+                Get-Job | Stop-Job -PassThru | Remove-Job -Force -Confirm:$false
+                [console]::TreatControlCAsInput = $false
+
+                $psReq ? (Write-Host "$($aRed)$Message$($reset)") :
+                (Write-Host $Message @errColors)
+                exit 77
+            }
+            # Flush the key buffer again for the next loop
+            $Host.UI.RawUI.FlushInputBuffer()
+        }
+    }
+
+    # Intercept ctrl+C for graceful shutdown of jobs
+    [console]::TreatControlCAsInput = $True
+    Start-Sleep -Milliseconds 500
+    $Host.UI.RawUI.FlushInputBuffer()
+
     if ($PSBoundParameters['TestFrames']) {
         $frameCount = $TestFrames
     }
+    # Gather total frame count without demuxing
     else {
         if (!$SecondPass) {
             Write-Progress "Gathering frame count for progress display..."
@@ -45,6 +77,8 @@ function Write-EncodeProgress {
     
     # While job is running, track progress
     while ((Get-Job -Name $JobName).State -ne 'Completed') {
+        # Check if script was terminated. If so, exit gracefully & terminate jobs
+        Watch-ScriptTerminated -Message $exitBanner
         # Wait until log is available
         do {
             Start-Sleep -Milliseconds 100

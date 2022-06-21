@@ -194,12 +194,7 @@ function Invoke-FFMpeg {
         # Skip HDR10+ even if present
         [Parameter(Mandatory = $false)]
         [Alias("NoProgressBar")]
-        [switch]$DisableProgress,
-
-        # Enable Verbose output
-        [Parameter(Mandatory = $false)]
-        [Alias("V")]
-        [string]$Verbosity
+        [switch]$DisableProgress
     )
 
     # Writes the banner information during encoding
@@ -213,25 +208,27 @@ function Invoke-FFMpeg {
             Write-Host ""
             if ($psReq) {
                 $PSStyle.Formatting.TableHeader = $aYellow
-                Write-Host "$($aYellow+$boldOn)-- TEST ENCODE --"
+                Write-Host "$($aYellow+$PSStyle.Bold)-- TEST ENCODE --"
             }
             else { Write-Host "--- TEST ENCODE ---" @warnColors }
+
             [PSCustomObject]@{
-                Start    = $startStr
+                Start    = "$startStr  "
                 Duration = "$TestFrames Frames"
             } | Format-Table -AutoSize
+
             if ($psReq) { $PSStyle.Formatting.TableHeader = "`e[32;1m" }
         }
-        Write-Host "To view detailed progress, run " -NoNewline
-        Write-Host "Get-Content `"$($Paths.LogPath)`" -Tail 10" @emphasisColors -NoNewline
-        Write-Host " in a different PowerShell session`n"
-    }
-
-    if ($PSBoundParameters['Verbosity']) {
-        $VerbosePreference = 'Continue'
-    }
-    else {
-        $VerbosePreference = 'SilentlyContinue'
+        if ($psReq) {
+            $cmd = "$($aCyan+$italicOn)Get-Content $($aBMagenta)`"$($Paths.LogPath)`" $($aCyan)-Tail 10"
+            $msg = "To view detailed progress, run $cmd $($reset)in a different PowerShell session`n"
+            Write-Host $msg
+        }
+        else {
+            Write-Host "To view detailed progress, run " -NoNewline
+            Write-Host "Get-Content `"$($Paths.LogPath)`" -Tail 10" @emphasisColors -NoNewline
+            Write-Host " in a different PowerShell session`n"
+        }
     }
 
     # Infer primary language based on streams (for muxing) - NOT always accurate, but pretty close
@@ -253,10 +250,18 @@ function Invoke-FFMpeg {
         $skip10P = ($SkipHDR10Plus) ? $true : $false
         # Get HDR metadata. Re-throw any errors from function & exit call stack
         try {
-            $HDR = Get-HDRMetadata $Paths.InputFile $Paths.HDR10Plus $Paths.DvPath $skipDv $skip10P
+            $params = @{
+                InputFile       = $Paths.InputFile
+                HDR10PlusPath   = $Paths.HDR10Plus
+                DolbyVisionPath = $Paths.DvPath
+                SkipDolbyVision = $skipDv
+                SkipHDR10Plus   = $skip10P
+                Verbose         = $setVerbose
+            }
+            $HDR = Get-HDRMetadata @params
         }
         catch [System.ArgumentNullException] {
-            Write-Error -ErrorRecord $_
+            Write-Host "`u{203C} Failed to get HDR metadata: $($_.Exception.Message). Metadata will not be copied" @errColors
             $HDR = $null
         }
     }
@@ -270,7 +275,7 @@ function Invoke-FFMpeg {
             Exception         = [System.InvalidOperationException]::new($msg)
             Category          = "InvalidOperation"
             TargetObject      = $Encoder
-            ErrorId           = 264
+            ErrorId           = 200
         }
 
         Write-Error @params -ErrorAction Stop
@@ -296,6 +301,7 @@ function Invoke-FFMpeg {
         AudioFrames = $TestFrames
         TestStart   = $TestStart
         RemuxStream = $false
+        Verbose     = $setVerbose
     }
     $audio = Set-AudioPreference @audioParam1
 
@@ -319,6 +325,7 @@ function Invoke-FFMpeg {
             AudioFrames = $TestFrames
             TestStart   = $TestStart
             RemuxStream = $remuxStream
+            Verbose     = $setVerbose
         }
         $audio2 = Set-AudioPreference @audioParam2
 
@@ -352,7 +359,7 @@ function Invoke-FFMpeg {
         Level   = ([ref]$Level)
     }
     
-    Confirm-Parameters @settings
+    Confirm-Parameters @settings -Verbose:$setVerbose
 
     # Gather preset-related parameters
     $presetArgs = @{ 
@@ -366,7 +373,7 @@ function Invoke-FFMpeg {
         RCLookahead = $RCLookahead
     }
     # Set preset based arguments based on user input
-    $presetParams = Set-PresetParameters -Settings $presetArgs -Preset $Preset -Encoder $Encoder
+    $presetParams = Set-PresetParameters -Settings $presetArgs -Preset $Preset -Encoder $Encoder -Verbose:$setVerbose
     Write-Verbose "PRESET PARAMETER VALUES:`n$($presetParams | Out-String)`n"
 
     <#
@@ -405,7 +412,7 @@ function Invoke-FFMpeg {
         TestFrames     = $TestFrames
         TestStart      = $TestStart
         Deinterlace    = $Deinterlace
-        Verbosity      = $Verbosity
+        Verbose        = $setVerbose
     }
 
     if ($HDR.DV -eq $true) {
@@ -421,7 +428,15 @@ function Invoke-FFMpeg {
     # If Dolby Vision is found and args not empty/null, encode with Dolby Vision using x265 pipe
     if ($dvArgs) {
         if ($IsLinux -or $IsMacOS) { 
-            $hevcPath = [regex]::Escape($Paths.HevcPath)
+            $Paths.HevcPath = [regex]::Escape($Paths.HevcPath)
+        }
+
+        # Pull the x265 name from PATH to account for any mods. Selects the first result
+        $x265 = Get-Command 'x265*' | Select-Object -First 1 -ExpandProperty Source | Split-Path -LeafBase
+        Write-Verbose "x265 executable: $x265`n"
+
+        if (!$DisableProgress) {
+            $threadArgs = @($dvArgs, $Paths.HevcPath, $Paths.LogPath, $x265)
         }
 
         # Two pass x265 encode
@@ -433,27 +448,26 @@ function Invoke-FFMpeg {
 
             if ($IsLinux -or $IsMacOS) {
                 if ($DisableProgress) {
-                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath" 2>$Paths.LogPath
+                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)" 2>$Paths.LogPath
                 }
                 else {
-                    $threadArgs = @($dvArgs, $hevcPath, $Paths.LogPath)
                     Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log)
-            
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
+                        param ($dvArgs, $out, $log, $x265)
+                        
+                        $out = [regex]::Escape($out)
+                        bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $out" 2>$log
                     } | Out-Null 
                 }
             }
             else {
                 if ($DisableProgress) {
-                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
+                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
                 }
                 else {
-                    $threadArgs = @($dvArgs, $Paths.HevcPath, $Paths.LogPath)
                     Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log)
+                        param ($dvArgs, $out, $log, $x265)
             
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
+                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
                     } | Out-Null 
                 }
             }
@@ -466,6 +480,7 @@ function Invoke-FFMpeg {
                     JobName     = 'ffmpeg 1st Pass'
                     SecondPass  = $false
                     DolbyVision = $dovi
+                    Verbose     = $setVerbose
                 }
                 Write-EncodeProgress @params
             }
@@ -476,27 +491,26 @@ function Invoke-FFMpeg {
             
             if ($IsLinux -or $IsMacOS) {
                 if ($DisableProgress) {
-                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o $hevcPath" 2>>$Paths.LogPath
+                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o $($Paths.HevcPath)" 2>>$Paths.LogPath
                 }
                 else {
-                    $threadArgs = @($dvArgs, $hevcPath, $Paths.LogPath)
                     Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log)
+                        param ($dvArgs, $out, $log, $x265)
             
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$out`"" 2>>$log
+                        $out = [regex]::Escape($out)
+                        bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o $out" 2>>$log
                     } | Out-Null 
                 }
             }
             else {
                 if ($DisableProgress) {
-                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>>$Paths.LogPath
+                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>>$Paths.LogPath
                 }
                 else {
-                    $threadArgs = @($dvArgs, $Paths.HevcPath, $Paths.LogPath)
                     Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log)
+                        param ($dvArgs, $out, $log, $x265)
             
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args2) -o `"$out`"" 2>>$log
+                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o `"$out`"" 2>>$log
                     } | Out-Null 
                 }
             }
@@ -509,6 +523,7 @@ function Invoke-FFMpeg {
                     JobName     = 'ffmpeg 2nd Pass'
                     SecondPass  = $true
                     DolbyVision = $dovi
+                    Verbose     = $setVerbose
                 }
                 Write-EncodeProgress @params
             }
@@ -521,27 +536,26 @@ function Invoke-FFMpeg {
 
             if ($IsLinux -or $IsMacOS) {
                 if ($DisableProgress) {
-                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $hevcPath" 2>$Paths.LogPath
+                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $($Paths.HevcPath)" 2>$Paths.LogPath
                 }
                 else {
-                    $threadArgs = @($dvArgs, $hevcPath, $Paths.LogPath)
                     Start-ThreadJob -Name ffmpeg -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log)
+                        param ($dvArgs, $out, $log, $x265)
             
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
+                        $out = [regex]::Escape($out)
+                        bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $out" 2>$log
                     } | Out-Null 
                 }
             }
             else {
                 if ($DisableProgress) {
-                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
+                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.HevcPath)`"" 2>$Paths.LogPath
                 }
                 else {
-                    $threadArgs = @($dvArgs, $Paths.HevcPath, $Paths.LogPath)
                     Start-ThreadJob -Name ffmpeg -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log)
+                        param ($dvArgs, $out, $log, $x265)
             
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
+                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
                     } | Out-Null 
                 }
             }
@@ -554,6 +568,7 @@ function Invoke-FFMpeg {
                     JobName     = 'ffmpeg'
                     SecondPass  = $false
                     DolbyVision = $dovi
+                    Verbose     = $setVerbose
                 }
                 Write-EncodeProgress @params
             }
@@ -606,14 +621,14 @@ function Invoke-FFMpeg {
             else {
                 $muxPaths.Temp = $Paths.TmpOut
             }
-            Invoke-MkvMerge -Paths $muxPaths -Mode 'dv' -Verbosity $Verbosity
+            Invoke-MkvMerge -Paths $muxPaths -Mode 'dv' -Verbose:$setVerbose
         }
         else {
             Write-Host "MkvMerge not found in PATH. Mux the HEVC stream manually to retain Dolby Vision"
         }
 
         Write-Host ""
-    }
+    } # End DoVi
     # Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
@@ -623,7 +638,7 @@ function Invoke-FFMpeg {
 
         if (([math]::Round(([FileInfo]($Paths.X265Log)).Length / 1MB, 2)) -gt 10) {
             $msg = "A large x265 first pass log already exists. If this isn't a full log, " +
-            "stop and delete the log before proceeding. Continuing to second pass..."
+                   "stop and delete the log before proceeding. Continuing to second pass..."
             if ($psReq) {
                 Write-Host "$($aYellow+$boldOn)$msg"
             }
@@ -653,6 +668,7 @@ function Invoke-FFMpeg {
                     TestFrames = $TestFrames
                     JobName    = 'ffmpeg 1st Pass'
                     SecondPass = $false
+                    Verbose    = $setVerbose
                 }
                 Write-EncodeProgress @params
             } 
@@ -672,11 +688,12 @@ function Invoke-FFMpeg {
             } | Out-Null
     
             $params = @{
-                InputFile  = $Paths.InputFile
-                LogPath    = $Paths.LogPath
-                TestFrames = $TestFrames
-                JobName    = 'ffmpeg 2nd Pass'
-                SecondPass = $true
+                InputFile   = $Paths.InputFile
+                LogPath     = $Paths.LogPath
+                TestFrames  = $TestFrames
+                JobName     = 'ffmpeg 2nd Pass'
+                SecondPass  = $true
+                Verbose     = $setVerbose
             }
             Write-EncodeProgress @params
         }  
@@ -718,7 +735,8 @@ function Invoke-FFMpeg {
     # Should be unreachable. Throw error and exit script if rate control cannot be detected
     else {
         $params = @{
-            Message      = "Rate control method could not be determined from input parameters"
+            Exception    = [System.FieldAccessException]::new('Rate control method could not be determined from input parameters')
+            Category     = 'InvalidResult'
             TargetObject = $RateControl
             ErrorId      = 101
         }
@@ -742,6 +760,7 @@ function Invoke-FFMpeg {
             JobName     = 'ffmpeg'
             SecondPass  = $false
             DolbyVision = $dovi
+            Verbose     = $setVerbose
         }
         Write-EncodeProgress @params
     }
