@@ -103,7 +103,7 @@ param (
     [Parameter(Mandatory = $false)]
     [Alias('Skip')]
     [ValidateSet('Writers', 'Directors', 'Cast', 'IMDbID', 'TMDbID')]
-    [string[]]$SkipProperties = @('Writers', 'Directors', 'Cast'),
+    [string[]]$SkipProperties,
 
     [Parameter(Mandatory = $false)]
     [switch]$NoMux,
