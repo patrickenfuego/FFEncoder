@@ -103,7 +103,7 @@ param (
     [Parameter(Mandatory = $false)]
     [Alias('Skip')]
     [ValidateSet('Writers', 'Directors', 'Cast', 'IMDbID', 'TMDbID')]
-    [string[]]$SkipProperties,
+    [string[]]$SkipProperties = @('Writers', 'Directors', 'Cast'),
 
     [Parameter(Mandatory = $false)]
     [switch]$NoMux,
@@ -117,19 +117,19 @@ param (
 # Define Variables                                      #                                           
 #########################################################
 
+$ErrorView = 'NormalView'
+
 #Console colors
 $progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black' }
 $warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black' }
 $dividerColor = @{ ForegroundColor = 'DarkMagenta'; BackgroundColor = 'Black' }
 
-$banner = @'
-#     #                                                    #######                   #####                                                         
-##   ##   ##   ##### #####   ####   ####  #    #   ##         #      ##    ####     #     # ###### #    # ###### #####    ##   #####  ####  #####  
-# # # #  #  #    #   #    # #    # #      #   #   #  #        #     #  #  #    #    #       #      ##   # #      #    #  #  #    #   #    # #    # 
-#  #  # #    #   #   #    # #    #  ####  ####   #    #       #    #    # #         #  #### #####  # #  # #####  #    # #    #   #   #    # #    # 
-#     # ######   #   #####  #    #      # #  #   ######       #    ###### #  ###    #     # #      #  # # #      #####  ######   #   #    # #####  
-#     # #    #   #   #   #  #    # #    # #   #  #    #       #    #    # #    #    #     # #      #   ## #      #   #  #    #   #   #    # #   #  
-#     # #    #   #   #    #  ####   ####  #    # #    #       #    #    #  ####      #####  ###### #    # ###### #    # #    #   #    ####  #    # 
+$banner2 = @'
+ __  __   _  __ __   __    _____                    ___                                   _               
+|  \/  | | |/ / \ \ / /   |_   _|  __ _   __ _     / __|  ___   _ _    ___   _ _   __ _  | |_   ___   _ _ 
+| |\/| | | ' <   \ V /      | |   / _` | / _` |   | (_ | / -_) | ' \  / -_) | '_| / _` | |  _| / _ \ | '_|
+|_|  |_| |_|\_\   \_/       |_|   \__,_| \__, |    \___| \___| |_||_| \___| |_|   \__,_|  \__| \___/ |_|  
+                                         |___/                                                            
 '@
 
 #Set Window Name
@@ -205,7 +205,7 @@ function Get-Metadata {
     #Create base object
     if ('TMDbID' -notin $SkipProperties) {
         $obj = @{
-            'TMDB' = $Id
+            'TMDB' = "movie/$Id"
         }
     }
     else { $obj = @{} }
@@ -374,7 +374,7 @@ if ((Test-Path -Path $outXML) -and !$PSBoundParameters['AllowClobber']) {
     exit 0
 }
 
-Write-Host "$banner`n`n" @dividerColor
+Write-Host "$banner2`n`n" @dividerColor
 
 #Sanitize title/year if not passed via parameter
 if (!$PSBoundParameters['Title'] -or !$PSBoundParameters['Year']) {
@@ -464,8 +464,7 @@ catch {
                 TargetObject      = $APIKey
                 ErrorId           = 1
             }
-            Write-Error @params
-            exit 1
+            Write-Error @params -ErrorAction Stop
         }
         if ($testQuery) {
             $params = @{
@@ -476,8 +475,7 @@ catch {
                 TargetObject      = $title
                 ErrorId           = 2
             }
-            Write-Error @params
-            exit 2
+            Write-Error @params -ErrorAction Stop
         }
     }
     elseif (!$movieObj) {
@@ -489,8 +487,7 @@ catch {
             TargetObject      = $movieObj
             ErrorId           = 3
         }
-        Write-Error @params
-        exit 3
+        Write-Error @params -ErrorAction Stop
     }
 }
 
@@ -520,5 +517,6 @@ else {
     Write-Host "Success! Exiting script" @progressColors
 }
 
+Write-Host ""
 $host.ui.RawUI.WindowTitle = $currName
 exit 0
