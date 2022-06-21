@@ -1,3 +1,5 @@
+using namespace System.Collections
+
 <#
     .SYNOPSIS   
         Function to build the arguments used by Invoke-FFMpeg
@@ -5,24 +7,6 @@
         Dynamically generates an array list of arguments based on parameters passed by the user,
         the preset selected, and a few hard coded default arguments based on my personal preference.
         If custom preset arguments are passed, they will override the default values. 
-        
-        The hard coded defaults are as follows and should be changed in this function if new values are
-        desired:
-
-        1. rc-lookahead: 48
-        2. subme: 4
-        3. open-gop: 0
-        4. sao: 0
-        4. keyint: 192 (8 second GOP)
-        5. frame-threads: 2
-        6. merange: 44 (720p/1080p only)
-
-        Two pass encoding, first pass (meant to balance speed and quality):
-
-        1. rect: 0
-        2. max-merge: 2
-        3. bintra: 0
-        4. subme: 2
     .OUTPUTS
         Array list of ffmpeg arguments
 #>
@@ -30,11 +14,15 @@
 function Set-FFMpegArgs {      
     [CmdletBinding()]
     param (
-        # Parameter help description
+        # Encoder to use
+        [Parameter(Mandatory = $true)]
+        [string]$Encoder,
+
+        # Audio options
         [Parameter(Mandatory = $true)]
         [array]$Audio,
 
-        # Parameter help description
+        # Subtitle options
         [Parameter(Mandatory = $true)]
         [array]$Subtitles,
 
@@ -47,11 +35,11 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $true)]
         [int[]]$CropDimensions,
 
-        # Parameter help description
+        # Rate Control configuration
         [Parameter(Mandatory = $true)]
         [array]$RateControl,
 
-        # Parameter help description
+        # Preset parameter values, default or modified by user
         [Parameter(Mandatory = $true)]
         [hashtable]$PresetParams,
 
@@ -69,17 +57,21 @@ function Set-FFMpegArgs {
 
         # psy-rd setting
         [Parameter(Mandatory = $false)]
-        [double]$PsyRd,
+        [string]$PsyRd,
 
         # Filter to help reduce high frequency noise (grain)
         [Parameter(Mandatory = $false)]
         [int[]]$NoiseReduction,
 
-        #Transform unit recursion depth (intra, inter)
+        # Enable tree algorithm
+        [Parameter(Mandatory = $false)]
+        [int]$Tree,
+
+        # Transform unit recursion depth (intra, inter)
         [Parameter(Mandatory = $false)]
         [int[]]$TuDepth,
  
-        #Early exit setting for tu recursion depth
+        # Early exit setting for tu recursion depth
         [Parameter(Mandatory = $false)]
         [int]$LimitTu,
 
@@ -93,7 +85,7 @@ function Set-FFMpegArgs {
 
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
-        [int]$FrameThreads,
+        [int]$Threads,
 
         # Encoder level to use. Default is unset (encoder decision)
         [Parameter(Mandatory = $false)]
@@ -102,14 +94,15 @@ function Set-FFMpegArgs {
         # Video buffering verifier: (bufsize, maxrate)
         [Parameter(Mandatory = $false)]
         [int[]]$VBV,
-
+        
         [Parameter(Mandatory = $false)]
         [array]$FFMpegExtra,
 
+        # Extra encoder parameters passed by user
         [Parameter(Mandatory = $false)]
-        [hashtable]$x265Extra,
+        [hashtable]$EncoderExtra,
 
-        # Parameter help description
+        # HDR data
         [Parameter(Mandatory = $false)]
         [hashtable]$HDR,
 
@@ -125,26 +118,16 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [int]$TestFrames,
 
-        #Starting Point for test encodes. Integers are treated as a frame #
+        # Starting Point for test encodes. Integers are treated as a frame #
         [Parameter(Mandatory = $false)]
         [string]$TestStart,
 
         # Switch to enable deinterlacing with yadif
         [Parameter(Mandatory = $false)]
-        [switch]$Deinterlace,
-
-        [Parameter(Mandatory = $false)]
-        [string]$Verbosity
+        [switch]$Deinterlace
     )
 
-    if ($PSBoundParameters['Verbosity']) {
-        $VerbosePreference = 'Continue'
-    }
-    else {
-        $VerbosePreference = 'SilentlyContinue'
-    }
-
-    #Split rate control array
+    # Split rate control array
     $twoPass = $RateControl[2]
     $passType = $RateControl[3]
     $RateControl = $RateControl[0..($RateControl.Length - 3)]
@@ -152,11 +135,11 @@ function Set-FFMpegArgs {
     ## Unpack extra parameters ##
 
     if ($PSBoundParameters['FFMpegExtra']) {
-        $ffmpegExtraArray = [System.Collections.ArrayList]@()
+        $ffmpegExtraArray = [ArrayList]@()
         foreach ($arg in $FFMpegExtra) {
             if ($arg -is [hashtable]) {
                 foreach ($entry in $arg.GetEnumerator()) {
-                    #Skip crop args. Handled in Set-VideoFilter
+                    # Skip crop args. Handled in Set-VideoFilter
                     if ($entry.Value -notmatch "crop") {
                         $ffmpegExtraArray.AddRange(@("$($entry.Name)", "$($entry.Value)"))
                     }
@@ -167,35 +150,38 @@ function Set-FFMpegArgs {
     }
 
     $skip = @{}
-    @('OpenGop', 'RCL', 'Keyint', 'MinKeyInt', 'Merange', 'Sao').ForEach({ $skip.$_ = $false })
-    if ($PSBoundParameters['x265Extra']) {
-        $x265ExtraArray = [System.Collections.ArrayList]@()
-        foreach ($arg in $x265Extra.GetEnumerator()) {
+    @('OpenGop', 'Keyint', 'MinKeyInt').ForEach({ $skip.$_ = $false })
+    if ($PSBoundParameters['EncoderExtra']) {
+        $encoderExtraArray = [ArrayList]@()
+        foreach ($arg in $EncoderExtra.GetEnumerator()) {
             if ($arg.Name -eq 'sao') { $skip.Sao = $true } 
-            elseif ($arg.Name -eq 'open-gop')     { $skip.OpenGOP = $true } 
-            elseif ($arg.Name -eq 'rc-lookahead') { $skip.RCL = $true } 
-            elseif ($arg.Name -eq 'keyint')       { $skip.Keyint = $true } 
-            elseif ($arg.Name -eq 'min-keyint')   { $skip.MinKeyint = $true } 
-            elseif ($arg.Name -eq 'merange')      { $skip.Merange = $true } 
-        
-            $x265ExtraArray.Add("$($arg.Name)=$($arg.Value)") > $null
+            elseif ($arg.Name -eq 'open-gop') { $skip.OpenGOP = $true } 
+            elseif ($arg.Name -eq 'keyint') { $skip.Keyint = $true } 
+            elseif ($arg.Name -eq 'min-keyint') { $skip.MinKeyint = $true } 
+            else {
+                $encoderExtraArray.Add("$($arg.Name)=$($arg.Value)") > $null
+            }
         }
     }
 
     ## Base Array Declarations ##
 
     #Primary array list initialized with global values
-    $ffmpegArgsAL = [System.Collections.ArrayList]@(
+    [ArrayList]$ffmpegArgsAL = @(
         '-probesize'
         '100MB'
         '-i'
         "`"$($Paths.InputFile)`""
+        if ($TrackTitle['VideoTitle']) {
+            '-metadata:s:v:0'
+            "title=$($TrackTitle['VideoTitle'])"
+        }
         '-color_range'
         'tv'
         '-map'
         '0:v:0'
         '-c:v'
-        'libx265'
+        ($Encoder -eq 'x265') ? 'libx265' : 'libx264'
         $Audio
         $Subtitles
         '-preset'
@@ -203,26 +189,93 @@ function Set-FFMpegArgs {
         $RateControl
     )
 
-    $x265BaseArray = [System.Collections.ArrayList]@(
-        "psy-rd=$PsyRd"
+    # Settings common to both encoders
+    [ArrayList]$baseArray = @(
         "qcomp=$QComp"
-        "tu-intra-depth=$($TuDepth[0])"
-        "tu-inter-depth=$($TuDepth[1])"
-        "limit-tu=$LimitTu"
-        "b-intra=$($PresetParams.BIntra)"
         "bframes=$($PresetParams.BFrames)"
-        "psy-rdoq=$($PresetParams.PsyRdoq)"
         "aq-mode=$($PresetParams.AqMode)"
-        "nr-intra=$($NoiseReduction[0])"
-        "nr-inter=$($NoiseReduction[1])"
+        "merange=$($PresetParams.Merange)"
+        "rc-lookahead=$($PresetParams.RCLookahead)"
+        "ref=$($PresetParams.Ref)"
         "aq-strength=$AqStrength"
-        "strong-intra-smoothing=$IntraSmoothing"
         "deblock=$($Deblock[0]),$($Deblock[1])"
+        if ($VBV) {
+            "vbv-bufsize=$($VBV[0])"
+            "vbv-maxrate=$($VBV[1])"
+        }
     )
+
+    # Assign settings unique to encoders
+    [ArrayList]$encoderBaseArray =
+
+    if ($Encoder -eq 'x265') {
+         @(
+            "tu-intra-depth=$($TuDepth[0])"
+            "tu-inter-depth=$($TuDepth[1])"
+            "limit-tu=$LimitTu"
+            "b-intra=$($PresetParams.BIntra)"
+            "psy-rdoq=$($PresetParams.PsyRdoq)"
+            "nr-intra=$($NoiseReduction[0])"
+            "nr-inter=$($NoiseReduction[1])"
+            "strong-intra-smoothing=$IntraSmoothing"
+            "cutree=$Tree"
+            if ($PsyRd) {
+                # If user accidentally enters in x264 format
+                if ($PsyRd -match '(?<v1>\d\.?\d{0,2}).*\,.*\d.*' -and ([double]$Matches.v1 -lt 5.01)) {
+                    "psy-rd=$($Matches.v1.Trim())"
+                }
+                elseif ([double]$PsyRd -lt 5.01) {
+                    "psy-rd=$PsyRd"
+                }
+                else {
+                    Write-Warning "Invalid input for psy-rd. Using default: 2.00"
+                    'psy-rd=2.00'
+                }
+                
+            }
+            if ($PSBoundParameters['Threads']) {
+                "frame-threads=$Threads"
+            }
+            if ($PSBoundParameters['Level']) {
+                "level-idc=$Level"
+            }
+        )
+    }
+    else {
+        @(
+            "mbtree=$Tree"
+            "nr=$($NoiseReduction[0])"
+            if ($PSBoundParameters['Threads']) {
+                "threads=$Threads"
+            }
+            if ($PSBoundParameters['Level']) {
+                "level=$Level"
+            }
+            # user entered both psy values as one string
+            if ($PSBoundParameters['PsyRd'] -match '\d\.?\d{0,2}.*\,.*\d.*') {
+                "psy-rd=$($PsyRd -replace '\s', '')"
+            }
+            elseif ($PSBoundParameters['PsyRd'] -and $PSBoundParameters['PsyRdoq']) {
+                "psy-rd=$PsyRd,$PsyRdoq"
+            }
+            elseif ($PSBoundParameters['PsyRd'] -and !$PSBoundParameters['PsyRdoq']) {
+                "psy-rd=$PsyRd,0.00"
+            }
+            elseif (!$PSBoundParameters['PsyRd'] -and $PSBoundParameters['PsyRdoq']) {
+                "psy-rd=1.00,$psyRdoq"
+            }
+            else {
+                'psy-rd=1.00,0.00'
+            }
+        )
+    }
+
+    # Combine base arrays
+    $encoderBaseArray.AddRange($baseArray)
 
     ## Build Argument Array Lists ##
 
-    #Set test encode arguments
+    # Set test encode arguments
 
     if ($PSBoundParameters['TestFrames']) {
         $tParams = @{
@@ -234,53 +287,39 @@ function Set-FFMpegArgs {
         }
         Set-TestParameters @tParams
     }
-    #If TestFrames is not used but a start code is passed
+    # If TestFrames is not used but a start code is passed
     elseif (!$PSBoundParameters['TestFrames'] -and $ffmpegExtraArray -contains '-ss') {
         $i = $ffmpegExtraArray.IndexOf('-ss')
         $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
         $ffmpegExtraArray.RemoveRange($i, 2)
     }
     
-    #Set additional x265 arguments and override arguments
-
-    if ($PSBoundParameters['FrameThreads']) {
-        $x265BaseArray.Add("frame-threads=$FrameThreads") > $null
-    }
-
-    if ($PSBoundParameters['Level']) {
-        $x265BaseArray.Add("level-idc=$Level") > $null
-    }
-
-    if ($PSBoundParameters['VBV']) {
-        $x265BaseArray.AddRange(@("vbv-bufsize=$($VBV[0])", "vbv-maxrate=$($VBV[1])"))
-    }
-
+    # Set hard coded defaults unless overridden
     switch ($skip) {
-        { $skip.OpenGOP -eq $false }   { $x265BaseArray.Add('open-gop=0') > $null }
-        { $skip.RCL -eq $false }       { $x265BaseArray.Add('rc-lookahead=48') > $null }
-        { $skip.KeyInt -eq $false }    { $x265BaseArray.Add('keyint=192') > $null }
-        { $skip.MinKeyInt -eq $false } { $x265BaseArray.Add('min-keyint=24') > $null }
-        { $skip.Sao -eq $false }       { $x265BaseArray.Add('sao=0') > $null }
+        { $skip.OpenGOP -eq $false } { $encoderBaseArray.Add('open-gop=0') > $null }
+        { $skip.KeyInt -eq $false } { $encoderBaseArray.Add('keyint=192') > $null }
+        { $skip.MinKeyInt -eq $false } { $encoderBaseArray.Add('min-keyint=24') > $null }
+        { $skip.Sao -eq $false -and ($Encoder -eq 'x265') } { $encoderBaseArray.Add('sao=0') > $null }
     }
     
-    #Set video specific filter arguments
+    # Set video specific filter arguments
 
     $vfHash = @{
         CropDimensions = $CropDimensions
         Scale          = $Scale
         FFMpegExtra    = $FFMpegExtra
         Deinterlace    = $Deinterlace
-        Verbosity      = $Verbosity
+        Verbose        = $setVerbose
         NLMeans        = $NLMeans
     }
-    $vfArray = Set-VideoFilter @vfHash
+    $vfArray = Set-VideoFilter @vfHash -Verbose:$setVerbose
     if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
 
-    #Set res and bit depth related arguments for x265
+    # Set res and bit depth related arguments for encoders
 
     if ($HDR) {
         $ffmpegArgsAL.AddRange(@('-pix_fmt', $HDR.PixelFmt))
-        #Arguments specific to 2160p HDR
+        # Arguments specific to 2160p HDR
         $resArray = @(
             "colorprim=$($HDR.ColorPrimaries)"
             "transfer=$($HDR.Transfer)"
@@ -297,40 +336,40 @@ function Set-FFMpegArgs {
         )
     }
     else {
-        $ffmpegArgsAL.AddRange(@('-pix_fmt', 'yuv420p10le'))
-        #Arguments specific to 1080p SDR
+        $pixFmt = ($Encoder -eq 'x265') ? 'yuv420p10le' : 'yuv420p'
+        $ffmpegArgsAL.AddRange(@('-pix_fmt', $pixFmt))
+        # Arguments specific to 1080p SDR
         $resArray = @(
             'colorprim=bt709'
             'transfer=bt709'
             'colormatrix=bt709'
         )
-        if ($skip.Merange -eq $false) { $resArray += 'merange=44' }
     }
-    $x265BaseArray.AddRange($resArray)
+    $encoderBaseArray.AddRange($resArray)
 
-    #Set ffmpeg extra arguments if passed
+    # Set ffmpeg extra arguments if passed
     if ($ffmpegExtraArray) {
         Write-Verbose "FFMPEG EXTRA ARGS ARE: `n $($ffmpegExtraArray -join ' ')`n"
         Write-Verbose "NOTE: If -ss was passed, it was moved before the file input and deleted from the above array"
         $ffmpegArgsAL.AddRange($ffmpegExtraArray) 
     }
-    #Add x265 extra arguments if passed
-    if ($x265ExtraArray) {
-        $x265BaseArray.AddRange($x265ExtraArray)
+    # Add extra encoder arguments if passed
+    if ($encoderExtraArray) {
+        $encoderBaseArray.AddRange($encoderExtraArray)
     }
 
     if ($twoPass) {
-        [System.Collections.ArrayList]$x265FirstPassArray = switch -Regex ($passType) {
+        [ArrayList]$x265FirstPassArray = switch -Regex ($passType) {
             "^d[efault]*$" {
                 @(
-                    $x265BaseArray
+                    $encoderBaseArray
                     "subme=$($PresetParams.Subme)"
                 )
                 break
             }
             "^f[ast]*$" {
                 @(
-                    $x265BaseArray
+                    $encoderBaseArray
                     'rect=0'
                     'amp=0'
                     'max-merge=1'
@@ -345,7 +384,7 @@ function Set-FFMpegArgs {
             }
             "^c[ustom]*$" {
                 @(
-                    $x265BaseArray
+                    $encoderBaseArray
                     'rect=0'
                     'amp=0'
                     'max-merge=2'
@@ -355,25 +394,41 @@ function Set-FFMpegArgs {
             }
         }
 
-        #Add remaining parameters for first/second pass
-        $x265FirstPassArray.AddRange(@('pass=1', "stats='$($Paths.X265Log)'"))
-        $x265SecondPassArray = $x265BaseArray.Clone()
-        $x265SecondPassArray.AddRange(@('pass=2', "stats='$($Paths.X265Log)'", "subme=$($PresetParams.Subme)"))
-        #Create copy for 2nd pass and join with ffmpeg arrays
+        # Create copy for 2nd pass parameters
         $ffmpegPassTwoArgsAL = $ffmpegArgsAL.Clone()
-        $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265FirstPassArray -join ':')`"")) 
-        $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "`"$($x265SecondPassArray -join ':')`""))
 
+        # Add remaining parameters for first/second pass based on encoder
+        if ($Encoder -eq 'x265') {
+            $x265FirstPassArray.AddRange(@('pass=1', "stats='$($Paths.X265Log)'"))
+            $x265SecondPassArray = $encoderBaseArray.Clone()
+            $x265SecondPassArray.AddRange(@('pass=2', "stats='$($Paths.X265Log)'", "subme=$($PresetParams.Subme)"))
+ 
+            $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265FirstPassArray -join ':')`"")) 
+            $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "`"$($x265SecondPassArray -join ':')`""))
+        }
+        else {
+            $x264FirstPassArray = $encoderBaseArray.Clone()
+            $x264FirstPassArray.AddRange(@('pass=1', "stats='$($Paths.X265Log)'", "subme=$($PresetParams.Subme)"))
+            $x264SecondPassArray = $x264FirstPassArray.Clone()
+            $x264SecondPassArray[$x264SecondPassArray.IndexOf('pass=1')] = 'pass=2'
+
+            $ffmpegArgsAL.AddRange(@('-x264-params', "`"$($x264FirstPassArray -join ':')`"")) 
+            $ffmpegPassTwoArgsAL.AddRange(@('-x264-params', "`"$($x264SecondPassArray -join ':')`""))
+        }
+        
         Write-Verbose "FFMPEG FIRST PASS ARRAY IS: `n $($ffmpegArgsAL -join " ")`n"
         Write-Verbose "FFMPEG SECOND PASS ARRAY IS: `n $($ffmpegPassTwoArgsAL -join " ")`n"
 
         return @($ffmpegArgsAL, $ffmpegPassTwoArgsAL)
     }
-    #CRF/1-Pass
+    # CRF/1-Pass
     else {
         #Add remaining argument and join with ffmpeg array
-        $x265BaseArray.Add("subme=$($PresetParams.Subme)") > $null
-        $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265BaseArray -join ':')`""))
+        $encoderBaseArray.Add("subme=$($PresetParams.Subme)") > $null
+
+        ($Encoder -eq 'x265') ?
+        ($ffmpegArgsAL.AddRange(@('-x265-params', "`"$($encoderBaseArray -join ':')`""))) :
+        ($ffmpegArgsAL.AddRange(@('-x264-params', "`"$($encoderBaseArray -join ':')`"")))
 
         Write-Verbose "FFMPEG ARGUMENT ARRAY IS:`n $($ffmpegArgsAL -join " ")`n"
 

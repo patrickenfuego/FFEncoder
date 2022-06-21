@@ -23,18 +23,8 @@ function Set-VideoFilter {
         [switch]$Deinterlace,
 
         [Parameter(Mandatory = $false)]
-        [hashtable]$NLMeans,
-
-        [Parameter(Mandatory = $false, Position = 4)]
-        [string]$Verbosity
+        [hashtable]$NLMeans
     )
-
-    if ($PSBoundParameters['Verbosity']) {
-        $VerbosePreference = 'Continue'
-    }
-    else {
-        $VerbosePreference = 'SilentlyContinue'
-    }
 
     [array]$vfArray = $null
 
@@ -61,15 +51,23 @@ function Set-VideoFilter {
 
     # if manual crop dimensions are passed, parse them out
     if ($CropDimensions -contains -1) {
-        [string]$cropStr = $FFMpegExtra.Where({ $_['-vf'] -match "crop" }) | 
+        [string]$cropStr = $FFMpegExtra.Where({ $_['-vf'] -match 'crop' }) | 
             Select-Object -ExpandProperty '-vf'
         if ($cropStr -match "crop=w?=?(?<width>\d{3,4}):h?=?(?<height>\d{3,4})") {
             $width, $height = $Matches.width, $Matches.height
             $CropDimensions = @($width, $height)
         }
         else {
-            throw "Error parsing crop parameters in FFMpegExtra"
-            exit 2
+            $msg = "Error parsing crop parameter regex in FFMpegExtra"
+            $params = @{
+                Exception         = [System.ArgumentException]::new($msg)
+                RecommendedAction = 'Verify crop parameters'
+                Category          = 'InvalidArgument'
+                CategoryActivity  = 'Parsing crop values for scaling'
+                TargetObject      = $cropStr
+                ErrorId           = 80
+            }
+            Write-Error @params -ErrorAction Stop 
         }
     }   
 
@@ -103,8 +101,16 @@ function Set-VideoFilter {
             }
         }
         else {
-            throw "Crop dimensions not found or are out of range. Cannot scale."
-            exit 2
+            $msg = "Crop dimensions were not found or are out of range. Cannot scale."
+            $params = @{
+                Exception         = [System.ArgumentException]::new($msg)
+                RecommendedAction = 'Verify scaling dimensions'
+                Category          = 'InvalidArgument'
+                CategoryActivity  = 'Setting crop values for scaling'
+                TargetObject      = $Scale
+                ErrorId           = 81
+            }
+            Write-Error @params -ErrorAction Stop 
         }
     }
 

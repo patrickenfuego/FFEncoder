@@ -10,7 +10,7 @@ function Set-SubtitlePreference {
         [string]$UserChoice
     )
 
-    if ($UserChoice -match "a[ll]*$") {
+    if ($UserChoice -match "a[ll]*$" -or $UserChoice -match "c[opy]*a[ll]*") {
         Write-Host "** ALL SUBTITLES SELECTED **" @progressColors
         Write-Host "All subtitle streams will be copied`n"
         return @('-map', '0:s?', '-c:s', 'copy')
@@ -29,11 +29,10 @@ function Set-SubtitlePreference {
         Write-Host "** $($UserChoice.ToUpper()) SUBTITLES SELECTED **" @progressColors
         $subStreams = Get-SubtitleStream -InputFile $InputFile -Language $UserChoice
         if ($null -ne $subStreams) {
-            $args = @()
             foreach ($s in $subStreams) {
-                $args += '-map', "0:s:$s`?", '-c:s', 'copy'
+                [string[]]$sArgs += '-map', "0:s:$s`?", '-c:s', 'copy'
             }
-            return $args
+            return $sArgs
         }
         else {
             Write-Warning "No matching subtitle preference was found. Subtitles will not be copied`n"

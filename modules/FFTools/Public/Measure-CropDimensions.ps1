@@ -33,23 +33,26 @@ function Measure-CropDimensions
         }
     }
     
-    #Exit script is either or both crop values are 0
+    # Exit function if either or both crop values are 0
     if ($cropWidth -eq 0 -or $cropHeight -eq 0) {
         if ($cropWidth -eq 0 -and $cropHeight -eq 0) {
             $msg = "Both crop values cannot be equal to 0"
+            $src = $cropWidth
         }
         elseif ($cropWidth -eq 0 -and $cropHeight -gt 0) {
             $msg = "Crop width cannot be equal to zero"
+            $src = $cropWidth
         }
         else {
             $msg = "Crop height cannot be equal to zero"
+            $src = $cropHeight
         }
         $params = @{
-            Message           = $msg
             RecommendedAction = "Check the input file and try again"
             Category          = "InvalidResult"
-            Exception         = [System.ArgumentException]::new()
-            CategoryActivity  = "Crop File Generation"
+            Exception         = [System.ArgumentException]::new($msg)
+            CategoryActivity  = "Crop File Measurement"
+            TargetObject      = $src
             ErrorId           = 7
         }
         Write-Error @params -ErrorAction Stop

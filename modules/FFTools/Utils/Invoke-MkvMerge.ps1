@@ -31,23 +31,13 @@ function Invoke-MkvMerge {
         [string]$Mode,
 
         [Parameter(Mandatory = $false)]
-        [int]$ModeID,
-
-        [Parameter(Mandatory = $false)]
-        [string]$Verbosity
+        [int]$ModeID
     )
-
-    if ($PSBoundParameters['Verbosity']) {
-        $VerbosePreference = 'Continue'
-    }
-    else {
-        $VerbosePreference = 'SilentlyContinue'
-    }
 
     # Mode for muxing externally encoded files
     if ($Mode -eq 'remux') {
-        if (!(Test-Path $Paths.Audio)) {
-            Write-Host "Could not locate the external audio path. Returning..." @warnColors
+        if (!(Test-Path $Paths.Audio -ErrorAction SilentlyContinue)) {
+            Write-Host "mkvmerge: Could not locate the external audio path. Returning..." @warnColors
             return
         }
         
@@ -109,7 +99,12 @@ function Invoke-MkvMerge {
             $trackOrder
         )
 
-        mkvmerge $remuxArgs
+        if ($PSBoundParameters['Verbose']) {
+            mkvmerge $remuxArgs 2>&1
+        }
+        else {
+            mkvmerge $remuxArgs >$null
+        }
         
         # Ensure output exists and file size is correct before deleting and renaming
         if ((Test-Path $Paths.Output) -and ((Get-Item $Paths.Output).Length -ge (Get-Item $Paths.Input).Length)) {
@@ -117,8 +112,9 @@ function Invoke-MkvMerge {
         }
         else { 
             Write-Host "There was a problem muxing the external audio file. Manual intervention required" @warnColors
-            return
         }
+
+        return
     }
     elseif ($Mode -eq 'dv') {
         Write-Host "MkvMerge Detected: Merging DV HEVC stream into container" @progressColors
@@ -177,7 +173,12 @@ function Invoke-MkvMerge {
             )
         }
 
-        mkvmerge $remuxArgs
+        if ($PSBoundParameters['Verbose']) {
+            mkvmerge $remuxArgs 2>&1
+        }
+        else {
+            mkvmerge $remuxArgs >$null
+        }
 
         if ($?) {
             Write-Verbose "Last exit code for MkvMerge: $LASTEXITCODE. Removing TMP file..."
@@ -201,8 +202,13 @@ function Invoke-MkvMerge {
             "$($Paths.Input)"
             ')'
         )
-        
-        mkvmerge $remuxArgs
+
+        if ($PSBoundParameters['Verbose']) {
+            mkvmerge $remuxArgs 2>&1
+        }
+        else {
+            mkvmerge $remuxArgs >$null
+        }
     }
     else {
         Write-Warning "Unknown mode used in Invoke-MkvMerge"

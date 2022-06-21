@@ -1,3 +1,5 @@
+using namespace System.IO
+
 <#
     .SYNOPSIS
         Private function to confirm Dolby Vision metadata and generate RPU file if found
@@ -6,6 +8,10 @@
         generate an RPU file for a small number of frames. If the output size is not 0 in length
         (meaning DV metadata was found), it will then generate a full RPU file and return
         $true.
+    .PARAMETER InputFile
+        Path to the input file (file to be encoded)
+    .PARAMETER HDR10PlusPath
+        Output path to the RPU metadata binary. RPU path is generated dynamically based on input path
     .NOTES
         This is the best solution I could come up with for verifying DV metadata without
         using/installing other dependencies or modules. Unlike hdr10plus_tool, dovi_tool does
@@ -21,39 +27,28 @@ function Confirm-DolbyVision {
         [string]$InputFile,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [string]$DolbyVisionPath,
-
-        [Parameter(Mandatory = $false, Position = 2)]
-        [string]$Verbosity
+        [string]$DolbyVisionPath
     )
 
-    if ($PSBoundParameters['Verbosity']) {
-        $VerbosePreference = 'Continue'
-    }
-    else {
-        $VerbosePreference = 'SilentlyContinue'
-    }
-
-    #if x265 not found in PATH, cannot generate RPU
+    # if x265 not found in PATH, cannot generate RPU
     if (!(Get-Command -Name 'x265*')) {
         Write-Verbose "x265 not found in PATH. Cannot encode Dolby Vision"
         return $false
     }
 
-    #Check for existing RPU file. Verification based on file size, can be improved
-    if (Test-Path -Path $DolbyVisionPath) {
-        if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB, 2) -gt 15) {
+    # Check for existing RPU file. Verification based on file size, can be improved
+    if ([File]::Exists($DolbyVisionPath)) {
+        if ([math]::round(([FileInfo]($DolbyVisionPath)).Length / 1MB, 2) -gt 12) {
             Write-Host "Existing Dolby Vision RPU file found" @emphasisColors
-            Write-Host "If the RPU file was generated during a test encode (i.e. not a full frame count), exit the script NOW, delete the file, and regenerate" @warnColors
             return $true
         }
     }
 
-    #Determine if file supports dolby vision
+    # Determine if file supports dolby vision
     if ($IsLinux -or $IsMacOS) {
         $parserPath = $IsLinux ?
-        (Join-Path ((Get-Item $PSScriptRoot).Parent.Parent.Parent) -ChildPath "bin/linux/dovi_tool") :
-        (Join-Path ((Get-Item $PSScriptRoot).Parent.Parent.Parent) -ChildPath "bin/mac/dovi_tool")
+        ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/linux/dovi_tool")) :
+        ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/mac/dovi_tool"))
 
         $InputFile = [regex]::Escape($InputFile)
         $parserPath = [regex]::Escape($parserPath)
@@ -61,22 +56,22 @@ function Confirm-DolbyVision {
         bash -c "ffmpeg -loglevel panic -i $InputFile -frames:v 5 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath --crop -m 2 extract-rpu - -o $dvPath"
     }
     else {
-        $path = Join-Path ((Get-Item $PSScriptRoot).Parent.Parent.Parent) -ChildPath "bin\windows"
+        $path = [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin\windows")
         $env:PATH += ";$path"
 
         cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -frames:v 5 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool --crop -m 2 extract-rpu - -o `"$DolbyVisionPath`""
     }
-    #If size is 0, DV metadata was not found
-    if ((Get-Item $DolbyVisionPath).Length -eq 0) {
+    # If size is 0, DV metadata was not found
+    if (([FileInfo]($DolbyVisionPath)).Length -eq 0) {
         Write-Verbose "Input File does not support Dolby Vision"
         if (Test-Path -Path $DolbyVisionPath) {
-            Remove-Item -Path $DolbyVisionPath -Force
+            [File]::Delete($DolbyVisionPath)
         }
         return $false
     }
-    elseif ((Get-Item $DolbyVisionPath).Length -gt 0) {
+    elseif (([FileInfo]($DolbyVisionPath)).Length -gt 0) {
         Write-Host "Dolby Vision Metadata found. Generating RPU file..." @emphasisColors
-        Remove-Item -Path $DolbyVisionPath -Force
+        [File]::Delete($DolbyVisionPath)
 
         if ($IsMacOS -or $IsLinux) {
             bash -c "ffmpeg -loglevel panic -i $InputFile -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath --crop -m 2 extract-rpu - -o $dvPath"
@@ -85,7 +80,7 @@ function Confirm-DolbyVision {
             cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool --crop -m 2 extract-rpu - -o `"$DolbyVisionPath`""
         }
 
-        if ([math]::round((Get-Item $DolbyVisionPath).Length / 1MB, 2) -gt 1) {
+        if ([math]::round(([FileInfo]($DolbyVisionPath)).Length / 1MB, 2) -gt 1) {
             Write-Verbose "RPU size is greater than 1 MB. RPU was most likely generated successfully"
             return $true
         }
@@ -95,7 +90,6 @@ function Confirm-DolbyVision {
         }
     }
     else {
-        throw "There was an unexpected error while generating RPU file. This should be unreachable"
-        exit 2
+        Write-Error "There was an unexpected error while generating the RPU file. This should be unreachable" -ErrorAction Stop
     }
 }

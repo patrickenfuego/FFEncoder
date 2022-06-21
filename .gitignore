@@ -4,4 +4,3 @@ sandbox.ps1
 *.DS_Store
 **/.idea
 **/__pycache__
-**/config.toml
