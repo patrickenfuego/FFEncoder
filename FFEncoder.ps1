@@ -572,16 +572,6 @@ param (
 )
 
 #########################################################
-# Set Console Configuration for Best Experience         #                   
-#########################################################
-
-$console = (Get-Host).UI.RawUI
-$currentTitle = $console.WindowTitle
-$console.ForegroundColor = 'White'
-$console.BackgroundColor = 'Black'
-$console.WindowTitle = 'FFEncoder'
-
-#########################################################
 # Function Definitions                                  #        
 #########################################################
 
@@ -666,13 +656,17 @@ function Set-ScriptPaths ([hashtable]$OS) {
     SETUP
 
     Help
+    Console config
     Verbose preference
     Verify PowerShell version
     Import Module
 #>
 
 # Print help content and exit
-if ($Help) { Get-Help .\FFEncoder.ps1 -Full; exit 0 }
+if ($Help) { 
+    Get-Help .\FFEncoder.ps1 -Full
+    exit 0 
+}
 # Enable verbose logging if passed. Cascade down setVerbose
 if ($PSBoundParameters['Verbose']) {
     $VerbosePreference = 'Continue'
@@ -682,6 +676,13 @@ else {
     $VerbosePreference = 'SilentlyContinue'
     $Global:setVerbose = $false 
 }
+
+# Set console options for best experience
+$Global:console = (Get-Host).UI.RawUI
+$Global:currentTitle = $console.WindowTitle
+$console.ForegroundColor = 'White'
+$console.BackgroundColor = 'Black'
+$console.WindowTitle = 'FFEncoder'
 
 # Import FFTools module
 Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
@@ -724,10 +725,12 @@ if ($PSBoundParameters['CompareVMAF']) {
 
     try {
         Invoke-VMAF @params
+        $console.WindowTitle = $currentTitle
         exit 0
     }
     catch {
         Write-Error "An exception occurred during VMAF: $($_.Exception.Message)"
+        $console.WindowTitle = $currentTitle
         exit 43
     }
 }
@@ -743,7 +746,8 @@ else {
     if (![Directory]::Exists($(Split-Path $paths.OutputFile -Parent))) {
         Write-Host "Creating output path directory structure..." @progressColors
         [Directory]::CreateDirectory($(Split-Path $paths.OutputFile -Parent)) > $null
-        if (!$?) { 
+        if (!$?) {
+            $console.WindowTitle = $currentTitle
             Write-Error "Could not create the specified output directory" -ErrorAction Stop
         }
     }
@@ -969,6 +973,7 @@ catch {
         ErrorId           = 55
     }
 
+    $console.WindowTitle = $currentTitle
     Write-Error @params -ErrorAction Stop
 }
 
@@ -1121,7 +1126,13 @@ elseif ([File]::Exists($output) -and
 # Generate tag file if passed
 if ($PSBoundParameters['GenerateMKVTagFile']) {
     try {
-        & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).toString() @GenerateMKVTagFile -Path $paths.OutputFile
+        # Verify MKVToolnix is installed before calling
+        if (!(Get-Command 'mkvmerge')) {
+            Write-Host "The MKVToolnix suite is required to use the -GenerateMKVTagFile parameter" @errColors
+        }
+        else {
+            & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).toString() @GenerateMKVTagFile -Path $paths.OutputFile
+        }
     }
     catch {
         Write-Host "An error occurred while generating the tag file: $($_.Exception.Message)" @errColors

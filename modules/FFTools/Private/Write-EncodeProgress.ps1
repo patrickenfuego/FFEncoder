@@ -46,7 +46,8 @@ function Write-EncodeProgress {
                 [console]::TreatControlCAsInput = $false
 
                 $psReq ? (Write-Host "$($aRed)$Message$($reset)") :
-                (Write-Host $Message @errColors)
+                         (Write-Host $Message @errColors)
+                $console.WindowTitle = $currentTitle
                 exit 77
             }
             # Flush the key buffer again for the next loop

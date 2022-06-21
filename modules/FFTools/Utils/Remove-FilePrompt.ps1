@@ -47,6 +47,7 @@ function Remove-FilePrompt {
                     Write-Host "<" -NoNewline @warnColors
                     Write-Host $Path @emphasisColors
                     Write-Host "> could not be deleted. Make sure it is not in use by another process. Exiting script..." @warnColors
+                    $console.WindowTitle = $currentTitle
                     exit 68
                 }
                 
@@ -55,6 +56,7 @@ function Remove-FilePrompt {
         1 { 
             Write-Host "Please choose a different file name, or delete the existing file`n" @warnColors
             Write-Host $exitBanner @errColors
+            $console.WindowTitle = $currentTitle 
             exit 0
         }
         default { 

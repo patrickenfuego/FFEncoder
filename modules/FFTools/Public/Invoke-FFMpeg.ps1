@@ -278,6 +278,7 @@ function Invoke-FFMpeg {
             ErrorId           = 200
         }
 
+        $console.WindowTitle = $currentTitle
         Write-Error @params -ErrorAction Stop
     }
 
@@ -740,6 +741,7 @@ function Invoke-FFMpeg {
             TargetObject = $RateControl
             ErrorId      = 101
         }
+        $console.WindowTitle = $currentTitle
         Write-Error @params -ErrorAction Stop
     }
 

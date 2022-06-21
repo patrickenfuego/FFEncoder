@@ -94,7 +94,9 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
     }
     
     Write-Host ""
-    $yn = $psReq ? ("($($PSStyle.Foreground.BrightGreen+$PSStyle.Bold)Y$($PSStyle.Reset) / $($PSStyle.Foreground.BrightRed+$PSStyle.Bold)N$($PSStyle.Reset))") : '(Y / N)' 
+    $yn = $psReq ? ("($($PSStyle.Foreground.BrightGreen+$PSStyle.Bold)Y$($PSStyle.Reset) / $($PSStyle.Foreground.BrightRed+$PSStyle.Bold)N$($PSStyle.Reset))") : 
+                   '(Y / N)'
+                   
     $params = @{
         Prompt  = "There is an update available for FFEncoder. Would you like to pull the latest release? $yn`: "
         Timeout = 20000
@@ -144,6 +146,7 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
 
                 if ($response) {
                     Write-Host "Yes was selected. Exiting script" @successColors
+                    $console.WindowTitle = $currentTitle
                     exit 0
                 }
                 else { return }
