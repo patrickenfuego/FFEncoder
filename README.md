@@ -21,6 +21,7 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
   - [Rate Control Options](#rate-control-options)
   - [VMAF Comparison](#vmaf-comparison)
+  - [MKV Tag Generator](#mkv-tag-generator)
   - [Script Parameters](#script-parameters)
     - [**Mandatory**](#mandatory)
     - [**Utility**](#utility)
@@ -146,6 +147,14 @@ FFEncoder supports the following rate control options:
 The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison. The machine Learning model files are already provided, and Frames-Per-Second (FPS) and resolution are calculated automatically.
 
 Additionally, you may add `SSIM` and `PSNR` measurements as well during the same VMAF run using their respective switch parameters - see the table below.
+
+---
+
+## MKV Tag Generator
+
+If the selected output format is Matroska (MKV), you can use the parameter `-GenerateMKVTagFile` (or its alias, `-CreateTagFile`) to dynamically pull down metadata from TMDB, create a valid XML file, and multiplex it into the output file. This allows you to add useful metadata to your container for things like Plex and Emby to detect, or add other cool properties like Directors, Writers, and Actors for your own reference; any parameter that is available via the TMDB API can be added to your container.
+
+To use this parameter, you will need a valid TMDB API key. See [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/MKV-Tag-Generator) for more information.
 
 ---
 
