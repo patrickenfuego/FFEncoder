@@ -27,7 +27,7 @@ Author = 'patrickenfuego'
 CompanyName = 'NA'
 
 # Copyright statement for this module
-Copyright = '(c) 2021 patrickenfuego, quietvoid, pcroland, and the FFMpeg developers.'
+Copyright = '(c) 2022 patrickenfuego, Moritz Bunkus, quietvoid, pcroland, Multicoreware, and the FFMpeg developers.'
 
 # Description of the functionality provided by this module
 Description = 'Module designed to make interfacing with FFMpeg tools easier for audio/video encoding'
