@@ -40,6 +40,7 @@ function Confirm-PoshVersion {
             TargetObject      = $PSVersionTable.PSVersion
             ErrorId           = 51
         }
+        $console.WindowTitle = $currentTitle
         Write-Error @params -ErrorAction Stop
     }
     # If pwsh 7 is installed, but currently running from Windows PowerShell context
@@ -54,6 +55,7 @@ function Confirm-PoshVersion {
             TargetObject      = $PSVersionTable.PSVersion
             ErrorId           = 52
         }
+        $console.WindowTitle = $currentTitle
         Write-Error @params -ErrorAction Stop
     }
     elseif (($PSVersionTable.PSVersion -lt [version]'7.2.0.0')) {
@@ -96,7 +98,7 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
     Write-Host ""
     $yn = $psReq ? ("($($PSStyle.Foreground.BrightGreen+$PSStyle.Bold)Y$($PSStyle.Reset) / $($PSStyle.Foreground.BrightRed+$PSStyle.Bold)N$($PSStyle.Reset))") : 
                    '(Y / N)'
-                   
+
     $params = @{
         Prompt  = "There is an update available for FFEncoder. Would you like to pull the latest release? $yn`: "
         Timeout = 20000
@@ -145,8 +147,9 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
                 }
 
                 if ($response) {
-                    Write-Host "Yes was selected. Exiting script" @successColors
+                    Write-Host "Yes was selected. Exiting script`n" @successColors
                     $console.WindowTitle = $currentTitle
+                    Write-Host $exitBanner @errColors
                     exit 0
                 }
                 else { return }
