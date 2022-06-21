@@ -124,20 +124,10 @@ function Set-FFMpegArgs {
 
         # Switch to enable deinterlacing with yadif
         [Parameter(Mandatory = $false)]
-        [switch]$Deinterlace,
-
-        [Parameter(Mandatory = $false)]
-        [string]$Verbosity
+        [switch]$Deinterlace
     )
 
-    if ($PSBoundParameters['Verbosity']) {
-        $VerbosePreference = 'Continue'
-    }
-    else {
-        $VerbosePreference = 'SilentlyContinue'
-    }
-
-    #Split rate control array
+    # Split rate control array
     $twoPass = $RateControl[2]
     $passType = $RateControl[3]
     $RateControl = $RateControl[0..($RateControl.Length - 3)]
@@ -182,6 +172,10 @@ function Set-FFMpegArgs {
         '100MB'
         '-i'
         "`"$($Paths.InputFile)`""
+        if ($TrackTitle['VideoTitle']) {
+            '-metadata:s:v:0'
+            "title=$($TrackTitle['VideoTitle'])"
+        }
         '-color_range'
         'tv'
         '-map'
@@ -315,10 +309,10 @@ function Set-FFMpegArgs {
         Scale          = $Scale
         FFMpegExtra    = $FFMpegExtra
         Deinterlace    = $Deinterlace
-        Verbosity      = $Verbosity
+        Verbose        = $setVerbose
         NLMeans        = $NLMeans
     }
-    $vfArray = Set-VideoFilter @vfHash
+    $vfArray = Set-VideoFilter @vfHash -Verbose:$setVerbose
     if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
 
     # Set res and bit depth related arguments for encoders

@@ -8,7 +8,7 @@
         storing. Shows the following info:
 
         1. Start & end date and time
-        2. All output produced by x265 throughout the encode 
+        2. All output produced by x264/x265 throughout the encode (NOT ffmpeg)
         2. Total encoding time in a more human readable format
     .NOTES
         The report name is the same as the output file name
@@ -17,6 +17,8 @@
     .PARAMETER Duration
         Stopwatch object which contains the duration of the encode
     .PARAMETER Paths
+        Object containing various paths used throughout the script
+    .PARAMETER TwoPass
         Object containing various paths used throughout the script
     .PARAMETER Encoder
         Encoding codec used. Output is altered depending on which one is used
@@ -29,13 +31,13 @@ function Write-Report {
         [datetime[]]$DateTimes,
 
         [Parameter(Mandatory = $true)]
-        [system.object]$Duration,
+        [System.Diagnostics.Stopwatch]$Duration,
 
         [Parameter(Mandatory = $true)]
         [hashtable]$Paths,
 
-        [Parameter(Mandatory = $true)]
-        [bool]$TwoPass,
+        [Parameter(Mandatory = $false)]
+        [switch]$TwoPass,
 
         [Parameter(Mandatory = $true)]
         [string]$Encoder
