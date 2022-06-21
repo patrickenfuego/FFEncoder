@@ -83,15 +83,17 @@ function Set-AudioPreference {
 
      if ($Stereo) { $channelStr = '2.0' }
     
+    # Set the track title based on user input and channel count
     $trackName = 
 
-    if ($UserChoice -in $dArgs[0..$($split - 1)])              { "E-AC3 $channelStr" }
-    elseif ($UserChoice -in $dArgs[$split..($dArgs.Length-1)]) { "AC3 $channelStr" }
-    elseif ($Userchoice -like '*aac*')                         { "AAC $channelStr" }
-    elseif ($Userchoice -like 'dts')                           { "DTS $channelStr" }
-    elseif ($Userchoice -like 'f*')                            { "FLAC $channelStr" }
-    elseif ($Userchoice -like '*thd*')                         { "TrueHD $channelStr" }
-    else                                                       { '' }
+    if ($UserChoice -in $dArgs[0..$($split - 1)])                { "E-AC3 $channelStr" }
+    elseif ($UserChoice -in 'dee_ddp_51', 'dee_eac3_51')         { "E-AC3 5.1" }
+    elseif ($UserChoice -in $dArgs[$split..($dArgs.Length-1)])   { "AC3 $channelStr" }
+    elseif ($Userchoice -like '*aac*')                           { "AAC $channelStr" }
+    elseif ($Userchoice -like 'dts')                             { "DTS $channelStr" }
+    elseif ($Userchoice -like 'f*')                              { "FLAC $channelStr" }
+    elseif ($Userchoice -like '*thd*')                           { "TrueHD $channelStr" }
+    else                                                         { '' }
 
     if ($Stereo -and $RemuxStream) { 
         $trackTitle['StereoTitle'] = $trackName
@@ -182,13 +184,25 @@ function Set-AudioPreference {
             Write-Host "**DOLBY ENCODING SUITE - DOLBY DIGITAL PLUS AUDIO SELECTED**" @progressColors
             if (!$Bitrate) {
                 $deeDefault = switch ($channels) {
-                    8       { 1536 }
-                    6       { 1024 }
+                    8       { 1024 }
+                    6       { 768 }
                     default { 0 }
                 }
+                $Bitrate = $deeDefault
             }
             $dee['DeeUsed'] = $true
             'dee_ddp'
+            break
+        }
+        { @('dee_ddp_51', 'dee_eac3_51') -contains $_ } {
+            Write-Host "**DOLBY ENCODING SUITE - DOLBY DIGITAL PLUS AUDIO SELECTED**" @progressColors
+            if (!$Bitrate) {
+                $deeDefault = 768
+                $Bitrate = $deeDefault
+            }
+            $channels = 6
+            $dee['DeeUsed'] = $true
+            'dee_ddp_51'
             break
         }
         { @('dee_dd', 'dee_ac3') -contains $_ } {
@@ -200,6 +214,7 @@ function Set-AudioPreference {
                     8       { 640 }
                     default { 0   }
                 }
+                $Bitrate = $deeDefault
             }
             'dee_dd'
             break
@@ -246,7 +261,7 @@ function Set-AudioPreference {
             break
         }
         default { 
-            Write-Warning "No matching audio preference was found. Audio will not be copied`n"
+            Write-Warning "No matching audio preference was found. Audio will not be copied"
             $null 
         }
     }
@@ -254,16 +269,23 @@ function Set-AudioPreference {
     # If not stream copying, append track label
     if ($audioArgs -and ($audioArgs[-1] -ne 'copy') -and ($audioArgs -notin $dee['DeeArgs'])) {
         if ($dee['DeeUsed']) { $ident = 2 }
-        $audioArgs = $audioArgs + @("-metadata:s:a:$Stream", "title=`"$($TrackTitle["AudioTitle$($ident)"])`"")
+        $title = $Stereo ? ("title=`"$($TrackTitle['StereoTitle'])`"") : ("title=`"$($TrackTitle["AudioTitle$($ident)"])`"")
+        $audioArgs = $audioArgs + @("-metadata:s:a:$Stream", $title)
     }
 
     # Print relevant info to console based on user choice
     if ($UserChoice -notin $noPrint) { 
-        if (@('dts', 'ac3', 'dd', 'eac3') -contains $UserChoice -and !$i) { 
+        if ('dts', 'ac3', 'dd', 'eac3' -contains $UserChoice -and !$i) { 
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
         }
         elseif ($deeDefault) {
-            $bitsPerChannel = $deeDefault
+            if ($UserChoice -notlike 'dee_thd') {
+                $bitStr = [math]::Round($deeDefault / $channels, 2)
+                $bitsPerChannel = "$bitStr kb/s"
+            }
+            else {
+                $bitsPerChannel = 0
+            }
         }
         else {
             $bitsPerChannel = "$($Bitrate / $channels) kb/s"
@@ -283,37 +305,25 @@ function Set-AudioPreference {
 
     # Start a background job to run Dolby Encoder if selected
     if ($UserChoice -like '*dee*') {
-        # Throw warning and exit until dee nonsense is fixed on *NIX systems
-        if ($os.OperatingSystem -in 'Linux', 'Mac') {
-            Write-Warning "DEE XML parsing is currently broken on *NIX systems. Skipping audio..."
-            return $null
-        }
+        Write-Verbose "DEE - Audio bitrate is: $Bitrate"
         Write-Host "Spawning dee encoder in a separate process`n" @emphasisColors
-        # Create environment vars for thread scope
-        [Environment]::SetEnvironmentVariable('PrivFunctionPath', $(Resolve-Path $PSScriptRoot))
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $(Join-Path (Get-Item $PSScriptRoot).Parent -ChildPath 'Utils'))      
-        [scriptblock]$init = {
-            . $(Join-Path $([Environment]::GetEnvironmentVariable('PrivFunctionPath')) -ChildPath 'Invoke-DeeEncoder.ps1')
-            . $(Join-Path $([Environment]::GetEnvironmentVariable('UtilFunctionPath')) -ChildPath 'Invoke-MkvMerge.ps1')
-        }
-        
+        # Create hash of dee params to marshall across process line
         $deeParams = @{
             Paths        = $Paths
             Codec        = $audioArgs
             ChannelCount = $channels
             Bitrate      = $Bitrate
+            Stereo       = $Stereo
         }
+        Start-ThreadJob -Name 'Dee Encoder' -StreamingHost $Host -ArgumentList $deeParams, $PSModuleRoot, $setVerbose -ScriptBlock {
+            param ($DeeParams, $Module, $Verbose)
 
-        Start-Job -Name 'Dee Encoder' -InitializationScript $init -ArgumentList $deeParams, $osInfo -ScriptBlock {
-            param ($deeParams, $OS)
-            
-            $Global:osInfo = $OS
-            Invoke-DeeEncoder @deeParams
+            # Source functions & variable
+            Import-Module $Module -Function Invoke-DeeEncoder, Invoke-MkvMerge -Variable osInfo
+
+            $Global:osInfo = $osInfo
+            Invoke-DeeEncoder @DeeParams -Verbose:$Verbose
         } | Out-Null
-
-        # Remove the temp environment variables
-        [Environment]::SetEnvironmentVariable('PrivFunctionPath', $null, 'User')
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $null, 'User')
 
         return $null
     }
@@ -324,24 +334,26 @@ function Set-AudioPreference {
         Write-Verbose "Preparing audio..."
         # Set audio paths based on container
         if ($Paths.InputFile.EndsWith('mkv')) {
-            $Paths.AudioPath = Join-Path (Split-Path $Paths.InputFile -Parent) -ChildPath "$($Paths.Title)_audio.mka"
+            $Paths.AudioPath = [System.IO.Path]::Join($(Split-Path $Paths.InputFile -Parent), "$($Paths.Title)_audio.mka")
         }
         elseif ($Paths.InputFile.EndsWith('mp4')) {
-            $Paths.AudioPath = Join-Path (Split-Path $Paths.InputFile -Parent) -ChildPath "$($Paths.Title)_audio.m4a"
+            $Paths.AudioPath = [System.IO.Path]::Join($(Split-Path $Paths.InputFile -Parent), "$($Paths.Title)_audio.m4a")
         }
         else {
             Write-Warning "Cannot determine container audio format for conversion to stereo"
             return $null
         }
 
+        Write-Verbose "Remuxed Audio path for jobs: $($Paths.AudioPath)"
+
         # If dee encoder is running, wait for audio multiplex to finish
         if ((Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue) -and
-            (!(Test-Path $Paths.AudioPath -ErrorAction SilentlyContinue))) {
+            (![System.IO.File]::Exists($Paths.AudioPath))) {
 
             $method = 0
             Start-Sleep -Seconds 160
         }
-        elseif (Test-Path $Paths.AudioPath -ErrorAction SilentlyContinue) {
+        elseif ([System.IO.File]::Exists($Paths.AudioPath)) {
             $method = 0
         }
         elseif ((Get-Command 'mkvmerge') -and $Paths.InputFile.EndsWith('mkv')) {
@@ -351,7 +363,7 @@ function Set-AudioPreference {
                 Input    = $Paths.InputFile
                 Output   = $Paths.AudioPath
                 Language = $Paths.Language
-
+                LogPath  = $Paths.LogPath
             }
         }
         elseif ($Paths.InputFile.EndsWith('mkv') -xor $Paths.InputFile.EndsWith('mp4')) {
@@ -362,39 +374,36 @@ function Set-AudioPreference {
             return $null
         }
 
-        Write-Host "Spawning stereo encoder in a separate process...`n" @progressColors 
+        Write-Host "Spawning stereo encoder in a separate process...`n" @progressColors
     
         # Modify and combine arrays for background job
         $stereoArgs[0] = '-af'
         $index = [array]::IndexOf($audioArgs, "-c:a:$Stream")
         $audioArgs[$index] = '-c:a:0'
         $fullArgs = $audioArgs + $stereoArgs
-        # Setup environment variable and init script for job scope
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', [Path]::Join($(Get-Item $PSScriptRoot).Parent, 'Utils') )  
-        [scriptblock]$init = {
-            . $(Join-Path $([Environment]::GetEnvironmentVariable('UtilFunctionPath')) -ChildPath 'Invoke-MkvMerge.ps1')
-        }
 
+        Write-Verbose "Stereo fullArgs are: $fullArgs"
+        
         # Start background job to encode stereo. Mux out audio if needed
-        Start-Job -Name 'Stereo Encoder' -InitializationScript $init -ScriptBlock {
+        Start-ThreadJob -Name 'Stereo Encoder' -ScriptBlock {
+            $tPaths = $Using:Paths
+            # Source function
+            Import-Module $Using:PSModuleRoot -Function Invoke-MkvMerge
             # Extract the stereo track if needed
             switch ($Using:method) {
                 0 { Write-Verbose "External audio file already exists. Skipping creation" }
                 1 { Invoke-MkvMerge -Paths $Using:remuxPaths -Mode 'extract' }
                 2 { 
-                    ffmpeg -hide_banner -i $Using:Paths.InputFile -loglevel error -map 0:a:0 -c:a copy `
-                        -map -0:t? -map_chapters -1 -vn -sn $Using:Paths.AudioPath
+                    ffmpeg -hide_banner -i $tPaths.InputFile -loglevel error -map 0:a:0 -c:a copy `
+                        -map -0:t? -map_chapters -1 -vn -sn $tPaths.AudioPath
                 }
-                default { Write-Verbose "Could not determine extraction method"; exit -10 }
+                default { Write-Verbose "Could not determine extraction method"; exit 17 }
             }
             
             # Encode the stereo track
-            ffmpeg -i $Using:Paths.AudioPath -loglevel error $Using:fullArgs -y $Using:Paths.StereoPath
+            ffmpeg -i $tPaths.AudioPath $Using:fullArgs -y $tPaths.StereoPath
 
         } | Out-Null
-
-        # Remove temp environment variable
-        [Environment]::SetEnvironmentVariable('UtilFunctionPath', $null, 'User')
 
         return $null
     }
