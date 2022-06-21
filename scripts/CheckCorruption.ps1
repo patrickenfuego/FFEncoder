@@ -96,7 +96,7 @@ while ((Get-Job).State -eq 'Running') {
 }
 
 if (!$Segment) {
-    Get-Job | Receive-Job | Stop-Job | Remove-Job -Force
+    Get-Job | Receive-Job | Stop-Job -PassThru | Remove-Job -Force
 }
 
 

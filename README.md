@@ -20,6 +20,7 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
   - [Auto-Cropping](#auto-cropping)
   - [Automatic HDR Metadata](#automatic-hdr-metadata)
   - [Rate Control Options](#rate-control-options)
+  - [VMAF Comparison](#vmaf-comparison)
   - [Script Parameters](#script-parameters)
     - [**Mandatory**](#mandatory)
     - [**Utility**](#utility)
@@ -121,7 +122,7 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 - Maximum Frame Average Light Level
 - HDR10+ Metadata
 - Dolby Vision Metadata
-  - Requires `x265` to be available via PATH (**Executable must be named x265**) because ffmpeg cannot handle RPU files
+  - Requires `x265` (mods are fine) to be available via PATH because ffmpeg still doesn't handle RPU files correctly, even in version 5. If there is more than one `x265*` option in PATH, the first option returned is selected
   - Currently, only profile 8.1 is supported due it it's backwards compatibility with HDR10
   - It is recommended to have `mkvmerge`/`mkvextract` available. The script will multiplex tracks back together after encoding
 
@@ -131,12 +132,20 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 
 FFEncoder supports the following rate control options:
 
-- **Constant Rate Factor (CRF)** - CRF encoding targets a specific quality level throughout, and isn't concerned with file size. Lower CRF values will result in a higher perceived quality and bitrate
-  - For high quality encodes, CRF 17-18 is generally considered a good starting point
+- **Constant Rate Factor (CRF)** - CRF encoding targets a specific quality level throughout, and isn't concerned with file size. Lower CRF values will result in a higher perceived quality and bitrate. For those familiar with Handbrake, this is essentially the same as `RF`
+  - For high quality encodes, CRF 17-19 is generally considered a good starting range.
   - If file size is more important than quality, CRF 20-23 is a good starting range
-- **Average Bitrate** - Average bitrate encoding targets a specific output file size, and isn't concerned with quality. There are 2 varieties of ABR encoding that FFEncoder supports:
+- **Average Bitrate** (<u>Not</u> **Adaptive Bitrate**) - This is also sometimes referred to as Variable Constrained Bitrate encoding. Average bitrate encoding targets a specific output file size, and isn't concerned with quality. There are 2 varieties of ABR encoding that FFEncoder supports:
   - **1-Pass** - This option uses a single pass, and isn't aware of the complexities of future frames and can only be scaled based on the past. Lower quality than 2-pass, but faster
   - **2-Pass** - 2-Pass encoding uses a first pass to calculate bitrate distribution, which is then used to allocate bits more accurately on the second pass
+
+---
+
+## VMAF Comparison
+
+The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison. The machine Learning model files are already provided, and Frames-Per-Second (FPS) and resolution are calculated automatically.
+
+Additionally, you may add `SSIM` and `PSNR` measurements as well during the same VMAF run using their respective switch parameters - see the table below.
 
 ---
 
@@ -148,48 +157,51 @@ FFEncoder can accept the following parameters from the command line:
 
 > An Asterisk <b>\*</b> denotes that the parameter is mandatory only for its given parameter set (for example, you can choose either `-CRF` or `-VideoBitrate` for rate control, but not both):
 
-| Parameter Name   | Default | Mandatory     | Alias                    | Description                                                                                                                  | Mandatory For |
-| ---------------- | ------- | ------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| **InputPath**    | N/A     | True          | **I**                    | The path to the source file, i.e. remux                                                                                      | All           |
-| **OutputPath**   | N/A     | True          | **O**                    | The path of the the encoded output file                                                                                      | All           |
-| **CRF**          | N/A     | <b>\*</b>True | **C**                    | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. Lower values result in higher quality | Rate Control  |
-| **VideoBitrate** | N/A     | <b>\*</b>True | **VBitrate**             | Rate control parameter that targets a specific bitrate. Can be used as an alternative to CRF when file size is a priority    | Rate Control  |
-| **Scale**        | None    | <b>\*</b>True | **Resize**, **Resample** | Scaling library to use. Options are `scale` (ffmpeg default) and `zscale` (requires `libzimg`)                               | Resizing      |
+| Parameter Name   | Default | Mandatory     | Alias                            | Description                                                                                                                  | Mandatory For |
+| ---------------- | ------- | ------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **InputPath**    | N/A     | True          | **I**, **Source**, **Reference** | The path to the source file, i.e. remux. Also acts as the reference path for VMAF comparisons                                | All           |
+| **OutputPath**   | N/A     | True          | **O**, **Encode**, **Distorted** | The path of the the encoded output file, or the encoded (distorted) file path during VMAF comparisons                        | All           |
+| **CRF**          | N/A     | <b>\*</b>True | **C**                            | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. Lower values result in higher quality | Rate Control  |
+| **VideoBitrate** | N/A     | <b>\*</b>True | **VBitrate**                     | Rate control parameter that targets a specific bitrate. Can be used as an alternative to CRF when file size is a priority    | Rate Control  |
+| **ScaleFilter**  | None    | <b>\*</b>True | **Resize**, **Resample**         | Scaling filter to use. Scaling options are `scale` (ffmpeg default) and `zscale` (requires `libzimg`)                        | Resizing      |
+| **CompareVMAF**  | N/A     | <b>\*</b>True | None                             | Runs a VMAF comparison on two video files                                                                                    | VMAF          |
 
 ### **Utility**
 
-| Parameter Name      | Default | Mandatory | Alias              | Description                                                                                                                                         |
-| ------------------- | ------- | --------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Help**            | False   | False     | **H**, **?**       | Switch to display help information, including examples and parameter descriptions                                                                   |
-| **RemoveFiles**     | False   | False     | **Del**, **RM**    | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report files             |
-| **GenerateReport**  | False   | False     | **Report**, **GR** | Switch that generates a report file of the encode. Data is pulled from the log file and written in a reading friendly format                        |
-| **Verbose**         | False   | False     | None               | `CmdletBinding` switch to enable verbose logging - cascaded down to relevant functions for additional information. Useful for debugging             |
-| **ExitOnError**     | False   | False     | **Exit**           | Switch that forcibly exits the script on certain non-terminating errors that prompt for re-input. Can be used to prevent blocking during automation |
-| **DisableProgress** | False   | False     | **NoProgressBar**  | Switch to disable the progress bar during encoding                                                                                                  |
+| Parameter Name         | Default | Mandatory | Alias              | Description                                                                                                                                         |
+| ---------------------- | ------- | --------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Help**               | False   | False     | **H**, **?**       | Switch to display help information, including examples and parameter descriptions                                                                   |
+| **RemoveFiles**        | False   | False     | **Del**, **RM**    | Switch that deletes extra files generated by the script (crop file, log file, etc.). Does not delete the input, output, or report file (if created) |
+| **GenerateReport**     | False   | False     | **Report**, **GR** | Switch that generates a report file of the encode. Data is pulled from the log file and written in a reading friendly format                        |
+| **GenerateMKVTagFile** | False   | False     | **CreateTagFile**  | Generates an MKV tag file using the TMDB API (key required). See the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki/MKV-Tag-Generator)     |
+| **Verbose**            | False   | False     | None               | `CmdletBinding` switch to enable verbose logging - cascaded down to relevant functions for additional information. Useful for debugging             |
+| **ExitOnError**        | False   | False     | **Exit**           | Switch that forcibly exits the script on certain non-terminating errors that prompt for re-input. Can be used to prevent blocking during automation |
+| **EnablePSNR**         | False   | False     | **SSIM**           | Enables an additional Peak Signal-to-Noise (PSNR) measurement during VMAF comparisons                                                               |
+| **EnableSSIM**         | False   | False     | **SSIM**           | Enables an additional Structural Similarity Index (SSIM) measurement during VMAF comparisons                                                        |
+| **DisableProgress**    | False   | False     | **NoProgressBar**  | Switch to disable the progress bar during encoding                                                                                                  |
 
 ### **Audio & Subtitles**
 
-> See [Audio Options](https://github.com/patrickenfuego/FFEncoder/wiki/Audio-Options) and [Subtitle Options](https://github.com/patrickenfuego/FFEncoder/wiki/Subtitle-Options) for more info
+> See [Audio Options](https://github.com/patrickenfuego/FFEncoder/wiki/Audio-Options) and [Subtitle Options](https://github.com/patrickenfuego/FFEncoder/wiki/Subtitle-Options) in the wiki for more info
 
-| Parameter Name    | Default | Mandatory | Alias                  | Description                                                                                              |
-| ----------------- | ------- | --------- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Audio**         | Copy    | False     | **A**                  | Audio preference for the primary stream                                                                  |
-| **AudioBitrate**  | Codec   | False     | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS    |
-| **Stereo**        | False   | False     | **2CH**, **ST**        | Switch to downmix the first audio track to stereo                                                        |
-| **Audio2**        | None    | False     | **A2**                 | Audio preference for the secondary stream                                                                |
-| **AudioBitrate2** | Codec   | False     | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with AAC, FDK AAC, AC3, EAC3, and DTS |
-| **Stereo2**       | False   | False     | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo                                                       |
-| **Subtitles**     | Default | False     | **S**, **Subs**        | Subtitle passthrough preference                                                                          |
+| Parameter Name    | Default | Mandatory | Alias                  | Description                                                                                                         |
+| ----------------- | ------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Audio**         | Copy    | False     | **A**                  | Audio preference for the primary stream                                                                             |
+| **AudioBitrate**  | Codec   | False     | **AB**, **ABitrate**   | Specifies the bitrate for `-Audio` (primary stream). Compatible with Dolby DEE, AAC, FDK AAC, AC3, EAC3, and DTS    |
+| **Stereo**        | False   | False     | **2CH**, **ST**        | Switch to downmix the first audio track to stereo                                                                   |
+| **Audio2**        | None    | False     | **A2**                 | Audio preference for the secondary stream                                                                           |
+| **AudioBitrate2** | Codec   | False     | **AB2**, **ABitrate2** | Specifies the bitrate for `-Audio2` (secondary stream). Compatible with Dolby DEE, AAC, FDK AAC, AC3, EAC3, and DTS |
+| **Stereo2**       | False   | False     | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo                                                                  |
+| **Subtitles**     | Default | False     | **S**, **Subs**        | Subtitle passthrough preference                                                                                     |
 
 ### **Video Filtering**
 
-| Parameter Name  | Default  | Mandatory     | Alias                    | Description                                                                                                                                        |
-| --------------- | -------- | ------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deinterlace** | Disabled | False         | **DI**                   | Switch to enable deinterlacing of interlaced content using yadif                                                                                   |
-| **NLMeans**     | Disabled | False         | **NL**                   | High quality denoising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info |
-| **Scale**       | None     | <b>\*</b>True | **Resize**, **Resample** | Scaling library to use. Options are `scale` (ffmpeg default) and `zscale` (requires libzimg). Required parameter for rescaling content             |
-| **ScaleFilter** | bilinear | False         | **ScaleType**, **SF**    | Scaling filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info        |
-| **Resolution**  | 1080p    | False         | **Res**, **R**           | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info           |
+| Parameter Name  | Default          | Mandatory | Alias                 | Description                                                                                                                                          |
+| --------------- | ---------------- | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deinterlace** | Disabled         | False     | **DI**                | Switch to enable deinterlacing of interlaced content using yadif                                                                                     |
+| **NLMeans**     | Disabled         | False     | **NL**                | High quality de-noising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info  |
+| **Scale**       | bilinear         | False     | **ScaleType**, **SF** | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info |
+| **Resolution**  | Source Dependent | False     | **Res**, **R**        | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info             |
 
 ### **Encoder Config**
 
@@ -224,8 +236,8 @@ FFEncoder can accept the following parameters from the command line:
 | **Ref**            | Preset      | False     | None                   | Sets the number of reference frames to use. Default value is based on the encoder preset. For x264, this might affect hardware compatibility                           |
 | **Subme**          | Preset      | False     | **Subpel**, **SPM**    | The amount of subpel motion refinement to perform. At values larger than 2, chroma residual cost is included. Has a significant performance impact                     |
 | **Threads**        | System      | False     | **FrameThreads**       | Set the number of threads. More threads equate to faster encoding. System default is based on the number of logical CPU cores                                          |
-| **Tree**           | 1 (Enabled) | False     | **CUTree**, **MBTree** | Enable or disable encoder-specific motion vector lookahead algorithm. 1 is enabled, 0 is disabled                                                                      |
-| **VBV**            | `Level`     | False     | None                   | Video buffering verifier. Default is based on the encoder level (except DV, which defaults to level 5.1). Requires 2 arguments: (`vbv-bufsize`, `vbv-maxrate`)         |
+| **Tree**           | 1 (Enabled) | False     | **CUTree**, **MBTree** | Enable or disable encoder-specific lowres motion vector lookahead algorithm. 1 is enabled, 0 is disabled. Best disabled for noisy content                              |
+| **VBV**            | `Level`     | False     | None                   | Video buffering verifier. Default is based on the encoder level (except DoVi, which defaults to level 5.1). Requires 2 arguments: (`vbv-bufsize`, `vbv-maxrate`)       |
 
 ### **x265 Only Settings**
 
