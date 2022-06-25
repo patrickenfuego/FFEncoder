@@ -383,7 +383,20 @@ function Set-DVArgs {
     #>
 
     # Set video specific filter arguments
-    $vfArray = Set-VideoFilter $CropDimensions $Scale $FFMpegExtra $Deinterlace -Verbose:$setVerbose
+    $vfHash = @{
+        CropDimensions = $CropDimensions
+        Scale          = $Scale
+        FFMpegExtra    = $FFMpegExtra
+        Deinterlace    = $Deinterlace
+        Verbose        = $setVerbose
+    }
+    try {
+        $vfArray = Set-VideoFilter @vfHash
+    }
+    catch {
+        Write-Error "Video filter exception: $($_.Exception)" -ErrorAction Stop
+    }
+
     if ($vfArray) { $ffmpegBaseVideoArray.AddRange($vfArray) }
 
     # Set test frames if passed. Insert start time before input

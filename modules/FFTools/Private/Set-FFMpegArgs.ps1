@@ -312,7 +312,13 @@ function Set-FFMpegArgs {
         Verbose        = $setVerbose
         NLMeans        = $NLMeans
     }
-    $vfArray = Set-VideoFilter @vfHash -Verbose:$setVerbose
+    try {
+        $vfArray = Set-VideoFilter @vfHash
+    }
+    catch {
+        Write-Error "Video filter exception: $($_.Exception)" -ErrorAction Stop
+    }
+
     if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
 
     # Set res and bit depth related arguments for encoders

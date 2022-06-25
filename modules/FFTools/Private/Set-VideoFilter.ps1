@@ -96,8 +96,8 @@ function Set-VideoFilter {
         # scaling up from 720p
         elseif ($CropDimensions[0] -lt 1300) {
             $widthRes = switch ($Scale.Resolution) {
-                '1080p' { $widthRes = $CropDimensions[0] * 1.5 }
-                '2160p' { $widthRes = $CropDimensions[0] * 3 }
+                '1080p' { $CropDimensions[0] * 1.5 }
+                '2160p' { $CropDimensions[0] * 3 }
             }
         }
         else {
@@ -156,6 +156,6 @@ function Set-VideoFilter {
         $vfArray = @('-vf', "`"$vfString`"")
     }
 
-    Write-Verbose "VIDEO FILTER ARRAY:`n$($vfArray -join " ")`n"
+    Write-Verbose "VIDEO FILTER ARRAY:`n$($vfArray -join ' ')`n"
     return $vfArray
 }
