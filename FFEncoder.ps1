@@ -92,16 +92,26 @@ using namespace System.IO
             - French            - "fra"
             - German            - "ger"
             - Spanish           - "spa"
-            - Dutch             - "dut"
+            - Dutch             - "dut" / "nld"
             - Danish            - "dan"
             - Finnish           - "fin"
             - Norwegian         - "nor"
             - Czech             - "cze"
             - Polish            - "pol"
-            - Chinese           - "chi"
+            - Chinese           - "chi" / "zho"
             - Korean            - "kor"
-            - Greek             - "gre"
+            - Greek             - "gre" / "ell"
             - Romanian          - "rum"
+            - Arabic            - "ara"
+            - Bulgarian         - "bul"
+            - Estonian          - "est"
+            - Indonesian        - "ind"
+            - Hindi             - "hin"
+            - Turkish           - "tur"
+            - Vietnamese        - "vie"
+            - Thai              - "tha"
+            - Slovenian         - "slv"
+            - Hebrew            - "heb"
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest). Slower presets improve quality by enabling additional, more expensive, x265 parameters at the expensive of encoding time.
         Recommended presets (depending on source and purpose) are slow, medium, or fast. 
@@ -268,8 +278,12 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet('all', 'a', 'copyall', 'ca', 'none', 'default', 'd', 'n', 'eng', 'fre', 'ger', 'spa', 'dut', 'dan', 'fin', 'nor', 'cze', 
-        'pol', 'chi', 'kor', 'gre', 'rum', 'rus', 'swe')]
+    [ValidateSet('all', 'a', 'copyall', 'ca', 'none', 'default', 'd', 'n', 'eng', 'fre', 'ger', 'spa', 'dut', 'dan', 
+        'fin', 'nor', 'cze', 'pol', 'chi', 'zho', 'kor', 'gre', 'rum', 'rus', 'swe', 'est', 'ind', 'slv', 'tur', 'vie',
+        'hin', 'heb', 'ell', 'bul', 'ara', 'por', 'nld',
+        '!eng', '!fre', '!ger', '!spa', '!dut', '!dan', '!fin', '!nor', '!cze', '!pol', '!chi', '!zho', '!kor', '!ara',
+        '!rum', '!rus', '!swe', '!est', '!ind', '!slv', '!tur', '!vie', '!hin', '!heb', '!gre', '!ell', '!bul', '!por',
+        '!nld')]
     [Alias("S", "Subs")]
     [string]$Subtitles = "default",
 

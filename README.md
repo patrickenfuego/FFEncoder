@@ -23,14 +23,14 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
   - [VMAF Comparison](#vmaf-comparison)
   - [MKV Tag Generator](#mkv-tag-generator)
   - [Script Parameters](#script-parameters)
-    - [**Mandatory**](#mandatory)
-    - [**Utility**](#utility)
-    - [**Audio & Subtitles**](#audio--subtitles)
-    - [**Video Filtering**](#video-filtering)
-    - [**Encoder Config**](#encoder-config)
-    - [**Universal Encoder Settings**](#universal-encoder-settings)
-    - [**x265 Only Settings**](#x265-only-settings)
-    - [**Extra**](#extra)
+    - [Mandatory](#mandatory)
+    - [Utility](#utility)
+    - [Audio & Subtitles](#audio--subtitles)
+    - [Video Filtering](#video-filtering)
+    - [Encoder Config](#encoder-config)
+    - [Universal Encoder Settings](#universal-encoder-settings)
+    - [x265 Only Settings](#x265-only-settings)
+    - [Extra](#extra)
 
 ---
 
@@ -48,12 +48,11 @@ Check out the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki) for addit
 
 - ffmpeg / ffprobe
 - PowerShell v. 7.0 or newer
+- [Mkvtoolnix](https://mkvtoolnix.download/) (optional, but highly recommended)
 
 The script requires PowerShell 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change. 
 
-For users with PowerShell 7.2 or newer, the script uses ANSI output in certain situations to enhance the console experience (although this is not required).
-
-`mkvmerge` and `mkvextract` from [Mkvtoolnix](https://mkvtoolnix.download/) are **recommended**, but not required.
+For users with PowerShell 7.2 or newer, the script uses ANSI output in certain scenarios to enhance the console experience.
 
 ---
 
@@ -146,7 +145,7 @@ FFEncoder supports the following rate control options:
 
 The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply enable the switch parameter `-compareVMAF` (or its alias, `-VMAF`) and pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison.
 
-The machine Learning model files are already provided, and Frames-Per-Second (FPS) and resolution/cropping are calculated automatically; `libvmaf` requires that these parameters be identical before it will begin.
+The machine Learning model files are already provided, and Frames-Per-Second (FPS), resolution/cropping, and scaling are handled automatically; `libvmaf` requires that these parameters be identical before it will run.
 
 Additionally, you may add `SSIM` and `PSNR` measurements as well during the same VMAF run using their respective switch parameters - see the table below.
 
@@ -164,7 +163,7 @@ To use this parameter, you will need a valid TMDB API key. See [the wiki](https:
 
 FFEncoder can accept the following parameters from the command line:
 
-### **Mandatory**
+### Mandatory
 
 > An Asterisk <b>\*</b> denotes that the parameter is mandatory only for its given parameter set (for example, you can choose either `-CRF` or `-VideoBitrate` for rate control, but not both):
 
@@ -177,7 +176,7 @@ FFEncoder can accept the following parameters from the command line:
 | **ScaleFilter**  | None    | <b>\*</b>True | **Resize**, **Resample**         | Scaling filter to use. Scaling options are `scale` (ffmpeg default) and `zscale` (requires `libzimg`)                        | Resizing      |
 | **CompareVMAF**  | N/A     | <b>\*</b>True | None                             | Runs a VMAF comparison on two video files                                                                                    | VMAF          |
 
-### **Utility**
+### Utility
 
 | Parameter Name         | Default | Mandatory | Alias              | Description                                                                                                                                         |
 | ---------------------- | ------- | --------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -191,7 +190,7 @@ FFEncoder can accept the following parameters from the command line:
 | **EnableSSIM**         | False   | False     | **SSIM**           | Enables an additional Structural Similarity Index (SSIM) measurement during VMAF comparisons                                                        |
 | **DisableProgress**    | False   | False     | **NoProgressBar**  | Switch to disable the progress bar during encoding                                                                                                  |
 
-### **Audio & Subtitles**
+### Audio & Subtitles
 
 > See [Audio Options](https://github.com/patrickenfuego/FFEncoder/wiki/Audio-Options) and [Subtitle Options](https://github.com/patrickenfuego/FFEncoder/wiki/Subtitle-Options) in the wiki for more info
 
@@ -205,7 +204,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Stereo2**       | False   | False     | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo                                                                  |
 | **Subtitles**     | Default | False     | **S**, **Subs**        | Subtitle passthrough preference                                                                                     |
 
-### **Video Filtering**
+### Video Filtering
 
 | Parameter Name  | Default          | Mandatory | Alias                 | Description                                                                                                                                          |
 | --------------- | ---------------- | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -214,7 +213,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Scale**       | bilinear         | False     | **ScaleType**, **SF** | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info |
 | **Resolution**  | Source Dependent | False     | **Res**, **R**        | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info             |
 
-### **Encoder Config**
+### Encoder Config
 
 | Parameter Name      | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
 | ------------------- | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -225,7 +224,7 @@ FFEncoder can accept the following parameters from the command line:
 | **TestFrames**      | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
 | **TestStart**       | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
 
-### **Universal Encoder Settings**
+### Universal Encoder Settings
 
 > **NOTE**: *Encoder* means the default is specific to the encoder used. *System* is based on system hardware
 
@@ -250,7 +249,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Tree**           | 1 (Enabled) | False     | **CUTree**, **MBTree** | Enable or disable encoder-specific lowres motion vector lookahead algorithm. 1 is enabled, 0 is disabled. Best disabled for noisy content                              |
 | **VBV**            | `Level`     | False     | None                   | Video buffering verifier. Default is based on the encoder level (except DoVi, which defaults to level 5.1). Requires 2 arguments: (`vbv-bufsize`, `vbv-maxrate`)       |
 
-### **x265 Only Settings**
+### x265 Only Settings
 
 | Parameter Name           | Default | Mandatory | Alias    | Description                                                                                                                                                              |
 | ------------------------ | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -259,7 +258,7 @@ FFEncoder can accept the following parameters from the command line:
 | **TuDepth**              | 1, 1    | False     | **TU**   | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
 | **StrongIntraSmoothing** | 1 (on)  | False     | **SIS**  | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                                            |
 
-### **Extra**
+### Extra
 
 > See [here](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#using-the-extra-parameter-options) for examples of how to use these parameters
 

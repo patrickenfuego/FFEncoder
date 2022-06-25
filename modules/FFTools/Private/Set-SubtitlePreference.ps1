@@ -25,10 +25,27 @@ function Set-SubtitlePreference {
         Write-Host "The primary subtitle stream will be copied`n"
         return @('-map', '0:s:0?', '-c:s', 'copy')
     }
+    elseif ($UserChoice -like "!*") {
+        $lang = $UserChoice.Replace('!', '').ToUpper()
+        Write-Host "** SKIP $lang SUBTITLES SELECTED **" @progressColors
+        Write-Host "All subtitle streams of this language will be ignored"
+        $subStreams = Get-SubtitleStream -InputFile $InputFile -Language $UserChoice
+        if ($subStreams) {
+            foreach ($s in $subStreams) {
+                [string[]]$sArgs += '-map', "0:s:$s`?", '-c:s', 'copy'
+            }
+            return $sArgs
+        }
+        else {
+            Write-Warning "No matching subtitle preference was found. Subtitles will not be copied`n"
+            return '-sn' 
+        }
+    }
     else {
         Write-Host "** $($UserChoice.ToUpper()) SUBTITLES SELECTED **" @progressColors
+        Write-Host "Only subtitles of this language will be copied"
         $subStreams = Get-SubtitleStream -InputFile $InputFile -Language $UserChoice
-        if ($null -ne $subStreams) {
+        if ($subStreams) {
             foreach ($s in $subStreams) {
                 [string[]]$sArgs += '-map', "0:s:$s`?", '-c:s', 'copy'
             }
