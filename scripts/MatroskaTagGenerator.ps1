@@ -119,7 +119,7 @@ param (
 
 $ErrorView = 'NormalView'
 
-#Console colors
+# Console colors
 $progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black' }
 $warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black' }
 $dividerColor = @{ ForegroundColor = 'DarkMagenta'; BackgroundColor = 'Black' }
@@ -132,7 +132,7 @@ $banner2 = @'
                                          |___/                                                            
 '@
 
-#Set Window Name
+# Set Window Name
 $currName = $host.ui.RawUI.WindowTitle
 $host.ui.RawUI.WindowTitle = 'MKV Tag Generator'
 
@@ -140,7 +140,7 @@ $host.ui.RawUI.WindowTitle = 'MKV Tag Generator'
 # Function Definitions                                  #                                           
 #########################################################
 
-#Retrieves the input file's TMDB code
+# Retrieves the input file's TMDB code
 function Get-ID {
     [CmdletBinding()]
     param (
@@ -157,7 +157,7 @@ function Get-ID {
     Write-Host "Requesting TMDB ID for '$Title'..."
     $query = Invoke-RestMethod -Uri "https://api.themoviedb.org/3/search/movie?api_key=$($APIKey)&query=$($Title)" -Method GET
     
-    #Verify if API returned multiple objects, and warn if no year was passed
+    # Verify if API returned multiple objects, and warn if no year was passed
     if ($query.results.Count -gt 1 -and $Year) {
         $queryID = $query.results | Where-Object { $_.release_date -like "$Year*" } | 
             Select-Object -ExpandProperty id
@@ -184,7 +184,7 @@ function Get-ID {
     return [int]$queryID
 }
 
-#Retrieves movie metadata for tag creation. Custom properties are NOT checked for accuracy OR existence
+# Retrieves movie metadata for tag creation. Custom properties are NOT checked for accuracy OR existence
 function Get-Metadata {
     [CmdletBinding()]
     param (
@@ -196,13 +196,13 @@ function Get-Metadata {
         [string]$APIKey
     )
 
-    #Trap to prevent terminating errors from crashing the script when a property isn't returned from the API
+    # Trap to prevent terminating errors from crashing the script when a property isn't returned from the API
     trap { 
         Write-Error "An error occurred. Skipping property..."
         continue
     }
 
-    #Create base object
+    # Create base object
     if ('TMDbID' -notin $SkipProperties) {
         $obj = @{
             'TMDB' = "movie/$Id"
@@ -210,7 +210,7 @@ function Get-Metadata {
     }
     else { $obj = @{} }
 
-    #Pull general info including IMDb ID
+    # Pull general info including IMDb ID
     if ('IMDbID' -notin $SkipProperties) {
         Write-Host "Requesting IMDB ID..."
         $genQuery = Invoke-RestMethod -Uri "https://api.themoviedb.org/3/movie/$($id)?api_key=$($APIKey)" -Method GET
@@ -228,7 +228,7 @@ function Get-Metadata {
 
     Write-Host "---------------------------------------------" @dividerColor
 
-    #Pull cast/crew data
+    # Pull cast/crew data
     $credits = Invoke-RestMethod -Uri "https://api.themoviedb.org/3/movie/$($Id)/credits?api_key=$($APIKey)" -Method GET
 
     # Get cast members
@@ -289,19 +289,23 @@ function Get-Metadata {
 
     Write-Host "---------------------------------------------" @dividerColor
    
-     #Search for custom properties and add them if found
+     # Search for custom properties and add them if found
      if ($Properties) {
         Write-Host "Searching for additional user-defined properties..."
         Write-Verbose "Property passed: $($Properties -join ', ')"
         foreach ($prop in $Properties) {
             if (![string]::IsNullOrEmpty($genQuery.$prop)) {
                 $prop = (Get-Culture).TextInfo.ToTitleCase($prop)
-                #check for duplicate key before adding
+                # check for duplicate key before adding
                 if (!$obj.ContainsKey($prop)) {
                     if ($prop -like "budget") {
                         [int]$val = $genQuery.$prop
                         $fNumber = "$" + $("{0:N0}" -f $val)
                         $obj.Add($prop, $fNumber)
+                    }
+                    elseif ($prop -like 'genres' -or $prop -like 'production*countries' -or $prop -like 'production*companies') {
+                        $val = $genQuery.$prop.name.ForEach({ $_ }) -join ', '
+                        $obj.Add($prop, $val)
                     }
                     else { $obj.Add($prop, $genQuery.$prop) }
                     
@@ -322,7 +326,7 @@ function Get-Metadata {
     return $obj
 } 
 
-#Generates the XML file
+# Generates the XML file
 function New-XMLTagFile {
     [CmdletBinding()]
     param (
@@ -339,17 +343,17 @@ function New-XMLTagFile {
     $root = $doc.CreateNode('element', 'Tags', $null)
     $tag = $doc.CreateNode('element', 'Tag', $null)
     foreach ($item in $Metadata.GetEnumerator()) {
-        #Create the parent Simple tag
+        # Create the parent Simple tag
         $simple = $doc.CreateNode('element', 'Simple', $null)
-        #Create the Name element for Simple and append it
+        # Create the Name element for Simple and append it
         $name = $doc.CreateElement('Name')
         $name.InnerText = $item.Name
         $simple.AppendChild($name) > $null
-        #Create the String element for Simple and append it
+        # Create the String element for Simple and append it
         $string = $doc.CreateElement('String')
-        $string.InnerText = $item.Value -join ", "
+        $string.InnerText = $item.Value -join ', '
         $simple.AppendChild($string) > $null
-        #Append the Simple node to parent Tag node
+        # Append the Simple node to parent Tag node
         $tag.AppendChild($simple) > $null
     }
     $root.AppendChild($tag) > $null
@@ -376,11 +380,11 @@ if ((Test-Path -Path $outXML) -and !$PSBoundParameters['AllowClobber']) {
 
 Write-Host "$banner2`n`n" @dividerColor
 
-#Sanitize title/year if not passed via parameter
+# Sanitize title/year if not passed via parameter
 if (!$PSBoundParameters['Title'] -or !$PSBoundParameters['Year']) {
-    $leafBase = (Split-Path -Path $Path -Leaf) -replace '\..*', ''
+    $leafBase = Split-Path -Path $Path -LeafBase
 
-    #Try to sanitize input title
+    # Try to sanitize input title
     $mTitle, $mYear = switch -Regex ($leafBase) {
         '^(?<title>[^(]+(?=\d+)?).*\(?(?<year>\d{4})\)?$' {
             Write-Verbose "Match case 1"
@@ -399,7 +403,7 @@ if (!$PSBoundParameters['Title'] -or !$PSBoundParameters['Year']) {
         default { 'Undefined', 'Undefined' }
     }
     
-    #Verify if Title was passed. Otherwise, assign to mTitle if applicable
+    # Verify if Title was passed. Otherwise, assign to mTitle if applicable
     if ($PSBoundParameters['Title']) {
         Write-Host "Search title: " -NoNewline
         Write-Host $Title @progressColors
@@ -418,7 +422,7 @@ if (!$PSBoundParameters['Title'] -or !$PSBoundParameters['Year']) {
         Write-Host $Title @progressColors
     }
 
-    #Verify if Year was passed. Otherwise, assign to mYear if applicable
+    # Verify if Year was passed. Otherwise, assign to mYear if applicable
     if ($PSBoundParameters['Year']) {
         if ([string]$Year -notmatch '^[0-9]{4}$') {
             $msg = "Incorrect Year format. A 4 digit integer was expected, but $Year was received. " +
@@ -442,7 +446,7 @@ if (!$PSBoundParameters['Title'] -or !$PSBoundParameters['Year']) {
     }
 }
 
-#Try to retrieve metadata. Catch and display a variety of potential errors
+# Try to retrieve metadata. Catch and display a variety of potential errors
 try {
     [int]$id = Get-ID -Title $Title -APIKey $APIKey -Year $Year -ErrorAction Stop
     $movieObj = Get-Metadata -Id $id -APIKey $APIKey
@@ -491,7 +495,7 @@ catch {
     }
 }
 
-#Try to create XML file
+# Try to create XML file
 try {
     New-XMLTagFile -Metadata $movieObj -OutputFile $outXML -ErrorAction Stop
 }
@@ -505,7 +509,7 @@ catch {
     }
 }
 
-#Mux the tag file into the container if mkvpropedit is in PATH
+# Mux the tag file into the container if mkvpropedit is in PATH
 if ((Get-Command 'mkvpropedit') -and !$PSBoundParameters['NoMux'] -and $Path.EndsWith('.mkv')) {
     Write-Host "Muxing tag file into container..." @progressColors
     mkvpropedit $Path -t global:$outxML
