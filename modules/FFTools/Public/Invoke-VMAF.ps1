@@ -4,10 +4,16 @@ function Invoke-VMAF {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string]$Source,
 
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string]$Encode,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('json', 'xml', 'csv', 'sub')]
+        [string]$LogFormat = 'json',
 
         [Parameter(Mandatory = $false)]
         [switch]$SSIM,
@@ -15,6 +21,20 @@ function Invoke-VMAF {
         [Parameter(Mandatory = $false)]
         [switch]$PSNR
     )
+
+    # Private internal function to parse dimensions from a string 
+    function Get-Resolution ([string]$FilePath) {
+        $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $FilePath
+
+        if ($resolution -match "(?<w>\d+)x(?<h>\d+)") {
+            [int]$width, [int]$height = $Matches.w, $Matches.h
+        }
+        else {
+            Write-Error "VMAF: Regular expression failed to match dimensions. ffprobe may have returned a bad result" -ErrorAction Stop
+        }
+
+        return $width, $height
+    }
 
     <#
         SETUP NAMES
@@ -35,18 +55,32 @@ function Invoke-VMAF {
     <#
         GATHER VIDEO INFORMATION
 
-        Video Title
         Resolution
+        Scaling
         Frame rate (FPS)
     #>
 
-    # Get the resolution of the encode (distorted) for cropping
-    $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $Encode
-    if ($resolution -match "(?<w>\d+)x(?<h>\d+)") {
-        [int]$w, [int]$h = $Matches.w, $Matches.h
+    # Check if zscale is available with ffmpeg & set scaling args
+    $scale, $set = ($(ffmpeg 2>&1) -join ' ' -notmatch 'libzimg') ? 'scale', 'flags' : 'zscale', 'f'
+
+    # # Get the resolution of the encode (distorted) for cropping
+    $w, $h = Get-Resolution -FilePath $Encode
+    # Get the resolution of the source (reference) file to verify if scaling was used
+    $sw, $sh = Get-Resolution -FilePath $Source
+    # Check for downscale - upscale encode back using lanczos
+    if (($sw - $w) -gt 200) {
+        $referenceString = "[0:v]crop=$($sw):$($sh)[reference]"
+        $distortedString = "[1:v]$scale=$($sw):$($sh):$set=lanczos[distorted]"
     }
+    # Check for upscale - downscale encode back using bicubic
+    elseif (($sw - $w) -lt 0) {
+        $referenceString = "[0:v]crop=$($sw):$($sh)[reference]"
+        $distortedString = "[1:v]$scale=$($sw):$($sh):$set=bicubic[distorted]"
+    }
+    # Both videos are the same base resolution - crop reference to source
     else {
-        Write-Error "VMAF: Regular expression failed to match dimensions. ffprobe may have returned a bad result" -ErrorAction Stop
+        $referenceString = "[0:v]crop=$w`:$h`[reference]"
+        $distortedString = "[1:v]crop=$w`:$h`[distorted]"
     }
 
     # Get framerate of Encode
@@ -69,7 +103,7 @@ function Invoke-VMAF {
     # Get the parent directory of json model files
     $root = [Path]::Join((Get-item $PSModuleRoot).Parent.Parent, 'vmaf')
 
-    $jsonFile = switch ($w) {
+    $jsonFile = switch ($sw) {
         { $_ -gt 3000 } { [Path]::Join($root, 'vmaf_4k_v0.6.1.json') }
         default         { [Path]::Join($root, 'vmaf_v0.6.1.json') }
     }
@@ -102,6 +136,12 @@ function Invoke-VMAF {
         Write-Error "Unknown Operating System detected. Exiting script" -ErrorAction Stop
     }
 
+    <#
+        Set VMAF string
+        Add features
+        Run libvmaf via ffmpeg
+    #>
+
     # Set the VMAF string with options and paths
     $vmafStr = "log_fmt=json:log_path=$logPath`:model_path=$modelPath"
     if ($SSIM) {
@@ -115,11 +155,12 @@ function Invoke-VMAF {
     ffmpeg -hide_banner `
         -r $framerate -i $Source `
         -r $framerate -i $Encode `
-        -filter_complex "[0:v]crop=$w`:$h`[reference];`
-                         [1:v]crop=$w`:$h`[distorted];`
+        -filter_complex "$referenceString;`
+                         $distortedString;`
                          [distorted][reference]libvmaf=$vmafStr" `
         -f null -
 
+    Write-Verbose "Last Exit Code: $LASTEXITCODE"
     if ($LASTEXITCODE) {
         Write-Host "`nAnalysis complete! " -NoNewline @successColors
     }
