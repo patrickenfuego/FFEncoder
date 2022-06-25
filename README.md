@@ -144,7 +144,9 @@ FFEncoder supports the following rate control options:
 
 ## VMAF Comparison
 
-The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison. The machine Learning model files are already provided, and Frames-Per-Second (FPS) and resolution are calculated automatically.
+The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply enable the switch parameter `-compareVMAF` (or its alias, `-VMAF`) and pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison.
+
+The machine Learning model files are already provided, and Frames-Per-Second (FPS) and resolution/cropping are calculated automatically; `libvmaf` requires that these parameters be identical before it will begin.
 
 Additionally, you may add `SSIM` and `PSNR` measurements as well during the same VMAF run using their respective switch parameters - see the table below.
 
