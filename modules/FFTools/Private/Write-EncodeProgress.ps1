@@ -43,11 +43,11 @@ function Write-EncodeProgress {
                 Write-Warning "CTRL+C was detected - shutting down all running jobs before exiting the script"
                 # Clean up all running jobs before exiting
                 Get-Job | Stop-Job -PassThru | Remove-Job -Force -Confirm:$false
-                [console]::TreatControlCAsInput = $false
 
                 $psReq ? (Write-Host "$($aRed)$Message$($reset)") :
                          (Write-Host $Message @errColors)
                 $console.WindowTitle = $currentTitle
+                [console]::TreatControlCAsInput = $False
                 exit 77
             }
             # Flush the key buffer again for the next loop
@@ -72,8 +72,13 @@ function Write-EncodeProgress {
         # Select-String does not work on this output for some reason?
         $tmp = $frameStr | Select-Object -Index ($frameStr.Count - 2)
         [int]$frameCount = $tmp | 
-            Select-String -Pattern '^frame=(\d+)\s.*' | 
+            Select-String -Pattern '^frame=\s*(\d+)\s.*' |
                 ForEach-Object { $_.Matches.Groups[1].Value }
+
+        if (!$frameCount) {
+            Write-Progress "Could not retrieve frame count" -Completed
+            return
+        }
     }
     
     # While job is running, track progress
@@ -91,8 +96,8 @@ function Write-EncodeProgress {
                     ForEach-Object { $_.Matches.Groups[1].Value }
         }
         else {
-            [int]$currentFrame = Get-Content $LogPath -Tail 1 | 
-                Select-String -Pattern '^frame=\s+(\d+) .*' | 
+            [int]$currentFrame = Get-Content $LogPath -Tail 1 |
+                Select-String -Pattern '^frame=\s+(\d+)\s*.*' | 
                     ForEach-Object { $_.Matches.Groups[1].Value }
         }
 
@@ -107,7 +112,7 @@ function Write-EncodeProgress {
                 Activity        = $activity
             }
             Write-Progress @params
-            Start-Sleep -Seconds 1.5
+            Start-Sleep -Seconds 1
         }
         else {
             Start-Sleep -Milliseconds 500
