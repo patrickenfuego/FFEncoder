@@ -523,18 +523,6 @@ param (
     [alias("Exit")]
     [switch]$ExitOnError,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "VMAF")]
-    [Alias("VMAF")]
-    [switch]$CompareVMAF,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
-    [alias("SSIM")]
-    [switch]$EnableSSIM,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
-    [alias("PSNR")]
-    [switch]$EnablePSNR,
-
     [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [alias("NoProgressBar")]
@@ -544,7 +532,6 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
     [ValidateScript(
         {
-            if ($_.Count -eq 0) { throw "MKV Tag Generator Hashtable cannot be empty" }
             $flag = $false
             if ($null -eq $_['APIKey']) {
                 throw "MKV Tag Hashtable must include an APIKey"
@@ -567,7 +554,26 @@ param (
     [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
     [ValidateNotNullOrEmpty()]
     [Alias("O", "Encode", "Distorted")]
-    [string]$OutputPath
+    [string]$OutputPath,
+
+    ## VMAF-Specific Parameters
+    [Parameter(Mandatory = $true, ParameterSetName = "VMAF")]
+    [Alias("VMAF")]
+    [switch]$CompareVMAF,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
+    [alias("SSIM")]
+    [switch]$EnableSSIM,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
+    [alias("PSNR")]
+    [switch]$EnablePSNR,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
+    [ValidateSet('json', 'xml', 'csv', 'sub')]
+    [alias("LogType")]
+    [string]$LogFormat
+
 )
 
 #########################################################
@@ -669,6 +675,7 @@ if ($Help) {
 # Enable verbose logging if passed. Cascade down setVerbose
 if ($PSBoundParameters['Verbose']) {
     $VerbosePreference = 'Continue'
+    $ErrorView = 'NormalView'
     $Global:setVerbose = $true
 }
 else { 
@@ -677,11 +684,13 @@ else {
 }
 
 # Set console options for best experience
-$Global:console = (Get-Host).UI.RawUI
+$Global:console = $Host.UI.RawUI
 $Global:currentTitle = $console.WindowTitle
 $console.ForegroundColor = 'White'
 $console.BackgroundColor = 'Black'
 $console.WindowTitle = 'FFEncoder'
+# Reset intercept if previous exit wasn't clean
+[console]::TreatControlCAsInput = $false
 
 # Import FFTools module
 Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
@@ -722,8 +731,12 @@ if ($PSBoundParameters['CompareVMAF']) {
         PSNR       = $EnablePSNR
     }
 
+    if ($PSBoundParameters['LogFormat']) {
+        $params['LogFormat'] = $LogFormat.ToLower()
+    }
+
     try {
-        Invoke-VMAF @params
+        Invoke-VMAF @params -Verbose:$setVerbose
         $console.WindowTitle = $currentTitle
         exit 0
     }
@@ -814,7 +827,7 @@ if ($isScale) {
     $scaleHash = @{
         Scale       = $scaleType
         ScaleFilter = $filter 
-        Resolution  = $defaultResolution
+        Resolution  = $Resolution ??= $defaultResolution
     }
 }
 
@@ -825,7 +838,7 @@ $res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=nopr
 
 if ($res) {
     $lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ? 
-    $true : $false
+                $true : $false
     $test1 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio -match $_ })
     $test2 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio2 -match $_ })
     if (!$lossless -and (!$test1 -or !$test2)) {
@@ -964,7 +977,7 @@ try {
 }
 catch {
     $params = @{
-        Message           = "An error occurred before ffmpeg could be invoked. Message:`n$($_.Exception.Message)"
+        Message           = "An error occurred before ffmpeg could be invoked. Exception:`n$($_.Exception)"
         RecommendedAction = 'Correct the Error Message'
         Category          = "InvalidArgument"
         CategoryActivity  = "FFmpeg Function Invocation"
@@ -973,6 +986,7 @@ catch {
     }
 
     $console.WindowTitle = $currentTitle
+    Get-Job | Stop-Job -PassThru | Remove-Job -Force
     Write-Error @params -ErrorAction Stop
 }
 
