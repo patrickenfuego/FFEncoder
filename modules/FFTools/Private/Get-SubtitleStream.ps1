@@ -60,8 +60,8 @@ function Get-SubtitleStream {
 
     if ($subArray.Count -gt 0) {
         ($Language -notlike '!*') ?
-        ( Write-Host "$langStr subtitles found! $($subArray.Count) stream(s) will be copied.`n") :
-        ( Write-Host "Non-$langStr subtitles found! $($subArray.Count) stream(s) will be copied.`n")
+        ( Write-Host "$langStr subtitles found! $($subArray.Count) stream(s) will be copied") :
+        ( Write-Host "Non-$langStr subtitles found! $($subArray.Count) stream(s) will be copied")
        
         return $subArray
     }

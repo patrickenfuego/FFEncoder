@@ -12,7 +12,7 @@ function Set-SubtitlePreference {
 
     if ($UserChoice -match "a[ll]*$" -or $UserChoice -match "c[opy]*a[ll]*") {
         Write-Host "** ALL SUBTITLES SELECTED **" @progressColors
-        Write-Host "All subtitle streams will be copied`n"
+        Write-Host "All subtitle streams will be copied"
         return @('-map', '0:s?', '-c:s', 'copy')
     }
     elseif ($UserChoice -match "n[one]*$") {
@@ -22,7 +22,7 @@ function Set-SubtitlePreference {
     }
     elseif ($UserChoice -match "d[efault]*$") {
         Write-Host "** DEFAULT SUBTITLE SELECTED **" @progressColors
-        Write-Host "The primary subtitle stream will be copied`n"
+        Write-Host "The primary subtitle stream will be copied"
         return @('-map', '0:s:0?', '-c:s', 'copy')
     }
     elseif ($UserChoice -like "!*") {
@@ -37,7 +37,7 @@ function Set-SubtitlePreference {
             return $sArgs
         }
         else {
-            Write-Warning "No matching subtitle preference was found. Subtitles will not be copied`n"
+            Write-Warning "No matching subtitle preference was found. Subtitles will not be copied"
             return '-sn' 
         }
     }
@@ -52,7 +52,7 @@ function Set-SubtitlePreference {
             return $sArgs
         }
         else {
-            Write-Warning "No matching subtitle preference was found. Subtitles will not be copied`n"
+            Write-Warning "No matching subtitle preference was found. Subtitles will not be copied"
             return '-sn' 
         }
     }
