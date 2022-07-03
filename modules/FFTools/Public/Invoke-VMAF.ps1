@@ -24,7 +24,7 @@ function Invoke-VMAF {
 
     # Private internal function to parse dimensions from a string 
     function Get-Resolution ([string]$FilePath) {
-        $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $FilePath
+        $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $FilePath
 
         if ($resolution -match "(?<w>\d+)x(?<h>\d+)") {
             [int]$width, [int]$height = $Matches.w, $Matches.h
@@ -87,7 +87,7 @@ function Invoke-VMAF {
     $fps = ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $Encode
     $framerate = [math]::Round($(Invoke-Expression $fps), 3)
     # Get framerate of source to ensure they match
-    $fpsSrc = ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $Encode
+    $fpsSrc = ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $Source
     $framerateSrc = [math]::Round($(Invoke-Expression $fpsSrc), 3)
     if ($framerate -ne $framerateSrc) {
         Write-Error "Source and encode have different frame rates. Ensure the proper files are being compared" -ErrorAction Stop
