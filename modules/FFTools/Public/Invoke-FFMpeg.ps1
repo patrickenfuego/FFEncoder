@@ -208,9 +208,9 @@ function Invoke-FFMpeg {
             Write-Host ""
             if ($psReq) {
                 $PSStyle.Formatting.TableHeader = $aYellow
-                Write-Host "$($aYellow+$PSStyle.Bold)-- TEST ENCODE --"
+                Write-Host "$($aYellow+$PSStyle.Bold)$("`u{294E}" * 3) TEST ENCODE $("`u{294E}" * 3)"
             }
-            else { Write-Host "--- TEST ENCODE ---" @warnColors }
+            else { Write-Host "$("`u{294E}" * 3) TEST ENCODE $("`u{294E}" * 3)" @warnColors }
 
             [PSCustomObject]@{
                 Start    = "$startStr  "
@@ -292,6 +292,17 @@ function Invoke-FFMpeg {
         Set subtitle array based on user input
 
     #>
+
+    $copyOpt = @('copy', 'c', 'copyall', 'ca') + 1..12
+    # Verify if stream copying and a named codec are used together
+    if ($copyOpt -notcontains $AudioInput[0].Audio -and 
+        $copyOpt -contains $AudioInput[1].Audio) {
+            
+        $remuxStream = $true
+    }
+    else {
+        $remuxStream = $false
+    }
     
     $audioParam1 = @{
         Paths       = $Paths
@@ -301,16 +312,14 @@ function Invoke-FFMpeg {
         Stereo      = $AudioInput[0].Stereo
         AudioFrames = $TestFrames
         TestStart   = $TestStart
-        RemuxStream = $false
+        RemuxStream = $remuxStream
         Verbose     = $setVerbose
     }
     $audio = Set-AudioPreference @audioParam1
 
     if ($null -ne $AudioInput[1]) {
         # Verify if stream copying and a named codec are used together
-        $copyOpt = @('copy', 'c', 'copyall', 'ca') + 1..12
-        if ($AudioInput[1].Stereo -and 
-            $copyOpt -contains $AudioInput[0].Audio -and 
+        if ($copyOpt -contains $AudioInput[0].Audio -and 
             $copyOpt -notcontains $AudioInput[1].Audio) {
             
             $remuxStream = $true
@@ -443,8 +452,9 @@ function Invoke-FFMpeg {
         # Two pass x265 encode
         if ($null -ne $dvArgs.x265Args2) {
             Write-Host
-            Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
-            Write-Host "***** STARTING x265 PIPE PASS 1 *****" @progressColors
+            Write-Host "$("`u{2726}" * 3) 2-Pass ABR Selected @ $($RateControl[1] -replace '(.*)(\w+)$', '$1 $2')b/s $("`u{2726}" * 3)" @emphasisColors
+            Write-Host "$boldOn$("`u{25c7}" * 4) STARTING x265 PIPE PASS 1 $("`u{25c7}" * 4)$boldOff" @progressColors
+            Write-Host "Generating 1st pass encoder metrics...`n"
             Write-Banner
 
             if ($IsLinux -or $IsMacOS) {
@@ -487,7 +497,7 @@ function Invoke-FFMpeg {
             }
 
             Write-Host
-            Write-Host "***** STARTING x265 PIPE PASS 2 *****" @progressColors
+            Write-Host "$boldOn$("`u{25c7}" * 4) STARTING x265 PIPE PASS 2 $("`u{25c7}" * 4)$boldOff" @progressColors
             Write-Banner
             
             if ($IsLinux -or $IsMacOS) {
@@ -531,8 +541,8 @@ function Invoke-FFMpeg {
         }
         # CRF/One pass x265 encode
         else {
-            Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
-            Write-Host "***** STARTING x265 PIPE *****" @progressColors
+            Write-Host "$("`u{2726}" * 3) CRF $($RateControl[1]) Selected $("`u{2726}" * 3)" @emphasisColors
+            Write-Host "$boldOn$("`u{25c7}" * 4) STARTING x265 PIPE $("`u{25c7}" * 4)$boldOff" @progressColors
             Write-Banner
 
             if ($IsLinux -or $IsMacOS) {
@@ -632,19 +642,19 @@ function Invoke-FFMpeg {
     } # End DoVi
     # Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
-        Write-Host "**** 2-Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
-        Write-Host "***** STARTING FFMPEG PASS 1 - $Encoder *****" @progressColors
-        Write-Host "Generating 1st pass encoder metrics..."
+        Write-Host "$("`u{2726}" * 3) 2-Pass ABR Selected @ $($RateControl[1] -replace '(.*)(\w+)$', '$1 $2')b/s $("`u{2726}" * 3)" @emphasisColors
+        Write-Host "$boldOn$("`u{25c7}" * 4) STARTING FFMPEG PASS 1 - $Encoder $("`u{25c7}" * 4)$boldOff" @progressColors
+        Write-Host "Generating 1st pass encoder metrics...`n"
         Write-Banner
 
         if (([math]::Round(([FileInfo]($Paths.X265Log)).Length / 1MB, 2)) -gt 10) {
             $msg = "A large x265 first pass log already exists. If this isn't a full log, " +
                    "stop and delete the log before proceeding. Continuing to second pass..."
             if ($psReq) {
-                Write-Host "$($aYellow+$boldOn)$msg"
+                Write-Host "$($aYellow+$boldOn)$msg`n"
             }
             else {
-                Write-Host "A full x265 first pass log already exists. Proceeding to second pass...`n" @warnColors
+                Write-Host "$msg`n" @warnColors
             }
         }
         else {
@@ -655,7 +665,6 @@ function Invoke-FFMpeg {
                 $ffArgsPass1 = $ffmpegArgs[0]
                 $ffArgsPass2 = $ffmpegArgs[1]
                 $log = $Paths.LogPath
-                $out = $Paths.OutputFile
 
                 Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $ffArgsPass1, $log -ScriptBlock {
                     param ($ffArgsPass1, $log)
@@ -664,25 +673,26 @@ function Invoke-FFMpeg {
                 } | Out-Null
 
                 $params = @{
-                    InputFile  = $Paths.InputFile
-                    LogPath    = $Paths.LogPath
-                    TestFrames = $TestFrames
-                    JobName    = 'ffmpeg 1st Pass'
-                    SecondPass = $false
-                    Verbose    = $setVerbose
+                    InputFile   = $Paths.InputFile
+                    LogPath     = $Paths.LogPath
+                    TestFrames  = $TestFrames
+                    JobName     = 'ffmpeg 1st Pass'
+                    SecondPass  = $false
+                    Verbose     = $setVerbose
+                    DolbyVision = $dovi
                 }
                 Write-EncodeProgress @params
             } 
         }
 
-        Write-Host "***** STARTING FFMPEG PASS 2 - $Encoder *****" @progressColors
+        Write-Host "$boldOn$("`u{25c7}" * 4) STARTING FFMPEG PASS 2 - $Encoder $("`u{25c7}" * 4)$boldOff" @progressColors
         Write-Banner
 
         if ($DisableProgress) {
             ffmpeg $ffmpegArgs[1] $Paths.OutputFile 2>>$Paths.LogPath
         }
         else {
-            Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $ffArgsPass2, $out, $log -ScriptBlock {
+            Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $ffArgsPass2, $Paths.OutputFile, $log -ScriptBlock {
                 param ($ffArgsPass2, $out, $log)
     
                 ffmpeg $ffArgsPass2 $out 2>>$log
@@ -695,14 +705,15 @@ function Invoke-FFMpeg {
                 JobName     = 'ffmpeg 2nd Pass'
                 SecondPass  = $true
                 Verbose     = $setVerbose
+                DolbyVision = $dovi
             }
             Write-EncodeProgress @params
         }  
     }
     # CRF encode
     elseif ($RateControl[0] -eq '-crf') {
-        Write-Host "**** CRF $($RateControl[1]) Selected ****" @emphasisColors
-        Write-Host "***** STARTING FFMPEG - $Encoder *****" @progressColors
+        Write-Host "$("`u{2726}" * 3) CRF $($RateControl[1]) Selected $("`u{2726}" * 3)" @emphasisColors
+        Write-Host "$boldOn$("`u{25c7}" * 4) STARTING FFMPEG - $Encoder $("`u{25c7}" * 4)$boldOff" @progressColors
         Write-Banner
 
         if ($DisableProgress) {
@@ -718,8 +729,8 @@ function Invoke-FFMpeg {
     }
     # One pass encode
     elseif ($RateControl[0] -eq '-b:v') {
-        Write-Host "**** 1 Pass ABR Selected @ $($RateControl[1])b/s ****" @emphasisColors
-        Write-Host "***** STARTING FFMPEG - $Encoder *****" @progressColors
+        Write-Host "$("`u{2726}" * 3) 1 Pass ABR Selected @ $($RateControl[1] -replace '(.*)(\w+)$', '$1 $2')b/s  $("`u{2726}" * 3)" @emphasisColors
+        Write-Host "$boldOn$("`u{25c7}" * 4) STARTING FFMPEG - $Encoder $("`u{25c7}" * 4)$boldOff" @progressColors
         Write-Banner
 
         if ($DisableProgress) {

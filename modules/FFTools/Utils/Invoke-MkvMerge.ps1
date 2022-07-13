@@ -2,10 +2,10 @@
     .SYNOPSIS
         Private helper function to handle the script's remuxing needs
     .DESCRIPTION
-        iF MKVToolnix is installed (and the file is mkv), this function will be used to remux
+        If MKVToolnix is installed (and the file is mkv), this function is used to remux
         tracks instead of ffmpeg.
     .PARAMETER Paths
-        Paths and variables used throughout the script, compacted into a hashtable
+        File paths and variables used throughout the script, compacted into a hashtable
     .PARAMETER Mode
         Specifies the mkvmerge mode
             extract - Extracts a file from the source
@@ -14,11 +14,11 @@
             
     .PARAMETER ModeID
         Identifies the remuxing mode
-            1 - Stereo stream remux
-            2 - Dee stream remux
-            3 - Stereo and dee stream remux (TBD)
+            1 - Stream copy & encode remux
+            2 - Dee stream encode remux
+            3 - Stereo & dee stream remux
     .NOTES
-        This function is a fucking mess and needs refactoring, but I don't care enough to do it
+        This function is a fucking mess and needs refactoring
 #>
 
 function Invoke-MkvMerge {
@@ -36,7 +36,9 @@ function Invoke-MkvMerge {
 
     # Mode for muxing externally encoded files
     if ($Mode -eq 'remux') {
-        if (!(Test-Path $Paths.Audio -ErrorAction SilentlyContinue)) {
+        if (![System.IO.File]::Exists($Paths.Audio) -and
+            ![System.IO.File]::Exists($Paths.ExternalAudio)) {
+                
             Write-Host "mkvmerge: Could not locate the external audio path. Returning..." @warnColors
             return
         }
@@ -77,20 +79,24 @@ function Invoke-MkvMerge {
             '('
             "$($Paths.Input)"
             ')'
-            '--language'
-            "0:$($Paths.Language)"
-            '--track-name'
-            ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
-            '('
-            "$($Paths.Audio)"
-            ')'
-            if ($Paths.Stereo) {
+            if ($Paths.Audio) {
                 '--language'
                 "0:$($Paths.Language)"
                 '--track-name'
-                "0:$($TrackTitle['StereoTitle'])"
+                ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
+            ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
+                ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
                 '('
-                "$($Paths.Stereo)"
+                "$($Paths.Audio)"
+                ')'
+            }
+            if ($Paths.ExternalAudio) {
+                '--language'
+                "0:$($Paths.Language)"
+                '--track-name'
+                ($null -ne $TrackTitle['ExternalTitle']) ? "0:$($TrackTitle['ExternalTitle'])" : "0:$($TrackTitle['StereoTitle'])"
+                '('
+                "$($Paths.ExternalAudio)"
                 ')'
             }
             '--title'
@@ -107,7 +113,8 @@ function Invoke-MkvMerge {
         }
         
         # Ensure output exists and file size is correct before deleting and renaming
-        if ((Test-Path $Paths.Output) -and ((Get-Item $Paths.Output).Length -ge (Get-Item $Paths.Input).Length)) {
+        if ((Test-Path $Paths.Output -ErrorAction SilentlyContinue) -and 
+            ((Get-Item $Paths.Output).Length -ge (Get-Item $Paths.Input).Length)) {
             Write-Verbose "Muxing successful for <$($Paths.Output)>"
         }
         else { 
@@ -188,10 +195,16 @@ function Invoke-MkvMerge {
         }
     }
     elseif ($Mode -eq 'extract') {
+        if ([System.IO.File]::Exists($Paths.Output)) {
+            Write-Verbose "MKVMerge: Existing external audio file found. Returning..."
+            return
+        }
 
         $remuxArgs = @(
             '--output'
             "$($Paths.Output)"
+            '--audio-tracks'
+            '1'
             '--no-video'
             '--no-subtitles'
             '--no-chapters'

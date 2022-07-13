@@ -61,13 +61,16 @@ function Set-AudioPreference {
         elseif ($bitsPerChannel -like '*0 kb/s*') {
             Write-Host "Bits per channel unknown (no bitrate specified or VBR selected)`n"
         }
+        elseif ($bitsPerChannel -eq 'variable') {
+            Write-Host "The selected option uses variable bitrate encoding"
+        }
         else {
             Write-Host "Bitrate per channel: ~ $bitsPerChannel`n"
         }
     }
 
     $stereoArgs = @("-filter:a:$Stream", 'pan=stereo|FL=0.5*FC+0.707*FL+0.707*BL+0.5*LFE|FR=0.5*FC+0.707*FR+0.707*BR+0.5*LFE')
-    $noPrint = @('copy', 'c', 'copyall', 'ca', 'none', 'n', 'flac', 'f', 'dee_thd') + 0..12
+    $noPrint = @('copy', 'c', 'copyall', 'ca', 'none', 'n') + 0..12
     $dArgs = @('dee_ddp', 'dee_eac3', 'eac3', 'ddp', 'dee_dd', 'dee_ac3', 'ac3', 'dd')
     $split = $dArgs.Length / 2
 
@@ -98,6 +101,9 @@ function Set-AudioPreference {
     if ($Stereo -and $RemuxStream) { 
         $trackTitle['StereoTitle'] = $trackName
     }
+    elseif ($RemuxStream) {
+        $trackTitle['ExternalTitle'] = $trackName
+    }
     elseif ($UserChoice -in $dee['DeeArgs']) {
         $trackTitle['DeeTitle'] = $trackName
     }
@@ -105,44 +111,46 @@ function Set-AudioPreference {
         $trackTitle["AudioTitle$($Stream + 1)"] = $trackName
     }
 
-    Write-Host "**** Audio Stream $($Stream + 1) ****" @emphasisColors
+    Write-Host "$("`u{2726}" * 3) Audio Stream $($Stream + 1) $("`u{2726}" * 3)" @emphasisColors
 
     # If dee has been used, set value to 0 to prevent stream mismatch
     if ($dee['DeeUsed']) { $Stream = 0 }
 
     $audioArgs = switch -Regex ($UserChoice) {
         "^c[opy]*$" {
-            Write-Host "** COPY AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) COPY AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             Write-Host "Audio stream 0 will be copied`n"
             @('-map', '0:a:0', '-c:a:0', 'copy')
             break
         }
         "c[opy]*a[ll]*" {
-            Write-Host "** COPY ALL AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) COPY ALL AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             Write-Host "All audio streams will be copied`n"
             @('-map', '0:a', '-c:a', 'copy')
             break
         }
         "^aac$" {
-            Write-Host "** AAC AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) AAC AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             if (!$Bitrate) { $Bitrate = $Stereo ? 128 : 512 }
-            @('-map', '0:a:0', "-c:a:$Stream", 'aac', "-b:a:$Stream", "$Bitrate`k")
+            @('-map', '0:a:0', "-c:a:$Stream", 'aac', '-b:a', "$Bitrate`k")
             break
         }
         "^dts$" {
-            Write-Host "** DTS AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) DTS AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
-            if ($i) {
-                $sChannels = Get-ChannelCount -ID $i
-                Write-Host "Channel count: $sChannels`n"
-                @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+            else {
+                $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
+                if ($i) {
+                    $sChannels = Get-ChannelCount -ID $i
+                    Write-Host "Channel count: $sChannels`n"
+                    @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+                }
+                else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
             }
-            else { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-strict', -2) }
             break
         }
         "f[dk]*aac$" {
-            Write-Host "** FDK AAC AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) FDK AAC AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             if (!$Bitrate) { 
                 Write-Host "No bitrate specified. Using VBR 3" @warnColors
                 @('-map', '0:a:0', "-c:a:$Stream", 'libfdk_aac', '-vbr', 3)
@@ -158,7 +166,7 @@ function Set-AudioPreference {
             break
         }
         '^aac_at$' {
-            Write-Host "** AAC_AT AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) AAC_AT AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             if (!$Bitrate) { 
                 Write-Host "No mode specified. Using auto VBR" @warnColors
                 @('-map', '0:a:0', "-c:a:$Stream", 'aac_at')
@@ -174,19 +182,19 @@ function Set-AudioPreference {
             break
         }
         '^dee_thd$' {
-            Write-Host "**DOLBY ENCODING SUITE - TRUEHD AUDIO SELECTED**" @progressColors
+            Write-Host "$("`u{25c7}" * 2) DOLBY ENCODING SUITE - TRUEHD AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             Write-Host "Input audio has $channels channels" 
             $dee['DeeUsed'] = $true
             'dee_thd'
             break
         }
         { @('dee_ddp', 'dee_eac3') -contains $_ } {
-            Write-Host "**DOLBY ENCODING SUITE - DOLBY DIGITAL PLUS AUDIO SELECTED**" @progressColors
+            Write-Host "$("`u{25c7}" * 2) DOLBY ENCODING SUITE - DOLBY DIGITAL PLUS AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             if (!$Bitrate) {
                 $deeDefault = switch ($channels) {
-                    8       { 1024 }
-                    6       { 768 }
-                    default { 0 }
+                    8       { 960 }
+                    6       { 640 }
+                    default { 768 }
                 }
                 $Bitrate = $deeDefault
             }
@@ -195,24 +203,24 @@ function Set-AudioPreference {
             break
         }
         { @('dee_ddp_51', 'dee_eac3_51') -contains $_ } {
-            Write-Host "**DOLBY ENCODING SUITE - DOLBY DIGITAL PLUS AUDIO SELECTED**" @progressColors
+            Write-Host "$("`u{25c7}" * 2) DOLBY ENCODING SUITE - DOLBY DIGITAL PLUS AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
+            $dee['DeeUsed'] = $true
             if (!$Bitrate) {
-                $deeDefault = 768
+                $deeDefault = 640
                 $Bitrate = $deeDefault
             }
             $channels = 6
-            $dee['DeeUsed'] = $true
             'dee_ddp_51'
             break
         }
         { @('dee_dd', 'dee_ac3') -contains $_ } {
-            Write-Host "**DOLBY ENCODING SUITE - DOLBY DIGITAL AUDIO SELECTED**" @progressColors
+            Write-Host "$("`u{25c7}" * 2) DOLBY ENCODING SUITE - DOLBY DIGITAL AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             $dee['DeeUsed'] = $true
             if (!$Bitrate) {
                 $deeDefault = switch ($channels) {
                     6       { 640 }
-                    8       { 640 }
-                    default { 0   }
+                    8       { 960 }
+                    default { 640 }
                 }
                 $Bitrate = $deeDefault
             }
@@ -220,27 +228,31 @@ function Set-AudioPreference {
             break
         }
         { @('eac3', 'ddp') -contains $_ } {
-            Write-Host "** DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) DOLBY DIGITAL PLUS (E-AC3) AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k") }
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
-            if ($i) {
-                $sChannels = Get-ChannelCount -ID $i
-                Write-Host "Channel count: $sChannels`n"
-                @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+            else {
+                $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
+                if ($i) {
+                    $sChannels = Get-ChannelCount -ID $i
+                    Write-Host "Channel count: $sChannels`n"
+                    @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+                }
+                else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', '640k') }
             }
-            else { @('-map', '0:a:0', "-c:a:$Stream", 'eac3') }
             break
         }
         { @('ac3', 'dd') -contains $_ } {
-            Write-Host "** DOLBY DIGITAL (AC3) AUDIO SELECTED **" @progressColors
-            if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', "$Bitrate`k") }
-            $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
-            if ($i) {
-                $sChannels = Get-ChannelCount -ID $i
-                Write-Host "Channel count: $sChannels`n"
-                @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+            Write-Host "$("`u{25c7}" * 2) DOLBY DIGITAL (AC3) AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
+            if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'eac3', '-b:a', "$Bitrate`k") }
+            else {
+                $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
+                if ($i) {
+                    $sChannels = Get-ChannelCount -ID $i
+                    Write-Host "Channel count: $sChannels`n"
+                    @('-map', "0:a:$i", "-c:a:$Stream", 'copy')
+                }
+                else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', '-b:a', '640k') }
             }
-            else { @('-map', '0:a:0', "-c:a:$Stream", 'ac3', "-b:a:$Stream", '640k') }
             break
         }
         { 0..12 -contains $_ } { 
@@ -250,13 +262,13 @@ function Set-AudioPreference {
             break
         }
         "^f[lac]*" {
-            Write-Host "** FLAC AUDIO SELECTED **" @progressColors
+            Write-Host "$("`u{25c7}" * 2) FLAC AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
             @('-map', '0:a:0', "-c:a:$Stream", 'flac')
             break
         }
         "^n[one]?" {
-            Write-Host "** NO AUDIO SELECTED **" @progressColors
-            Write-Host "All audio streams will be excluded from the output file`n"
+            Write-Host "$("`u{25c7}" * 2) NO AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
+            Write-Host "No audio streams will be included in the output file`n"
             $null
             break
         }
@@ -267,7 +279,7 @@ function Set-AudioPreference {
     }
 
     # If not stream copying, append track label
-    if ($audioArgs -and ($audioArgs[-1] -ne 'copy') -and ($audioArgs -notin $dee['DeeArgs'])) {
+    if ($audioArgs -and ($audioArgs[-1] -ne 'copy') -and ($audioArgs -notin $dee['DeeArgs']) -and !$RemuxStream) {
         if ($dee['DeeUsed']) { $ident = 2 }
         $title = $Stereo ? ("title=`"$($TrackTitle['StereoTitle'])`"") : ("title=`"$($TrackTitle["AudioTitle$($ident)"])`"")
         $audioArgs = $audioArgs + @("-metadata:s:a:$Stream", $title)
@@ -278,14 +290,17 @@ function Set-AudioPreference {
         if ('dts', 'ac3', 'dd', 'eac3' -contains $UserChoice -and !$i) { 
             $bitsPerChannel = "$($Bitrate / 6) kb/s"
         }
-        elseif ($deeDefault) {
+        elseif ($UserChoice -in $dee['DeeArgs']) {
             if ($UserChoice -notlike 'dee_thd') {
-                $bitStr = [math]::Round($deeDefault / $channels, 2)
+                $bitStr = [math]::Round($Bitrate / $channels, 2)
                 $bitsPerChannel = "$bitStr kb/s"
             }
             else {
-                $bitsPerChannel = 0
+                $bitsPerChannel = 'variable'
             }
+        }
+        elseif ($UserChoice -in 'f', 'flac', 'fdkaac', 'faac') {
+            $bitsPerChannel = 'variable'
         }
         else {
             $bitsPerChannel = "$($Bitrate / $channels) kb/s"
@@ -298,7 +313,7 @@ function Set-AudioPreference {
         BACKGROUND JOBS
 
         Dee
-        Stereo
+        External audio (if stream copy is used)
 
         TODO: Cleanup and simplification
     #>
@@ -315,7 +330,9 @@ function Set-AudioPreference {
             Bitrate      = $Bitrate
             Stereo       = $Stereo
         }
-        Start-ThreadJob -Name 'Dee Encoder' -StreamingHost $Host -ArgumentList $deeParams, $PSModuleRoot, $setVerbose -ScriptBlock {
+
+        $threadArgs = @($deeParams, $PSModuleRoot, $setVerbose)
+        Start-ThreadJob -Name 'Dee Encoder' -StreamingHost $Host -ArgumentList $threadArgs -ScriptBlock {
             param ($DeeParams, $Module, $Verbose)
 
             # Source functions & variable
@@ -330,8 +347,7 @@ function Set-AudioPreference {
     elseif (!$RemuxStream -and $Stereo) {
         return $audioArgs + $stereoArgs
     }
-    elseif ($RemuxStream -and $Stereo) {
-        Write-Verbose "Preparing audio..."
+    elseif ($RemuxStream) {
         # Set audio paths based on container
         if ($Paths.InputFile.EndsWith('mkv')) {
             $Paths.AudioPath = [System.IO.Path]::Join($(Split-Path $Paths.InputFile -Parent), "$($Paths.Title)_audio.mka")
@@ -340,21 +356,29 @@ function Set-AudioPreference {
             $Paths.AudioPath = [System.IO.Path]::Join($(Split-Path $Paths.InputFile -Parent), "$($Paths.Title)_audio.m4a")
         }
         else {
-            Write-Warning "Cannot determine container audio format for conversion to stereo"
+            Write-Warning "Could not determine container format for background encoding. Encode the audio manually"
             return $null
         }
-
-        Write-Verbose "Remuxed Audio path for jobs: $($Paths.AudioPath)"
 
         # If dee encoder is running, wait for audio multiplex to finish
         if ((Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue) -and
             (![System.IO.File]::Exists($Paths.AudioPath))) {
-
             $method = 0
             Start-Sleep -Seconds 160
         }
         elseif ([System.IO.File]::Exists($Paths.AudioPath)) {
-            $method = 0
+            # Delete empty file if it exists
+            if ((Get-Item $Paths.AudioPath).Length -eq 0) {
+                Write-Verbose "Empty audio file found. Deleting..."
+                [System.IO.File]::Delete($Paths.AudioPath)
+                if ((Get-Command 'mkvmerge') -and $Paths.InputFile.EndsWith('mkv')) {
+                    $method = 1
+                }
+                elseif ($Paths.InputFile.EndsWith('mkv') -xor $Paths.InputFile.EndsWith('mp4')) {
+                    $method = 2
+                }
+            }
+            else { $method = 0 }
         }
         elseif ((Get-Command 'mkvmerge') -and $Paths.InputFile.EndsWith('mkv')) {
             $method = 1
@@ -374,34 +398,47 @@ function Set-AudioPreference {
             return $null
         }
 
-        Write-Host "Spawning stereo encoder in a separate process...`n" @progressColors
+        Write-Host "Stream copy detected: Spawning audio encoder in a separate thread...`n" @progressColors
     
         # Modify and combine arrays for background job
-        $stereoArgs[0] = '-af'
+        #$stereoArgs[0] = '-af'
         $index = [array]::IndexOf($audioArgs, "-c:a:$Stream")
         $audioArgs[$index] = '-c:a:0'
-        $fullArgs = $audioArgs + $stereoArgs
+        #$fullArgs = $audioArgs + $stereoArgs
 
-        Write-Verbose "Stereo fullArgs are: $fullArgs"
+        if ($Stereo) {
+            $stereoArgs[0] = '-af'
+            $audioArgs = $audioArgs + $stereoArgs
+            $title = $trackTitle['StereoTitle']
+        }
+        else {
+            $title = $trackTitle['ExternalTitle']
+        }
+
+        Write-Verbose "Background audio arguments:`n  $audioArgs`n"
         
         # Start background job to encode stereo. Mux out audio if needed
-        Start-ThreadJob -Name 'Stereo Encoder' -ScriptBlock {
+        Start-ThreadJob -Name 'Audio Encoder' -StreamingHost $Host -ScriptBlock {
             $tPaths = $Using:Paths
             # Source function
-            Import-Module $Using:PSModuleRoot -Function Invoke-MkvMerge
+            Import-Module $Using:PSModuleRoot -Function Invoke-MkvMerge -Variable warnColors
             # Extract the stereo track if needed
             switch ($Using:method) {
-                0 { Write-Verbose "External audio file already exists. Skipping creation" }
-                1 { Invoke-MkvMerge -Paths $Using:remuxPaths -Mode 'extract' }
+                0 { Write-Host "External audio file already exists. Skipping creation`n" @warnColors }
+                1 { Invoke-MkvMerge -Paths $Using:remuxPaths -Mode 'extract' -Verbose:$Using:setVerbose }
                 2 { 
                     ffmpeg -hide_banner -i $tPaths.InputFile -loglevel error -map 0:a:0 -c:a copy `
                         -map -0:t? -map_chapters -1 -vn -sn $tPaths.AudioPath
                 }
-                default { Write-Verbose "Could not determine extraction method"; exit 17 }
+                default {
+                    Write-Host "Could not determine audio extraction method. Exiting background job" @warnColors
+                    exit 17 
+                }
             }
             
-            # Encode the stereo track
-            ffmpeg -i $tPaths.AudioPath $Using:fullArgs -y $tPaths.StereoPath
+            # Encode the audio track
+            ffmpeg -hide_banner -i $tPaths.AudioPath -metadata:s:a:0 "title=`"$Using:title`"" $Using:audioArgs -y `
+                $tPaths.StereoPath 2>$audioDebugLog
 
         } | Out-Null
 

@@ -13,8 +13,6 @@ function Remove-FilePrompt {
         [string]$Type
     )
 
-    Write-Host "`n"
-
     $title = "$Type Output Path Already Exists"
     $prompt = "Would you like to delete it?"
     $yesPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes", 
@@ -22,7 +20,7 @@ function Remove-FilePrompt {
     $noPrompt = New-Object System.Management.Automation.Host.ChoiceDescription "&No", 
         "Do not delete the existing file and exit the script. The file must be renamed or deleted before continuing"
     $options = [System.Management.Automation.Host.ChoiceDescription[]]($yesPrompt, $noPrompt)
-    $response = $host.ui.PromptForChoice($title, $prompt, $options, 1)
+    $response = $Host.ui.PromptForChoice($title, $prompt, $options, 1)
 
     switch ($response) {
         0 { 
@@ -42,6 +40,7 @@ function Remove-FilePrompt {
                 if ($psReq) {
                     $msg = "$aRed`File $($aBlue+$ul)$Path$($ulOff+$aRed) could not be deleted. Make sure it is not in use by another process. Exiting script..."
                     Write-Host $msg
+                    exit 68
                 }
                 else {
                     Write-Host "<" -NoNewline @warnColors
@@ -50,7 +49,6 @@ function Remove-FilePrompt {
                     $console.WindowTitle = $currentTitle
                     exit 68
                 }
-                
             }
         }
         1 { 
@@ -59,8 +57,8 @@ function Remove-FilePrompt {
             $console.WindowTitle = $currentTitle 
             exit 0
         }
-        default { 
-            throw "An error occurred while attempting to delete <$Path> via prompt. This should be unreachable"
+        default {
+            Write-Error "An error occurred while attempting to delete <$Path> via prompt. This should be unreachable"
             exit 55
         }
     }

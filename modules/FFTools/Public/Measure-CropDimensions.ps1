@@ -60,7 +60,7 @@ function Measure-CropDimensions
     elseif ($cropWidth -ge 3000) { $enableHDR = $true }
     else { $enableHDR = $false }
 
-    Write-Host "** CROP DIMENSIONS SUCCESSFULLY RETRIEVED ** " @progressColors
+    Write-Host "$("`u{25c7}" * 2) CROP DIMENSIONS SUCCESSFULLY RETRIEVED $("`u{25c7}" * 2)" @progressColors
     if (!$PSBoundParameters['Resolution']) {
         Write-Host "Dimensions: $cropWidth x $cropHeight`n"
     }

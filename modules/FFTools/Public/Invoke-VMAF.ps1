@@ -1,5 +1,23 @@
 using namespace System.IO
 
+<#
+    .SYNOPSIS
+        Performs VMAF quality comparison on two video files
+    .DESCRIPTION
+        Accepts a reference (source) and distorted (encode) video file for VMAF comparison. Can also perform
+        SSIM and PSNR evaluations in addition to VMAF using the relevant switch parameters. Default log format
+        is json, but can also be output with csv, sub, or xml.
+    .PARAMETER Source
+        Reference file path used for comparison
+    .PARAMETER Encode
+        Distorted file path used for comparison
+    .PARAMETER LogFormat
+        Specify the output log format
+    .PARAMETER SSIM
+        Switch parameter that adds SSIM evaluation
+    .PARAMETER PSNR
+        Switch parameter that adds PSNR evaluation
+#>
 function Invoke-VMAF {
     [CmdletBinding()]
     param (
