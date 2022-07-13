@@ -10,7 +10,6 @@ using namespace System.Collections
     .OUTPUTS
         Array list of ffmpeg arguments
 #>
-
 function Set-FFMpegArgs {      
     [CmdletBinding()]
     param (
@@ -150,7 +149,7 @@ function Set-FFMpegArgs {
     }
 
     $skip = @{}
-    @('OpenGop', 'Keyint', 'MinKeyInt').ForEach({ $skip.$_ = $false })
+    @('OpenGop', 'Keyint', 'MinKeyInt', 'Sao').ForEach({ $skip.$_ = $false })
     if ($PSBoundParameters['EncoderExtra']) {
         $encoderExtraArray = [ArrayList]@()
         foreach ($arg in $EncoderExtra.GetEnumerator()) {
@@ -252,17 +251,12 @@ function Set-FFMpegArgs {
                 "level=$Level"
             }
             # user entered both psy values as one string
+            # WIP: '^(?<v1>\d\.?\d{0,2}).*\,.*(?<v2>\d+\.?\d+)$'
             if ($PSBoundParameters['PsyRd'] -match '\d\.?\d{0,2}.*\,.*\d.*') {
                 "psy-rd=$($PsyRd -replace '\s', '')"
             }
-            elseif ($PSBoundParameters['PsyRd'] -and $PSBoundParameters['PsyRdoq']) {
-                "psy-rd=$PsyRd,$PsyRdoq"
-            }
-            elseif ($PSBoundParameters['PsyRd'] -and !$PSBoundParameters['PsyRdoq']) {
-                "psy-rd=$PsyRd,0.00"
-            }
-            elseif (!$PSBoundParameters['PsyRd'] -and $PSBoundParameters['PsyRdoq']) {
-                "psy-rd=1.00,$psyRdoq"
+            elseif ($PSBoundParameters['PsyRd'] -match '\d\.?\d{0,2}.*') {
+                "psy-rd=$($PsyRd -replace '\s', ''),$($PresetParams.PsyRdoq)"
             }
             else {
                 'psy-rd=1.00,0.00'
@@ -299,7 +293,6 @@ function Set-FFMpegArgs {
         { $skip.OpenGOP -eq $false } { $encoderBaseArray.Add('open-gop=0') > $null }
         { $skip.KeyInt -eq $false } { $encoderBaseArray.Add('keyint=192') > $null }
         { $skip.MinKeyInt -eq $false } { $encoderBaseArray.Add('min-keyint=24') > $null }
-        { $skip.Sao -eq $false -and ($Encoder -eq 'x265') } { $encoderBaseArray.Add('sao=0') > $null }
     }
     
     # Set video specific filter arguments

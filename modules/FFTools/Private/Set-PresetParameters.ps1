@@ -37,17 +37,18 @@ function Set-PresetParameters {
         }    
     }
     else {
+        # Set psy-trellis here purely for convenience. It's not an actual preset parameter
         switch ($Preset) {
-            'ultrafast'   { $pSubme = 0; $pBframes = 0; $pAqMode = 0; $pMerange = 16; $pRef = 1; $pRCLookahead = 0 }
-            'superfast'   { $pSubme = 1; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 1; $pRCLookahead = 0 }
-            'veryfast'    { $pSubme = 2; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 1; $pRCLookahead = 10 }
-            'faster'      { $pSubme = 4; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 2; $pRCLookahead = 20 }
-            'fast'        { $pSubme = 6; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 2; $pRCLookahead = 30 }
-            'medium'      { $pSubme = 6; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 3; $pRCLookahead = 40 }
-            'slow'        { $pSubme = 8; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 5; $pRCLookahead = 50 }
-            'slower'      { $pSubme = 9; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 8; $pRCLookahead = 60 }
-            'veryslow'    { $pSubme = 10; $pBframes = 8; $pAqMode = 1; $pMerange = 24; $pRef = 16; $pRCLookahead = 60 }
-            'placebo'     { $pSubme = 11; $pBframes = 16; $pAqMode = 1; $pMerange = 24; $pRef = 16; $pRCLookahead = 60 }
+            'ultrafast'   { $pSubme = 0; $pBframes = 0; $pAqMode = 0; $pMerange = 16; $pRef = 1; $pRCLookahead = 0; $pPsyRdoq = 0.00 }
+            'superfast'   { $pSubme = 1; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 1; $pRCLookahead = 0; $pPsyRdoq = 0.00 }
+            'veryfast'    { $pSubme = 2; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 1; $pRCLookahead = 10; $pPsyRdoq = 0.00 }
+            'faster'      { $pSubme = 4; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 2; $pRCLookahead = 20; $pPsyRdoq = 0.00 }
+            'fast'        { $pSubme = 6; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 2; $pRCLookahead = 30; $pPsyRdoq = 0.00 }
+            'medium'      { $pSubme = 6; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 3; $pRCLookahead = 40; $pPsyRdoq = 0.00 }
+            'slow'        { $pSubme = 8; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 5; $pRCLookahead = 50; $pPsyRdoq = 0.00 }
+            'slower'      { $pSubme = 9; $pBframes = 3; $pAqMode = 1; $pMerange = 16; $pRef = 8; $pRCLookahead = 60; $pPsyRdoq = 0.00 }
+            'veryslow'    { $pSubme = 10; $pBframes = 8; $pAqMode = 1; $pMerange = 24; $pRef = 16; $pRCLookahead = 60; $pPsyRdoq = 0.00 }
+            'placebo'     { $pSubme = 11; $pBframes = 16; $pAqMode = 1; $pMerange = 24; $pRef = 16; $pRCLookahead = 60; $pPsyRdoq = 0.00 }
             default       { throw "Unrecognized preset option in Set-PresetParameters - x264" }
         }
     }
@@ -59,6 +60,7 @@ function Set-PresetParameters {
     $ref = $Settings.Ref ? $Settings.Ref : $pRef
     $merange = $Settings.Merange ? $Settings.Merange : $pMerange
     $RCL = $Settings.RCLookahead ? $Settings.RCLookahead : $pRCLookahead
+    $psyRdoq = $Settings.PsyRdoq ? $Settings.PsyRdoq : $pPsyRdoq
 
     # Save base return parameters
     $params = @{
@@ -68,14 +70,12 @@ function Set-PresetParameters {
         Ref         = $ref
         Merange     = $merange
         RCLookahead = $RCL
+        PsyRdoq     = $psyRdoq
     }
 
     if ($Encoder -eq 'x265') {
         $bIntra = $Settings.BIntra ? 1 : $pBIntra
-        $psyRdoq = $Settings.PsyRdoq ? $Settings.PsyRdoq : $pPsyRdoq
-
         $params['BIntra'] = $bIntra
-        $params['PsyRdoq'] = $psyRdoq
     }
 
     return $params
