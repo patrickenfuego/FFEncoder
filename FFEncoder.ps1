@@ -1,5 +1,3 @@
-using namespace System.IO
-
 <#
     .SYNOPSIS
         Cross-platform script for encoding HD/FHD/UHD video content using ffmpeg and x265
@@ -218,6 +216,8 @@ using namespace System.IO
         x265 HEVC Documentation - https://x265.readthedocs.io/en/master/introduction.html
 
 #>
+
+using namespace System.IO
 
 [CmdletBinding(DefaultParameterSetName = "CRF")]
 param (
@@ -646,6 +646,18 @@ function Set-ScriptPaths ([hashtable]$OS) {
         Write-Host ""
     }
 
+    # Check for existing log - concurrent encodes of same source
+    if ([File]::Exists($logPath) -and 
+        ((Get-Process 'ffmpeg' -ErrorAction SilentlyContinue) -or 
+        (Get-Process 'x265*' -ErrorAction SilentlyContinue))) {
+
+        $logCount = (Get-ChildItem $root -Filter '*encode*.log' | Measure-Object).Count
+        if ($logCount) {
+            Write-Host "Existing encode detected...creating a separate log file" @warnColors
+            $logPath = [Path]::Join($root, "$title`_encode$($logCount + 1).log")
+        }
+    }
+
     $pathObject = @{
         InputFile  = $InputPath
         Root       = $root
@@ -707,7 +719,7 @@ $console.WindowTitle = 'FFEncoder'
 [console]::TreatControlCAsInput = $false
 
 # Import FFTools module
-Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
+Import-Module -Name "$PSScriptRoot\modules\FFTools"
 Write-Verbose "`n`n---------------------------------------"
 
 # Source version functions
@@ -991,7 +1003,7 @@ try {
 }
 catch {
     $params = @{
-        Message           = "An error occurred before ffmpeg could be invoked. Exception:`n$($_.Exception)"
+        Message           = "An error occurred during ffmpeg invocation. Exception:`n$($_.Exception)"
         RecommendedAction = 'Correct the Error Message'
         Category          = "InvalidArgument"
         CategoryActivity  = "FFmpeg Function Invocation"
@@ -1016,118 +1028,122 @@ catch {
     TODO: Refactor this mess
 #>
 
-Start-Sleep -Milliseconds 750
+Start-Sleep -Milliseconds 500
 
-$skipStereoMux = $false
+$skipBackgroundAudioMux = $false
 $mId = 0
 # Check for running jobs
 $deeRunning = (Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
-$stereoRunning = (Get-Job -Name 'Stereo Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
+$audioRunning = (Get-Job -Name 'Audio Encoder' -ErrorAction SilentlyContinue).State -eq 'Running'
 # Set the temporary output file
 $output = $paths.OutputFile -replace '^(.+)\.(.+)', '$1 (1).$2'
 
 # Handle dee encoded audio. If a stereo track was created, add it as well
 if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
     # Check for stereo and add it
-    if ([File]::Exists($Paths.StereoPath) -and !$stereoRunning) {
-        $skipStereoMux = $true
+    if ($audioRunning) {
+        Write-Host "Audio Encoder background job is still running. Pausing..." @warnColors
+        do {
+            Start-Sleep -Seconds 1
+        } until ((Get-Job 'Audio Encoder').State -eq 'Completed')
         Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
-    }
-    elseif ([File]::Exists($Paths.StereoPath) -and $stereoRunning) {
-        Write-Host "Stereo Encoder background job is still running. Mux the file manually" @warnColors
     }
     
     # Mux in the dee encoded file if job isn't running
     if ($deeRunning) {
-        Write-Host "Dee Encoder background job is still running. Mux the file manually" @warnColors
-    }
-    else {
-        Write-Host "Multiplexing DEE track back into the output file..." @progressColors
+        Write-Host "Dee Encoder background job is still running. Pausing..." @warnColors
+        do {
+            Start-Sleep -Seconds 1
+        } until ((Get-Job 'Dee Encoder').State -eq 'Completed')
         Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
-
-        if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
-            #Find the dee encoded output file
-            $deePath = Get-ChildItem $(Split-Path $Paths.OutputFile -Parent) |
-                Where-Object { $_.Name -like "$($paths.Title)_audio.*3" -or $_.Name -like "$($paths.Title)_audio.thd" } |
-                    Select-Object -First 1 -ExpandProperty FullName
-
-            $muxPaths = @{
-                Input    = $paths.OutputFile
-                Output   = $output
-                Audio    = $deePath
-                Title    = $paths.Title
-                Language = $paths.Language
-                LogPath  = $paths.LogPath
-            }
-            if ($skipStereoMux) {
-                $muxPaths.Stereo = $paths.StereoPath
-                $mId = 3
-            }
-            else { $mId = 2 }
-
-            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mId -Verbose:$setVerbose
-        }
-        # If no mkvmerge, mux with ffmpeg
-        else {
-            
-            $fArgs = @(
-                '-i'
-                "$($paths.OutputFile)"
-                '-i'
-                $deePath
-                if ($skipStereoMux) {
-                    '-i'
-                    "$($paths.StereoPath)"
-                }
-                '-loglevel'
-                'error'
-                '-map'
-                0
-                '-map'
-                '1:a'
-                if ($skipStereoMux) {
-                    '-map'
-                    '2:a'
-                }
-                '-c'
-                'copy'
-                '-y'
-                $output
-            )
-
-            ffmpeg $fArgs
-        }
-
-        # Remove the DEE audio file if switch is present
-        if ($PSBoundParameters['RemoveFiles']) { Remove-Item $deePath -Force }
     }
+    Write-Host "Multiplexing DEE track back into the output file..." @progressColors
+    Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
+
+    if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
+        #Find the dee encoded output file
+        $deePath = Get-ChildItem $(Split-Path $Paths.OutputFile -Parent) |
+            Where-Object { $_.Name -like "$($paths.Title)_audio.*3" -or $_.Name -like "$($paths.Title)_audio.thd" } |
+                Select-Object -First 1 -ExpandProperty FullName
+
+        $muxPaths = @{
+            Input    = $paths.OutputFile
+            Output   = $output
+            Audio    = $deePath
+            Title    = $paths.Title
+            Language = $paths.Language
+            LogPath  = $paths.LogPath
+        }
+        if ($skipBackgroundAudioMux) {
+            $muxPaths.ExternalAudio = $paths.StereoPath
+            $mId = 3
+        }
+        else { $mId = 2 }
+
+        Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID $mId -Verbose:$setVerbose
+    }
+    # If no mkvmerge, mux with ffmpeg
+    else {
+        
+        $fArgs = @(
+            '-i'
+            "$($paths.OutputFile)"
+            '-i'
+            $deePath
+            if ($skipBackgroundAudioMux) {
+                '-i'
+                "$($paths.StereoPath)"
+            }
+            '-loglevel'
+            'error'
+            '-map'
+            0
+            '-map'
+            '1:a'
+            if ($skipBackgroundAudioMux) {
+                '-map'
+                '2:a'
+            }
+            '-c'
+            'copy'
+            '-y'
+            $output
+        )
+
+        ffmpeg $fArgs
+    }
+
+    # Remove the DEE audio file if switch is present
+    if ($PSBoundParameters['RemoveFiles']) { Remove-Item $deePath -Force }
 }
 
 # If stream copy and stereo are used, mux the stream back into the container
-if (($Audio -in 'copy', 'c', 'copyall', 'ca') -and $Stereo2 -and !$skipStereoMux) {
-    if ($stereoRunning) {
-        Write-Host "Stereo encoder background job is still running. Mux the file manually" @warnColors
+if ([File]::Exists($Paths.StereoPath) -and !$skipBackgroundAudioMux) {
+    if ($audioRunning) {
+        Write-Host "Audio encoder background job is still running. Pausing..." @warnColors
+        do {
+            Start-Sleep -Seconds 1
+        } until ((Get-Job 'Audio Encoder').State -eq 'Completed')
+        Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
     }
-    else {
-        Write-Host "Multiplexing stereo track back into the output file..." @progressColors
+    Write-Host "Multiplexing external audio track back into the output file..." @progressColors
 
-        # If mkvmerge is available, use it instead of ffmpeg
-        if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
-            $muxPaths = @{
-                Input    = $paths.OutputFile
-                Output   = $output
-                Audio    = $paths.StereoPath
-                Title    = $paths.Title
-                Language = $paths.Language
-                LogPath  = $paths.LogPath
-            }
-            $mId = 1
-            Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1 -Verbose:$setVerbose
+    # If mkvmerge is available, use it instead of ffmpeg
+    if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
+        $muxPaths = @{
+            Input          = $paths.OutputFile
+            Output         = $output
+            ExternalAudio  = $paths.StereoPath
+            Title          = $paths.Title
+            Language       = $paths.Language
+            LogPath        = $paths.LogPath
         }
-        # if not mkv or no mkvmerge, mux with ffmpeg
-        else {
-            ffmpeg -i $paths.OutputFile -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $output
-        }
+        $mId = 1
+        Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1 -Verbose:$setVerbose
+    }
+    # if not mkv or no mkvmerge, mux with ffmpeg
+    else {
+        ffmpeg -i $paths.OutputFile -i $paths.StereoPath -loglevel error -map 0 -map 1:a -c copy -y $output
     }
 }
 
@@ -1135,11 +1151,19 @@ if (($Audio -in 'copy', 'c', 'copyall', 'ca') -and $Stereo2 -and !$skipStereoMux
 if ([File]::Exists($output) -and 
     (([FileInfo]($output)).Length -ge ([FileInfo]($paths.OutputFile)).Length)) {
 
-    Remove-Item $paths.OutputFile -Force
-
+    [File]::Delete($paths.OutputFile)
     if (!$?) { 
         Write-Host ""
         Write-Host "Could not delete the original output file. It may be in use by another process" @warnColors 
+    }
+
+    # Delete background audio file if it exists
+    if ([File]::Exists($paths.StereoPath)) {
+        [File]::Delete($paths.StereoPath)
+    }
+    if (!$?) { 
+        Write-Host ""
+        Write-Host "Could not delete the background audio file. It may be in use by another process" @warnColors 
     }
     # Rename the new output file and assign the name for reference
     $paths.OutputFile = (Rename-Item $output -NewName "$($paths.Title).$($paths.Extension)" -PassThru).FullName
