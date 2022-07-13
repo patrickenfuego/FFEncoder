@@ -66,7 +66,7 @@ function Get-SubtitleStream {
         return $subArray
     }
     else {
-        Write-Host "No subtitles matching '$Language' were found. Subtitles will not be copied" @warnColors
+        Write-Warning "No subtitles matching '$cleanLanguage' were found. Subtitles will not be copied" @warnColors
         Write-Host
         return $null
     }

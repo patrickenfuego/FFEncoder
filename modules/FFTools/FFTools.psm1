@@ -19,10 +19,10 @@ $PSModule = $ExecutionContext.SessionState.Module
 $PSModuleRoot = $PSModule.ModuleBase
 $ScriptsDirectory = [System.IO.Path]::Join($(Get-Item $ScriptPath).Parent.Parent, 'scripts')
 
-$progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black'}
-$warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black'}
-$emphasisColors = @{ForegroundColor = 'Cyan'; BackgroundColor = 'Black'}
-$errColors = @{ ForegroundColor = 'Red'; BackgroundColor = 'Black'}
+$progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black' }
+$warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black' }
+$emphasisColors = @{ForegroundColor = 'Cyan'; BackgroundColor = 'Black' }
+$errColors = @{ ForegroundColor = 'Red'; BackgroundColor = 'Black' }
 
 # Ansi colors
 $aYellow = $PSStyle.Foreground.BrightYellow
@@ -53,11 +53,12 @@ $reset = $PSStyle.Reset
 
 # Track titles for muxing files with mkvmerge
 $Script:trackTitle = @{
-    AudioTitle1 = $null
-    AudioTitle2 = $null
-    StereoTitle = $null
-    DeeTitle    = $null
-    VideoTitle  = $null
+    AudioTitle1   = $null
+    AudioTitle2   = $null
+    StereoTitle   = $null
+    ExternalTitle = $null
+    DeeTitle      = $null
+    VideoTitle    = $null
 }
 
 # Arguments for dee encoders and audio
@@ -132,7 +133,7 @@ ___________      .__  __  .__                 ______________________            
 '@
 
 # Current script release version
-[version]$release = '2.0.1'
+[version]$release = '2.0.2'
 
 
 #### End module variables ####
@@ -184,8 +185,8 @@ New-Alias -Name cropdim -Value Measure-CropDimensions -Force
 $ExportModule = @{
     Alias    = @('iffmpeg', 'cropfile', 'cropdim')
     Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus',
-                    'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge', 'Invoke-DeeEncoder', 'Read-TimedInput', 'Invoke-VMAF')
+                 'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge', 'Invoke-DeeEncoder', 'Read-TimedInput', 'Invoke-VMAF')
     Variable = @('progressColors', 'warnColors', 'emphasisColors', 'errColors', 'osInfo', 'banner1', 'banner2', 'exitBanner', 'ScriptsDirectory',
-                    'release' )
+                 'release' )
 }
 Export-ModuleMember @ExportModule
