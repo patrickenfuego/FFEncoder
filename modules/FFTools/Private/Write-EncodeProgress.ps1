@@ -90,15 +90,28 @@ function Write-EncodeProgress {
             Start-Sleep -Milliseconds 100
         } until ([File]::Exists($LogPath))
 
-        if ($DolbyVision) {
-            [int]$currentFrame = Get-Content $LogPath -Tail 1 | 
-                Select-String -Pattern '^(\d+)' | 
-                    ForEach-Object { $_.Matches.Groups[1].Value }
+        try {
+            if ($DolbyVision) {
+                $currentFrameStr = Get-Content $LogPath -Tail 1 | 
+                    Select-String -Pattern '^(\d+)' |
+                        ForEach-Object { $_.Matches.Groups[1].Value }
+            }
+            else {
+                $currentFrameStr = Get-Content $LogPath -Tail 1 |
+                    Select-String -Pattern '^frame=\s*(\d+)\s*.*' | 
+                        ForEach-Object { $_.Matches.Groups[1].Value }
+            }
+
+            if (($currentFrameStr -as [int]) -is [int]) {
+                [int]$currentFrame = $currentFrameStr 
+            }
+            else {
+                $currentFrame = $currentFrame
+            }
         }
-        else {
-            [int]$currentFrame = Get-Content $LogPath -Tail 1 |
-                Select-String -Pattern '^frame=\s+(\d+)\s*.*' | 
-                    ForEach-Object { $_.Matches.Groups[1].Value }
+        catch {
+            Write-Verbose "Error: $currentFrame is not an integer"
+            continue
         }
 
         if ($currentFrame) {
