@@ -133,7 +133,7 @@ function New-CropFile {
 
     Start-Sleep -Milliseconds 500
     if ((Get-Content $CropFilePath).Count -gt 10) {
-        Write-Host "`n** CROP FILE SUCCESSFULLY GENERATED **" @progressColors
+        Write-Host "`n$("`u{25c7}" * 2) CROP FILE SUCCESSFULLY GENERATED $("`u{25c7}" * 2)" @progressColors
     }
     # If the crop file fails to generate, sleep for 5 seconds and perform a recursive call to try again
     else {
