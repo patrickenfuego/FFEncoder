@@ -125,7 +125,7 @@ function Get-HDRMetadata {
         )
     }
     else {
-        Write-Host "** HDR METADATA SUCCESSFULLY RETRIEVED **" @progressColors
+        Write-Host "$("`u{25c7}" * 2) HDR METADATA SUCCESSFULLY RETRIEVED $("`u{25c7}" * 2)" @progressColors
         Write-Host ""
         return $metadataObj
     }
