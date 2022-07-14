@@ -6,13 +6,16 @@
     .PARAMETER UserChoice
         Audio option selected before running the script. See documentation for all available options
     .PARAMETER Bitrate
-        Bitrate for the selected audio stream in kb/s. Values 1-5 are reserved for libfdk's variable bitrate 
+        Bitrate for the selected audio stream in kb/s. Values 1-5 are reserved for FDK AAC's variable bitrate 
         (vbr) encoder
     .PARAMETER Stream
         References the different output streams if a second audio option is passed to the script
-    .NOTES
-        ffmpeg cannot decode Dolby Atmos streams, nor can they be identified using ffprobe. If you try and
-        copy a Dolby Atmos track, the script will fail. 
+    .PARAMETER Stereo
+        Switch to enable stereo downmixing
+    .PARAMETER RemuxStream
+        Switch to enable external (background) audio encoding when stream copying is used
+    .PARAMETER Paths
+        File paths and names used throughout the module
 #>
 function Set-AudioPreference {
     [CmdletBinding()]
@@ -31,12 +34,6 @@ function Set-AudioPreference {
 
         [Parameter(Mandatory = $true)]
         [bool]$RemuxStream,
-
-        [Parameter(Mandatory = $false)]
-        [int]$AudioFrames,
-
-        [Parameter(Mandatory = $false)]
-        [string]$TestStart,
 
         [Parameter(Mandatory = $true)]
         [hashtable]$Paths

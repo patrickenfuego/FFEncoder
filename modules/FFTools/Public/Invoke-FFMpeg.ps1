@@ -305,14 +305,12 @@ function Invoke-FFMpeg {
     }
     
     $audioParam1 = @{
-        Paths       = $Paths
         UserChoice  = $AudioInput[0].Audio
         Bitrate     = $AudioInput[0].Bitrate
         Stream      = 0
         Stereo      = $AudioInput[0].Stereo
-        AudioFrames = $TestFrames
-        TestStart   = $TestStart
         RemuxStream = $remuxStream
+        Paths       = $Paths
         Verbose     = $setVerbose
     }
     $audio = Set-AudioPreference @audioParam1
@@ -327,14 +325,12 @@ function Invoke-FFMpeg {
         else { $remuxStream = $false }
 
         $audioParam2 = @{
-            Paths       = $Paths
             UserChoice  = $AudioInput[1].Audio
             Bitrate     = $AudioInput[1].Bitrate
             Stream      = 1
             Stereo      = $AudioInput[1].Stereo
-            AudioFrames = $TestFrames
-            TestStart   = $TestStart
             RemuxStream = $remuxStream
+            Paths       = $Paths
             Verbose     = $setVerbose
         }
         $audio2 = Set-AudioPreference @audioParam2
