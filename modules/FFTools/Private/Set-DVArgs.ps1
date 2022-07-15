@@ -351,7 +351,7 @@ function Set-DVArgs {
         '--min-keyint'
         24
         '--psy-rd'
-        $PsyRd
+        $PSBoundParameters['PsyRd'] ? $PsyRd : '2.00'
         '--tu-intra-depth'
         "$($TuDepth[0])"
         '--tu-inter-depth'
@@ -432,7 +432,6 @@ function Set-DVArgs {
     if ($x265ExtraArray) { $x265BaseArray.AddRange($x265ExtraArray) }
     
     switch ($x265ExtraArray) {
-        { $_ -notcontains '--sao' }          { $x265BaseArray.Add('--no-sao') > $null }
         { $_ -notcontains '--open-gop' }     { $x265BaseArray.Add('--no-open-gop') > $null }
         { $_ -notcontains '--keyint' }       { $x265BaseArray.AddRange(@('--keyint', 192)) }
         { $_ -notcontains '--min-keyint' }   { $x265BaseArray.AddRange(@('--min-keyint', 24)) }
