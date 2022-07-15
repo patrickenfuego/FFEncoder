@@ -10,8 +10,9 @@
 function Get-ReleaseVersion ([string]$Repository) {
     $repo = switch ($Repository) {
         'PowerShell' { 'PowerShell/PowerShell' }
-        'Pwsh' { 'PowerShell/PowerShell' }
-        'FFEncoder' { 'patrickenfuego/FFEncoder' }
+        'Pwsh'       { 'PowerShell/PowerShell' }
+        'Posh'       { 'PowerShell/PowerShell' }
+        'FFEncoder'  { 'patrickenfuego/FFEncoder' }
     }
 
     $uri = "https://api.github.com/repos/$repo/releases"
@@ -76,13 +77,16 @@ function Confirm-PoshVersion {
 
 <#
     .SYNOPSIS
-        Check for updates to FFEncoder and pull the latest
+        Check for updates to FFEncoder and pull the latest release
     .DESCRIPTION
         Function to compare the internal release of FFEncoder against the release version in GitHub.
         If a newer version is available, the user is prompted to clone the latest repo and exit the
         current PowerShell session
     .PARAMETER CurrentRelease
         Current version of script. Pulled from the module manifest
+    .NOTES
+        Pulling the latest release will not overwrite the current directory - it appends the '-latest'
+        tag to the directory name to prevent conflicts
 #>
 function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
     if ($Verbose) { $VerbosePreference = 'Continue' }
@@ -96,8 +100,9 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
     }
     
     Write-Host ""
-    $yn = $psReq ? ("($($PSStyle.Foreground.BrightGreen+$PSStyle.Bold)Y$($PSStyle.Reset) / $($PSStyle.Foreground.BrightRed+$PSStyle.Bold)N$($PSStyle.Reset))") : 
-                   '(Y / N)'
+    $yn = $psReq ? 
+        ("($($PSStyle.Foreground.BrightGreen+$PSStyle.Bold)Y$($PSStyle.Reset) / $($PSStyle.Foreground.BrightRed+$PSStyle.Bold)N$($PSStyle.Reset))") : 
+        '(Y / N)'
 
     $params = @{
         Prompt  = "There is an update available for FFEncoder. Would you like to pull the latest release? $yn`: "
@@ -118,7 +123,6 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
         Write-Host "The updated repository will be cloned with the suffix '-latest' inside the parent directory" @progressColors
 
         if (Get-Command 'git') {
-            Push-Location (Get-Location).Path && Push-Location ((Get-Item (Get-Location)).Parent).FullName
             $repoPath = ([System.IO.Path]::Join((Get-Location).Path, 'FFEncoder-latest')).ToString()
 
             if ([System.IO.Directory]::Exists($repoPath)) {
@@ -126,6 +130,8 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
                 Pop-Location
                 return
             }
+            
+            Push-Location (Get-Location).Path && Push-Location ((Get-Item (Get-Location)).Parent).FullName
             # Clone the repo and save it with the -latest suffix in the same parent directory
             git clone https://github.com/patrickenfuego/FFEncoder.git $repoPath
             Pop-Location
