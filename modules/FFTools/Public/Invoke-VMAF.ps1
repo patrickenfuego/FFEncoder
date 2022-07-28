@@ -41,11 +41,15 @@ function Invoke-VMAF {
     )
 
     # Private internal function to parse dimensions from a string 
-    function Get-Resolution ([string]$FilePath) {
-        $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width, height -of csv=s=x:p=0 $FilePath
+    function Get-Resolution ([string]$FilePath, [string]$Type) {
+        $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $FilePath
+        Write-Verbose "VMAF Resolution is: $resolution"
+        $match = [regex]::Matches($resolution, "(?<w>\d+)x(?<h>\d+).*")
+        if ($match) {
+            [int]$width = $match.Groups[1].Value
+            [int]$height = $match.Groups[2].Value
 
-        if ($resolution -match "(?<w>\d+)x(?<h>\d+)") {
-            [int]$width, [int]$height = $Matches.w, $Matches.h
+            Write-Verbose "VMAF Dimensions for $Type : $width`x$height"
         }
         else {
             Write-Error "VMAF: Regular expression failed to match dimensions. ffprobe may have returned a bad result" -ErrorAction Stop
@@ -54,21 +58,18 @@ function Invoke-VMAF {
         return $width, $height
     }
 
+    Write-Verbose "Source Path: $Source"
+    Write-Verbose "Encode path: $Encode"
+    
     <#
-        SETUP NAMES
+        SETUP
 
+        Sanitize LogFormat if present
         Title
-        Current Directory
     #>
 
-    if ($Encode -match "(?<oRoot>.*(?:\\|\/)+)(?<oTitle>.*)\..*") {
-        $title = $Matches.oTitle -replace '\s', '_'
-        $currDirectory = $Matches.oRoot
-    }
-    else {
-        $title = 'title_vmaf'
-        $currDirectory = Split-Path $Encode -Parent
-    }
+    $LogFormat = $LogFormat.ToLower()
+    $title = Split-Path $Encode -LeafBase
 
     <#
         GATHER VIDEO INFORMATION
@@ -79,12 +80,15 @@ function Invoke-VMAF {
     #>
 
     # Check if zscale is available with ffmpeg & set scaling args
-    $scale, $set = ($(ffmpeg 2>&1) -join ' ' -notmatch 'libzimg') ? 'scale', 'flags' : 'zscale', 'f'
+    $scale, $set = ($(ffmpeg 2>&1) -join ' ' -notmatch 'libzimg') ? 
+        'scale', 'flags' :
+        'zscale', 'f'
 
-    # # Get the resolution of the encode (distorted) for cropping
-    $w, $h = Get-Resolution -FilePath $Encode
     # Get the resolution of the source (reference) file to verify if scaling was used
-    $sw, $sh = Get-Resolution -FilePath $Source
+    $sw, $sh = Get-Resolution -FilePath $Source -Type 'Source'
+    # # Get the resolution of the encode (distorted) for cropping
+    $w, $h = Get-Resolution -FilePath $Encode -Type 'Encode'
+
     # Check for downscale - upscale encode back using lanczos
     if (($sw - $w) -gt 200) {
         $referenceString = "[0:v]crop=$($sw):$($sh)[reference]"
@@ -112,10 +116,11 @@ function Invoke-VMAF {
     }
     
     <#
-        SET PATHS
+        SET PATHS & CPU COUNT
 
         Log path
-        model path
+        Model path
+        Collect number of CPUs to use as thread count (50% usage)
     #>
 
     # Get the parent directory of json model files
@@ -130,29 +135,51 @@ function Invoke-VMAF {
         Write-Error "VMAF: Cannot locate json model file" -ErrorAction Stop
     }
 
-    $jsonLeaf = Split-Path $jsonFile -Leaf
-
     # Perform all the path fuckery required by VMAF & ffmpeg on Windows
-    if ($env:OS -like "*Windows*") {
-        # Copy to temp for easier path manipulation
-        Copy-Item -Path $jsonFile -Destination 'C:\Temp'
-        # Set true paths in temp
-        $jsonTmpPath = [Path]::Join('C:\Temp', $jsonLeaf)
-        $logTmpPath = [Path]::Join('C:\Temp', "$title`_vmaf_log.json")
-        # Escape path in the special way required by libvmaf: C\\:/Temp/file.json
-        $tmpRoot = (Split-Path $jsonTmpPath -Qualifier) -replace ':', '\\:'
-        $tmpPath = (Split-Path $jsonTmpPath -NoQualifier) -replace '\\', '/'
-        $modelPath = "$tmpRoot$tmpPath"
-        $logPath = "$tmpRoot/Temp/$title`_vmaf_log.json"
+    if ($IsWindows) {
+        # Set the model path and format for libvmaf
+        $modelDrive = (Split-Path $jsonFile -Qualifier) -replace ':', '\\:'
+        $modelPath = (Split-Path $jsonFile -NoQualifier) -replace '\\', '/'
+        $modelPath = "$modelDrive$modelPath"
+        
+        $logDrive = (Split-Path $Encode -Qualifier) -replace ':', '\\:'
+        $logPath = (Split-Path $Encode -Parent)
+        $logPath = (Split-Path $logPath -NoQualifier) -replace '\\', '/'
+        $logPath = "$logDrive$logPath/$title`_vmaf_log.json"
+
+        # Get CPU count. Use ~ 50% of system capability
+        $coreCount = Get-CimInstance Win32_Processor | Select-Object -ExpandProperty NumberOfCores
     }
-    elseif ($IsLinux -or $isMacOS) {
-        Copy-Item $jsonFile -Destination '/tmp'
-        $modelPath = [Path]::Join('/tmp', $jsonLeaf)
-        $logPath = [Path]::Join('/tmp', "$title`_vmaf_log.json")
+    elseif ($IsLinux -or $IsMacOS) {
+        $modelPath = $jsonFile
+        $logPath = [Path]::Join($(Split-Path $Encode -Parent), "$title`_vmaf_log.json")
+
+        # Get CPU count. Use ~ 50% of system capability
+        $cpuStr = $IsLinux ? 
+            (grep 'cpu cores' /proc/cpuinfo | uniq) :
+            (sysctl -a | grep machdep.cpu.core_count)
+        
+        $countStr = [regex]::Match($cpuStr, '\d+') |
+        if ($countStr) {
+            if (($coreCount.Value -as [int]) -is [int]) {
+                $coreCount = $countStr.Value
+            }
+            else {
+                Write-Warning "CPU count did not return an integer. Defaulting to 4 threads"
+                $coreCount = 4
+            }
+        }
+        else {
+            Write-Host "Could not detect the number of CPUs on the system. Defaulting to 4 threads"
+            $coreCount = 4
+        }
     }
     else {
         Write-Error "Unknown Operating System detected. Exiting script" -ErrorAction Stop
     }
+
+    Write-Verbose "VMAF Model Path: $modelPath"
+    Write-Verbose "VMAF Log Path: $logPath"
 
     <#
         Set VMAF string
@@ -161,7 +188,7 @@ function Invoke-VMAF {
     #>
 
     # Set the VMAF string with options and paths
-    $vmafStr = "log_fmt=json:log_path=$logPath`:model_path=$modelPath"
+    $vmafStr = "log_fmt=$LogFormat`:log_path=$logPath`:model_path=$modelPath`:n_threads=$coreCount"
     if ($SSIM) {
         $vmafStr += ":feature=name=ssim"
     }
@@ -179,21 +206,11 @@ function Invoke-VMAF {
         -f null -
 
     Write-Verbose "Last Exit Code: $LASTEXITCODE"
-    if ($LASTEXITCODE) {
-        Write-Host "`nAnalysis complete! " -NoNewline @successColors
+    if ($LASTEXITCODE -ne 1) {
+        Write-Host "`nAnalysis complete!" -NoNewline @successColors
+        Write-Host "The log file can be found at: $($ul)$($aMagenta)$logPath"
     }
     else {
         Write-Host "The exit code for ffmpeg indicates that a problem occurred. " @warnColors -NoNewline
-    }
-    # Copy log path back to main directory and remove temp paths
-    Copy-Item $logTmpPath -Destination $currDirectory -ErrorAction SilentlyContinue
-    $success = $?
-    if ($psReq) {
-        $success ? (Write-Host "VMAF log has been copied to $($italicOn+$aMagenta)`u{201C}$currDirectory`u{201D}$($reset)") :
-                   (Write-Host "There was an issue copying the log file back from the temp directory" @warnColors)
-    }
-    else {
-        $success ? (Write-Host "VMAF log has been copied to `u{201C}$currDirectory`u{201D}" @progressColors) :
-                   (Write-Host "There was an issue copying the log file back from the temp directory" @warnColors)
     }
 }
