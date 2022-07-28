@@ -253,8 +253,8 @@ function Set-AudioPreference {
             break
         }
         { 0..12 -contains $_ } { 
-            Write-Host "AUDIO STREAM $UserChoice SELECTED" @progressColors
-            Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in the output"
+            Write-Host "$("`u{25c7}" * 2) AUDIO STREAM $UserChoice SELECTED $("`u{25c7}" * 2)" @progressColors
+            Write-Host "Stream $UserChoice from input will be mapped to stream $Stream in the output`n"
             @('-map', "0:a:$UserChoice`?", "-c:a:$Stream", 'copy')
             break
         }
@@ -318,7 +318,7 @@ function Set-AudioPreference {
     # Start a background job to run Dolby Encoder if selected
     if ($UserChoice -like '*dee*') {
         Write-Verbose "DEE - Audio bitrate is: $Bitrate"
-        Write-Host "Spawning dee encoder in a separate process`n" @emphasisColors
+        Write-Host "Spawning dee encoder in a separate thread`n" @emphasisColors
         # Create hash of dee params to marshall across process line
         $deeParams = @{
             Paths        = $Paths
