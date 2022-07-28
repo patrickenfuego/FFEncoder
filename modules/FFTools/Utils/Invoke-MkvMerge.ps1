@@ -52,6 +52,7 @@ function Invoke-MkvMerge {
             3 { '0:1,0:2,0:3' }
             4 { '0:1,0:2,0:3,0:4' }
             5 { '0:1,0:2,0:3,0:4,0:5' }
+            6 { '0:1,0:2,0:3,0:4,0:5,0:6' }
         }
 
         $trackOrder = switch ($ModeID) {
@@ -83,8 +84,6 @@ function Invoke-MkvMerge {
                 '--language'
                 "0:$($Paths.Language)"
                 '--track-name'
-                ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
-            ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
                 ($ModeID -in 2, 3) ? "0:$($trackTitle['DeeTitle'])" : "0:$($trackTitle['StereoTitle'])" 
                 '('
                 "$($Paths.Audio)"
