@@ -650,11 +650,18 @@ function Set-ScriptPaths ([hashtable]$OS) {
     if ([File]::Exists($logPath) -and 
         ((Get-Process 'ffmpeg' -ErrorAction SilentlyContinue) -or 
         (Get-Process 'x265*' -ErrorAction SilentlyContinue))) {
+        
+        # Check if a process is writing to the current log file
+        $length1 = (Get-Content $logPath).Length
+        Start-Sleep -Seconds 1.2
+        $length2 = (Get-Content $logPath).Length
 
-        $logCount = (Get-ChildItem $root -Filter '*encode*.log' | Measure-Object).Count
-        if ($logCount) {
-            Write-Host "Existing encode detected...creating a separate log file" @warnColors
-            $logPath = [Path]::Join($root, "$title`_encode$($logCount + 1).log")
+        if ($length2 -gt $length1) {
+            $logCount = (Get-ChildItem $root -Filter '*encode*.log' | Measure-Object).Count
+            if ($logCount) {
+                Write-Host "Existing encode detected...creating a separate log file" @warnColors
+                $logPath = [Path]::Join($root, "$title`_encode$($logCount + 1).log")
+            }
         }
     }
 
