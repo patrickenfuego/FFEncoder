@@ -82,6 +82,10 @@ function Set-FFMpegArgs {
         [Parameter(Mandatory = $false)]
         [hashtable]$NLMeans,
 
+        # Sharpen/blur filter
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Unsharp,
+
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
         [int]$Threads,
@@ -153,7 +157,6 @@ function Set-FFMpegArgs {
     if ($PSBoundParameters['EncoderExtra']) {
         $encoderExtraArray = [ArrayList]@()
         foreach ($arg in $EncoderExtra.GetEnumerator()) {
-            if ($arg.Name -eq 'sao') { $skip.Sao = $true } 
             elseif ($arg.Name -eq 'open-gop') { $skip.OpenGOP = $true } 
             elseif ($arg.Name -eq 'keyint') { $skip.Keyint = $true } 
             elseif ($arg.Name -eq 'min-keyint') { $skip.MinKeyint = $true } 
@@ -169,8 +172,16 @@ function Set-FFMpegArgs {
     [ArrayList]$ffmpegArgsAL = @(
         '-probesize'
         '100MB'
-        '-i'
-        "`"$($Paths.InputFile)`""
+        if (![string]::IsNullOrEmpty($Paths.VPY)) {
+            '-f'
+            'vapoursynth'
+            '-i'
+            "`"$($Paths.VPY)`""
+        }
+        else {
+            '-i'
+            "`"$($Paths.InputFile)`""
+        }
         if ($TrackTitle['VideoTitle']) {
             '-metadata:s:v:0'
             "title=$($TrackTitle['VideoTitle'])"
@@ -284,7 +295,9 @@ function Set-FFMpegArgs {
     # If TestFrames is not used but a start code is passed
     elseif (!$PSBoundParameters['TestFrames'] -and $ffmpegExtraArray -contains '-ss') {
         $i = $ffmpegExtraArray.IndexOf('-ss')
-        $ffmpegArgsAL.InsertRange($ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
+        $ffmpegArgsAL.InsertRange(
+            $ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1])
+        )
         $ffmpegExtraArray.RemoveRange($i, 2)
     }
     
@@ -295,24 +308,26 @@ function Set-FFMpegArgs {
         { $skip.MinKeyInt -eq $false } { $encoderBaseArray.Add('min-keyint=24') > $null }
     }
     
-    # Set video specific filter arguments
+    # Set video specific filter arguments unless VS is used
+    if ([string]::IsNullOrEmpty($Paths.VPY)) {
+        $vfHash = @{
+            CropDimensions = $CropDimensions
+            Scale          = $Scale
+            FFMpegExtra    = $FFMpegExtra
+            Deinterlace    = $Deinterlace
+            NLMeans        = $NLMeans
+            Unsharp        = $Unsharp
+            Verbose        = $setVerbose
+        }
+        try {
+            $vfArray = Set-VideoFilter @vfHash
+        }
+        catch {
+            Write-Error "Video filter exception: $($_.Exception)" -ErrorAction Stop
+        }
 
-    $vfHash = @{
-        CropDimensions = $CropDimensions
-        Scale          = $Scale
-        FFMpegExtra    = $FFMpegExtra
-        Deinterlace    = $Deinterlace
-        Verbose        = $setVerbose
-        NLMeans        = $NLMeans
+        if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
     }
-    try {
-        $vfArray = Set-VideoFilter @vfHash
-    }
-    catch {
-        Write-Error "Video filter exception: $($_.Exception)" -ErrorAction Stop
-    }
-
-    if ($vfArray) { $ffmpegArgsAL.AddRange($vfArray) }
 
     # Set res and bit depth related arguments for encoders
 
@@ -349,7 +364,7 @@ function Set-FFMpegArgs {
     # Set ffmpeg extra arguments if passed
     if ($ffmpegExtraArray) {
         Write-Verbose "FFMPEG EXTRA ARGS ARE: `n $($ffmpegExtraArray -join ' ')`n"
-        Write-Verbose "NOTE: If -ss was passed, it was moved before the file input and deleted from the above array"
+        Write-Verbose "NOTE: If -ss was passed, it was moved before the file input and deleted from the array"
         $ffmpegArgsAL.AddRange($ffmpegExtraArray) 
     }
     # Add extra encoder arguments if passed

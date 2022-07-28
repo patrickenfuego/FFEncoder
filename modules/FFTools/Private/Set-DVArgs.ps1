@@ -79,6 +79,10 @@ function Set-DVArgs {
         [Parameter(Mandatory = $false)]
         [hashtable]$NLMeans,
 
+        # Sharpen/blur filter
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Unsharp,
+
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
         [int]$Threads,
@@ -267,10 +271,20 @@ function Set-DVArgs {
     <#
         SET BASE ARGUMENT ARRAYS
 
+        vapoursynth vspipe array (if used)
         ffmpeg base array for video
         ffmpeg base array for audio/subs
         x265 base array
     #>
+
+    if (![string]::IsNullOrEmpty($Paths.VPY)) {
+        $vapoursynthBaseArray = [ArrayList]@(
+            'vspipe'
+            '--y4m'
+            "`"$($Paths.VPY)`""
+            '- '
+        )
+    }
 
     $ffmpegBaseVideoArray = [ArrayList]@(
         '-i'
@@ -348,8 +362,6 @@ function Set-DVArgs {
         "$($PresetParams.RCLookahead)"
         '--aq-strength'
         $AqStrength
-        '--min-keyint'
-        24
         '--psy-rd'
         $PSBoundParameters['PsyRd'] ? $PsyRd : '2.00'
         '--tu-intra-depth'
@@ -373,6 +385,10 @@ function Set-DVArgs {
             '-F'
             $Threads
         }
+        if (![string]::IsNullOrEmpty($Paths.VPY) -and $TestFrames) {
+            '--frames'
+            $TestFrames
+        }
     )
 
     <#
@@ -382,22 +398,25 @@ function Set-DVArgs {
         Set situational arguments based on parameters
     #>
 
-    # Set video specific filter arguments
-    $vfHash = @{
-        CropDimensions = $CropDimensions
-        Scale          = $Scale
-        FFMpegExtra    = $FFMpegExtra
-        Deinterlace    = $Deinterlace
-        Verbose        = $setVerbose
-    }
-    try {
-        $vfArray = Set-VideoFilter @vfHash
-    }
-    catch {
-        Write-Error "Video filter exception: $($_.Exception)" -ErrorAction Stop
-    }
+    # Set video specific filter arguments unless VS is used
+    if ([string]::IsNullOrEmpty($Paths.VPY)) {
+        $vfHash = @{
+            CropDimensions = $CropDimensions
+            Scale          = $Scale
+            FFMpegExtra    = $FFMpegExtra
+            Deinterlace    = $Deinterlace
+            Unsharp        = $Unsharp
+            Verbose        = $setVerbose
+        }
+        try {
+            $vfArray = Set-VideoFilter @vfHash
+        }
+        catch {
+            Write-Error "Video filter exception: $($_.Exception)" -ErrorAction Stop
+        }
 
-    if ($vfArray) { $ffmpegBaseVideoArray.AddRange($vfArray) }
+        if ($vfArray) { $ffmpegBaseVideoArray.AddRange($vfArray) }
+    }
 
     # Set test frames if passed. Insert start time before input
     if ($PSBoundParameters['TestFrames']) {
@@ -412,8 +431,12 @@ function Set-DVArgs {
     }
     elseif (!$PSBoundParameters['TestFrames'] -and $ffmpegExtraArray -contains '-ss') {
         $i = $ffmpegExtraArray.IndexOf('-ss')
-        $ffmpegBaseVideoArray.InsertRange($ffmpegBaseVideoArray.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
-        $ffmpegOtherArray.InsertRange($ffmpegOtherArray.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1]))
+        $ffmpegBaseVideoArray.InsertRange(
+            $ffmpegBaseVideoArray.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1])
+        )
+        $ffmpegOtherArray.InsertRange(
+            $ffmpegOtherArray.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1])
+        )
         $ffmpegExtraArray.RemoveRange($i, 2)
     }
 
@@ -439,12 +462,12 @@ function Set-DVArgs {
 
 
     ($PresetParams.BIntra -eq 1) ? 
-    ($x265BaseArray.Add('--b-intra') > $null) : 
-    ($x265BaseArray.Add('--no-b-intra') > $null)
+        ($x265BaseArray.Add('--b-intra') > $null) : 
+        ($x265BaseArray.Add('--no-b-intra') > $null)
 
     ($IntraSmoothing -eq 0) ?
-    ($x265BaseArray.Add('--no-strong-intra-smoothing') > $null) : 
-    ($x265BaseArray.Add('--strong-intra-smoothing') > $null)
+        ($x265BaseArray.Add('--no-strong-intra-smoothing') > $null) : 
+        ($x265BaseArray.Add('--strong-intra-smoothing') > $null)
 
     <#
         SET RATE CONTROL
@@ -466,8 +489,11 @@ function Set-DVArgs {
         $x265BaseArray.AddRange(@('--bitrate', $val))
     }
 
-    Write-Verbose "FFMPEG VIDEO ARGS ARE: `n $($ffmpegBaseVideoArray -join " ")`n"
-    Write-Verbose "FFMPEG SUB/AUDIO ARGS ARE: `n $($ffmpegOtherArray -join " ")`n"
+    ($null -ne $Paths.VPY) ?
+        (Write-Verbose "VAPOURSYNTH ARGS ARE :`n  $($vapoursynthBaseArray -join " ")`n") :
+        (Write-Verbose "FFMPEG VIDEO ARGS ARE:`n  $($ffmpegBaseVideoArray -join " ")`n")
+
+    Write-Verbose "FFMPEG SUB/AUDIO ARGS ARE:`n  $($ffmpegOtherArray -join " ")`n"
 
     <#
         TWO PASS SETTINGS
@@ -522,13 +548,14 @@ function Set-DVArgs {
 
         $x265FirstPassArray.AddRange(@('--stats', "`"$($Paths.X265Log)`"", '--pass', 1))
         $x265SecondPassArray = $x265BaseArray.Clone()
-        $x265SecondPassArray.AddRange(@('--stats', "`"$($Paths.X265Log)`"", '--pass', 2, '--subme', "$($PresetParams.Subme)"))
+        $x265SecondPassArray.AddRange(
+            @('--stats', "`"$($Paths.X265Log)`"", '--pass', 2, '--subme', "$($PresetParams.Subme)")
+        )
 
         Write-Verbose "DV FIRST PASS ARRAY IS:`n $($x265FirstPassArray -join " ")`n"
         Write-Verbose "DV SECOND PASS ARRAY IS:`n $($x265SecondPassArray -join " ")`n"
         
         $dvHash = @{
-            FFMpegVideo = $ffmpegBaseVideoArray
             FFMpegOther = $ffmpegOtherArray
             x265Args1   = $x265FirstPassArray
             x265Args2   = $x265SecondPassArray
@@ -541,12 +568,21 @@ function Set-DVArgs {
         Write-Verbose "x265 ARRAY IS:`n $($x265BaseArray -join " ")`n"
         
         $dvHash = @{
-            FFMpegVideo = $ffmpegBaseVideoArray
             FFMpegOther = $ffmpegOtherArray
             x265Args1   = $x265BaseArray
             x265Args2   = $null
         }
     }
 
+    if (![string]::IsNullOrEmpty($Paths.VPY)) {
+        $dvHash['Vapoursynth'] = $vapoursynthBaseArray
+        $dvHash['FFMpegVideo'] = $null
+    }
+    else {
+        $dvHash['FFMpegVideo'] = $ffmpegBaseVideoArray
+        $dvHash['Vapoursynth'] = $null
+    }
+
     return $dvHash
 }
+

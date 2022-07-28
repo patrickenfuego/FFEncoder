@@ -36,7 +36,7 @@ function Read-TimedInput {
         [int]$Timeout = 50000,
 
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Yes/No', 'Integer', 'Scale')]
+        [ValidateSet('Yes/No', 'Integer', 'Select')]
         [string]$Mode,
 
         [Parameter(Mandatory = $true)]
@@ -83,11 +83,11 @@ function Read-TimedInput {
             'Integer' {
                 (($response -as [int]) -is [int] -and $response -gt 0) ? [int]$response : $null
             }
-            'Scale' {
+            'Select' {
                 if ($response -match '^e[xit]?' -or $response -match '^q[uit]?') {
                     Write-Host $exitBanner @errColors -ErrorAction Stop
                 }
-                ($response -in $InputObject) ? $response : $null
+                ($response -in $InputObject -xor $response -like 'custom=*') ? $response : $null
             }
         }
 
