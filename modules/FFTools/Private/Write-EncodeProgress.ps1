@@ -67,7 +67,7 @@ function Write-EncodeProgress {
     else {
         if (!$SecondPass) {
             Write-Progress "Gathering frame count for progress display..."
-            $frameStr = ffmpeg -i $InputFile -map 0:v:0 -c:v copy -f null - 2>&1
+            $frameStr = ffmpeg -hide_banner -i $InputFile -map 0:v:0 -c:v copy -f null - 2>&1
         }
         # Select-String does not work on this output for some reason?
         $tmp = $frameStr | Select-Object -Index ($frameStr.Count - 2)
@@ -92,32 +92,40 @@ function Write-EncodeProgress {
 
         try {
             if ($DolbyVision) {
-                $currentFrameStr = Get-Content $LogPath -Tail 1 | 
-                    Select-String -Pattern '^(\d+)' |
-                        ForEach-Object { $_.Matches.Groups[1].Value }
+                $params = @{
+                    Pattern    = '(?<fr>\d+)\/?\d{0,8}(?=\s+frames)[^\d]+(?<fps>\d+\.?\d*)(?=\s+fps)'
+                    AllMatches = $true
+                }
+                $currentFrameStr, $fpsStr = Get-Content $LogPath -Tail 1 |
+                    Select-String @params |
+                        ForEach-Object { $_.Matches.Groups[1].Value, $_.Matches.Groups[2].Value }
             }
             else {
-                $currentFrameStr = Get-Content $LogPath -Tail 1 |
-                    Select-String -Pattern '^frame=\s*(\d+)\s*.*' | 
-                        ForEach-Object { $_.Matches.Groups[1].Value }
+                $params = @{
+                    Pattern    = '^frame=\s*(?<fr>\d+)\s*fps=\s*(?<fps>\d+\.?\d*)(?=\s*q)'
+                    AllMatches = $true
+                }
+                $currentFrameStr, $fpsStr = Get-Content $LogPath -Tail 1 |
+                    Select-String @params | 
+                        ForEach-Object { $_.Matches.Groups[1].Value, $_.Matches.Groups[2].Value }
             }
 
             if (($currentFrameStr -as [int]) -is [int]) {
-                [int]$currentFrame = $currentFrameStr 
+                [int]$currentFrame = $currentFrameStr
             }
-            else {
-                $currentFrame = $currentFrame
+            if (($fpsStr -as [double]) -is [double]) {
+                [double]$fps = $fpsStr
             }
         }
         catch {
-            Write-Verbose "Error: $currentFrame is not an integer"
+            Write-Verbose "Error: $currentFrame or $fps is not a number"
             continue
         }
 
-        if ($currentFrame) {
+        if ($currentFrame -and $fps) {
             $progress = ($currentFrame / $frameCount) * 100
-            $status = "$([math]::Round($progress, 2))% Complete"
-            $activity = "Encoding Frame $currentFrame of $frameCount"
+            $status = '{0:N1}% Complete' -f $progress
+            $activity = "Encoding Frame $currentFrame of $frameCount, $('{0:N2}' -f $fps) FPS"
 
             $params = @{
                 PercentComplete = $progress
@@ -125,7 +133,7 @@ function Write-EncodeProgress {
                 Activity        = $activity
             }
             Write-Progress @params
-            Start-Sleep -Seconds 1
+            Start-Sleep -Seconds 1.2
         }
         else {
             Start-Sleep -Milliseconds 500
