@@ -30,75 +30,82 @@ function Invoke-FFMpeg {
 
         # Crop dimensions for the output file
         [Parameter(Mandatory = $true)]
-        [Alias("Crop", "CropDim")]
+        [Alias('Crop', 'CropDim')]
         [int[]]$CropDimensions,
 
         # Audio preference for the output file
         [Parameter(Mandatory = $false)]
-        [Alias("Audio", "A")]
+        [Alias('Audio', 'A')]
         [array]$AudioInput,
 
         # Subtitle option
         [Parameter(Mandatory = $false)]
-        [Alias("S")]
+        [Alias('S')]
         [string]$Subtitles,
 
         # x265 preset setting
         [Parameter(Mandatory = $false)]
-        [Alias("P")]
+        [Alias('P')]
         [string]$Preset,
 
         # x265 CRF / 1 pass ABR array of arguments
         [Parameter(Mandatory = $true)]
+        [Alias('RC')]
         [array]$RateControl,
 
         # Deblock filter setting
         [Parameter(Mandatory = $false)]
-        [Alias("DBF")]
+        [Alias('DBF')]
         [int[]]$Deblock,
 
         # aq-mode setting. Default is 2
         [Parameter(Mandatory = $false)]
-        [Alias("AQM")]
+        [Alias('AQM')]
         [int]$AqMode,
 
         # aq-strength. Higher values equate to a lower QP, but can also increase bitrate significantly
         [Parameter(Mandatory = $false)]
-        [Alias("AQS")]
+        [Alias('AQS')]
         [double]$AqStrength,
 
         # psy-rd. Psycho visual setting
         [Parameter(Mandatory = $false)]
+        [Alias('PsyRDO')]
         [string]$PsyRd,
 
         # psy-rdoq (trellis). Psycho visual setting
         [Parameter(Mandatory = $false)]
-        [Alias("PRDQ")]
+        [Alias('PRDQ', 'PsyTrellis')]
         [double]$PsyRdoq,
 
         # Filter to help reduce high frequency noise (grain)
         [Parameter(Mandatory = $false)]
-        [Alias("NR")]
+        [Alias('NR')]
         [int[]]$NoiseReduction,
 
         # Powerful denoising filter
         [Parameter(Mandatory = $false)]
-        [Alias("NL")]
+        [Alias('NL')]
         [hashtable]$NLMeans,
+
+        # Sharpen/blur filter
+        [Parameter(Mandatory = $false)]
+        [Alias('U')]
+        [hashtable]$Unsharp,
 
         # Transform unit recursion depth (intra, inter)
         [Parameter(Mandatory = $false)]
-        [Alias("TU")]
+        [Alias('TU')]
         [int[]]$TuDepth,
 
         # Early exit setting for TU recursion depth
         [Parameter(Mandatory = $false)]
-        [Alias("LTU")]
+        [Alias('LTU')]
         [int]$LimitTu,
 
         # Adjusts the quantizer curve compression factor
         [Parameter(Mandatory = $false)]
-        [Alias("Q")]
+        [Alias('Q')]
         [double]$QComp,
 
         # The number of reference frames to use
@@ -107,93 +114,101 @@ function Invoke-FFMpeg {
 
         # Enable or disable (CU | MB)Tree algorithm
         [Parameter(Mandatory = $false)]
-        [Alias("MBTree", "CUTree")]
+        [Alias('MBTree', 'CUTree')]
         [int]$Tree,
 
         # Motion Estimation range
         [Parameter(Mandatory = $false)]
+        [Alias('MR')]
         [int]$Merange,
 
         # Maximum number of consecutive b-frames
         [Parameter(Mandatory = $false)]
+        [Alias('B')]
         [int]$BFrames,
 
         # Enables the evaluation of intra modes in B slices
         [Parameter(Mandatory = $false)]
+        [Alias('BINT')]
         [int]$BIntra,
 
         # Subpel motion refinement
         [Parameter(Mandatory = $false)]
+        [Alias('Subpel')]
         [int]$Subme,
 
         # Enable/disable strong-intra-smoothing
         [Parameter(Mandatory = $false)]
-        [Alias("SIS")]
+        [Alias('SIS')]
         [int]$IntraSmoothing,
 
         # Number of frame threads the encoder should use
         [Parameter(Mandatory = $false)]
+        [Alias('FrameThreads')]
         [int]$Threads,
 
         # Rate control lookahead buffer
         [Parameter(Mandatory = $false)]
-        [Alias("RCL", "Lookahead")]
+        [Alias('RCL', 'Lookahead')]
         [int]$RCLookahead,
 
         # Encoder level to use. Default is unset
         [Parameter(Mandatory = $false)]
+        [Alias('L')]
         [string]$Level,
 
         # Encoder level to use. Default is unset
         [Parameter(Mandatory = $false)]
+        [Alias('VideoBuffer')]
         [int[]]$VBV,
 
         # Additional ffmpeg options
         [Parameter(Mandatory = $false)]
+        [Alias('FE', 'FFExtra')]
         [array]$FFMpegExtra,
 
         # Additional encoder-specific options
         [Parameter(Mandatory = $false)]
+        [Alias('Extra')]
         [hashtable]$EncoderExtra,
 
         # Path to the log file
         [Parameter(Mandatory = $true)]
-        [Alias("L")]
         [hashtable]$Paths,
 
         # Scale setting
         [Parameter(Mandatory = $false)]
-        [Alias("Resize", "DS")]
+        [Alias('Resize')]
         [hashtable]$Scale,
 
         # Switch to enable a test run 
         [Parameter(Mandatory = $false)]
-        [Alias("T")]
+        #[Alias('T')]
         [int]$TestFrames,
 
         # Starting Point for test encodes. Integers are treated as a frame #
         [Parameter(Mandatory = $false)]
-        [Alias("Start", "TS")]
+        [Alias('Test')]
         [string]$TestStart,
 
         # Deinterlacing
         [Parameter(Mandatory = $false)]
-        [Alias("DI")]
+        [Alias('DI')]
         [switch]$Deinterlace,
 
         # Skip DV even if present
         [Parameter(Mandatory = $false)]
-        [Alias("NoDV", "SDV")]
+        [Alias('NoDV', 'SkipDV')]
         [switch]$SkipDolbyVision,
 
         # Skip HDR10+ even if present
         [Parameter(Mandatory = $false)]
-        [Alias("NoD10P", "STP")]
+        [Alias('No10P', 'Skip10P')]
         [switch]$SkipHDR10Plus,
 
         # Skip HDR10+ even if present
         [Parameter(Mandatory = $false)]
-        [Alias("NoProgressBar")]
+        [Alias('NoProgressBar')]
         [switch]$DisableProgress
     )
 
@@ -232,9 +247,11 @@ function Invoke-FFMpeg {
     }
 
     # Infer primary language based on streams (for muxing) - NOT always accurate, but pretty close
-    $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language -select_streams a -v 0 -of compact=p=0:nk=1 
-    [string]$lang = $streams -replace '\d\|', '' | Group-Object | Sort-Object -Property Count -Descending | 
-        Select-Object -First 1 -ExpandProperty Name
+    $streams = ffprobe $Paths.InputFile -show_entries stream=index:stream_tags=language `
+        -select_streams a -v 0 -of compact=p=0:nk=1
+    [string]$lang = $streams -replace '\d\|', '' | Group-Object |
+        Sort-Object -Property Count -Descending |
+            Select-Object -First 1 -ExpandProperty Name
     $Paths.Language = $lang
 
     <#
@@ -403,6 +420,7 @@ function Invoke-FFMpeg {
         AqStrength     = $AqStrength
         NoiseReduction = $NoiseReduction
         NLMeans        = $NLMeans
+        Unsharp        = $Unsharp
         TuDepth        = $TuDepth
         LimitTu        = $LimitTu
         Tree           = $Tree
@@ -439,11 +457,7 @@ function Invoke-FFMpeg {
 
         # Pull the x265 name from PATH to account for any mods. Selects the first result
         $x265 = Get-Command 'x265*' | Select-Object -First 1 -ExpandProperty Source | Split-Path -LeafBase
-        Write-Verbose "x265 executable: $x265`n"
-
-        if (!$DisableProgress) {
-            $threadArgs = @($dvArgs, $Paths.HevcPath, $Paths.LogPath, $x265)
-        }
+        Write-Verbose "x265 EXECUTABLE NAME: $x265`n"
 
         # Two pass x265 encode
         if ($null -ne $dvArgs.x265Args2) {
@@ -453,38 +467,44 @@ function Invoke-FFMpeg {
             Write-Host "Generating 1st pass encoder metrics...`n"
             Write-Banner
 
-            if ($IsLinux -or $IsMacOS) {
-                if ($DisableProgress) {
-                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)" 2>$Paths.LogPath
-                }
-                else {
-                    Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log, $x265)
-                        
-                        $out = [regex]::Escape($out)
-                        bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $out" 2>$log
-                    } | Out-Null 
-                }
+            # If VS script was passed
+            if (![string]::IsNullOrEmpty($Paths.VPY)) {
+                $shellArgsPass1 = ($IsLinux -or $IsMacOS) ?
+                    ('bash', '-c', "$($dvArgs.Vapoursynth) | $x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)") :
+                    ('cmd.exe', '/c', "$($dvArgs.Vapoursynth) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"")
+
+                $shellArgsPass2 = ($IsLinux -or $IsMacOS) ?
+                    ('bash', '-c', "$($dvArgs.Vapoursynth) | $x265 $($dvArgs.x265Args2) -o $($Paths.hevcPath)") :
+                    ('cmd.exe', '/c', "$($dvArgs.Vapoursynth) | $x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"")
             }
             else {
-                if ($DisableProgress) {
-                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"" 2>$Paths.LogPath
-                }
-                else {
-                    Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log, $x265)
-            
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
-                    } | Out-Null 
-                }
+                $shellArgsPass1 = ($IsLinux -or $IsMacOS) ?
+                    ('bash', '-c', "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)") :
+                    ('cmd.exe', '/c', "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"")
+
+                $shellArgsPass2 = ($IsLinux -or $IsMacOS) ?
+                    ('bash', '-c', "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o $($Paths.hevcPath)") :
+                    ('cmd.exe', '/c', "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"")
             }
 
-            if (!$DisableProgress) {
+            Write-Verbose "FULL CLI PASS 1:`n  $($shellArgsPass1 -join ' ')`n"
+            Write-Verbose "FULL CLI PASS 2:`n  $($shellArgsPass2 -join ' ')`n"
+
+            if ($DisableProgress) {
+                & $shellArgsPass1[0] $shellArgsPass1[1] $shellArgsPass1[2] 2>Paths.$LogPath
+            }
+            else {
+                Start-ThreadJob -Name '1st Pass' -ArgumentList $shellArgsPass1, $Paths.LogPath -ScriptBlock {
+                    param ([array]$ShellArgs, [string]$LogPath)
+
+                    & $ShellArgs[0] $ShellArgs[1] $ShellArgs[2] 2>$LogPath
+                } | Out-Null
+
                 $params = @{
                     InputFile   = $Paths.InputFile
                     LogPath     = $Paths.LogPath
                     TestFrames  = $TestFrames
-                    JobName     = 'ffmpeg 1st Pass'
+                    JobName     = '1st Pass'
                     SecondPass  = $false
                     DolbyVision = $dovi
                     Verbose     = $setVerbose
@@ -495,39 +515,22 @@ function Invoke-FFMpeg {
             Write-Host
             Write-Host "$boldOn$("`u{25c7}" * 4) STARTING x265 PIPE PASS 2 $("`u{25c7}" * 4)$boldOff" @progressColors
             Write-Banner
-            
-            if ($IsLinux -or $IsMacOS) {
-                if ($DisableProgress) {
-                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o $($Paths.HevcPath)" 2>>$Paths.LogPath
-                }
-                else {
-                    Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log, $x265)
-            
-                        $out = [regex]::Escape($out)
-                        bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o $out" 2>>$log
-                    } | Out-Null 
-                }
+
+            if ($DisableProgress) {
+                & $shellArgsPass2[0] $shellArgsPass2[1] $shellArgsPass2[2] 2>Paths.$LogPath
             }
             else {
-                if ($DisableProgress) {
-                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o `"$($Paths.hevcPath)`"" 2>>$Paths.LogPath
-                }
-                else {
-                    Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log, $x265)
-            
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args2) -o `"$out`"" 2>>$log
-                    } | Out-Null 
-                }
-            }
+                Start-ThreadJob -Name '2nd Pass' -ArgumentList $shellArgsPass2, $Paths.LogPath -ScriptBlock {
+                    param ([array]$ShellArgs, [string]$LogPath)
 
-            if (!$DisableProgress) {
+                    & $ShellArgs[0] $ShellArgs[1] $ShellArgs[2] 2>$LogPath
+                } | Out-Null
+
                 $params = @{
                     InputFile   = $Paths.InputFile
                     LogPath     = $Paths.LogPath
                     TestFrames  = $TestFrames
-                    JobName     = 'ffmpeg 2nd Pass'
+                    JobName     = '2nd Pass'
                     SecondPass  = $true
                     DolbyVision = $dovi
                     Verbose     = $setVerbose
@@ -541,38 +544,34 @@ function Invoke-FFMpeg {
             Write-Host "$boldOn$("`u{25c7}" * 4) STARTING x265 PIPE $("`u{25c7}" * 4)$boldOff" @progressColors
             Write-Banner
 
-            if ($IsLinux -or $IsMacOS) {
-                if ($DisableProgress) {
-                    bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $($Paths.HevcPath)" 2>$Paths.LogPath
-                }
-                else {
-                    Start-ThreadJob -Name ffmpeg -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log, $x265)
-            
-                        $out = [regex]::Escape($out)
-                        bash -c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $out" 2>$log
-                    } | Out-Null 
-                }
+            if (![string]::IsNullOrEmpty($Paths.VPY)) {
+                $shellArgs = ($IsLinux -or $IsMacOS) ?
+                    ('bash', '-c', "$($dvArgs.Vapoursynth) | $x265 $($dvArgs.x265Args1) -o $($Paths.hevcPath)") :
+                    ('cmd.exe', '/c', "$($dvArgs.Vapoursynth) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.hevcPath)`"")
             }
             else {
-                if ($DisableProgress) {
-                    cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.HevcPath)`"" 2>$Paths.LogPath
-                }
-                else {
-                    Start-ThreadJob -Name ffmpeg -ArgumentList $threadArgs -ScriptBlock {
-                        param ($dvArgs, $out, $log, $x265)
-            
-                        cmd.exe /c "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$out`"" 2>$log
-                    } | Out-Null 
-                }
+                $shellArgs = ($IsLinux -or $IsMacOS) ?
+                    ('bash', '-c', "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o $($Paths.HevcPath)") :
+                    ('cmd.exe', '/c', "ffmpeg -hide_banner -loglevel panic $($dvArgs.FFMpegVideo) | $x265 $($dvArgs.x265Args1) -o `"$($Paths.HevcPath)`"")
             }
 
-            if (!$DisableProgress) {
+            Write-Verbose "FULL CLI:`n  $($shellArgs -join ' ')`n"
+
+            if ($DisableProgress) {
+                & $shellArgs[0] $shellArgs[1] $shellArgs[2] 2>Paths.$LogPath
+            }
+            else {
+                Start-ThreadJob -Name 'crf' -ArgumentList $shellArgs, $Paths.LogPath -ScriptBlock {
+                    param ([array]$ShellArgs, [string]$LogPath)
+
+                    & $ShellArgs[0] $ShellArgs[1] $ShellArgs[2] 2>$LogPath
+                } | Out-Null
+
                 $params = @{
                     InputFile   = $Paths.InputFile
                     LogPath     = $Paths.LogPath
                     TestFrames  = $TestFrames
-                    JobName     = 'ffmpeg'
+                    JobName     = 'crf'
                     SecondPass  = $false
                     DolbyVision = $dovi
                     Verbose     = $setVerbose
@@ -586,7 +585,8 @@ function Invoke-FFMpeg {
             $Paths.TmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 # Cut stream at video frame marker
-                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) -y $Paths.tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) `
+                    -y $Paths.tmpOut 2>>$Paths.LogPath
             }
             else {
                 ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther -y $Paths.tmpOut 2>>$Paths.LogPath
@@ -622,7 +622,7 @@ function Invoke-FFMpeg {
                 $muxPaths.Temp = $Paths.ChapterPath
                 $muxPaths.Chapters = $true
             }
-            elseif (!$Paths.ChapterPath -and !$Paths.TmpOut) { 
+            elseif (!$Paths.ChapterPath -and !$Paths.TmpOut) {
                 $muxPaths.VideoOnly = $true 
             }
             else {
@@ -636,6 +636,7 @@ function Invoke-FFMpeg {
 
         Write-Host ""
     } # End DoVi
+
     # Two pass encode
     elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "$("`u{2726}" * 3) 2-Pass ABR Selected @ $($RateControl[1] -replace '(.*)(\w+)$', '$1 $2')b/s $("`u{2726}" * 3)" @emphasisColors

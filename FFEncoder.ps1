@@ -191,6 +191,15 @@
         Filtering method used for rescaling input with the -Scale parameter. Compatible arguments:
             - scale: fast_bilinear, neighbor, area, gauss, sinc, spline, bilinear, bicubic, lanczos
             - zscale: point, spline16, spline36, bilinear, bicubic, lanczos
+    .PARAMETER Unsharp
+        Enable the unsharp filter and specify the search range. Use one of the presets specified in the project wiki, in the form:
+            <luma|chroma|yuv>_<small|medium|large>
+        or pass a custom filter string as:
+            'custom=<filter string>'
+        Mandatory parameter for sharpening/blurring a video source.
+        
+    .PARAMETER UnsharpStrength
+        Sets the strength of the unsharp filter. Use one of the presets defined in the project wiki, in the form: <sharpen|blur>_<mild|medium|strong>
     .PARAMETER Resolution
         Upscale/downscale resolution used with the -Scale parameter. Default value is 1080p (1920 x 1080)
     .PARAMETER SkipDolbyVision
@@ -219,99 +228,115 @@
 
 using namespace System.IO
 
-[CmdletBinding(DefaultParameterSetName = "CRF")]
+[CmdletBinding(DefaultParameterSetName = 'CRF')]
 param (
-    [Parameter(Mandatory = $true, ParameterSetName = "Help")]
-    [Alias("H", "?")]
+    [Parameter(Mandatory = $true, ParameterSetName = 'Help')]
+    [Alias('H')]
     [switch]$Help,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet("x264", "x265")]
-    [Alias("Enc")]
-    [string]$Encoder = "x265",
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateSet('x264', 'x265')]
+    [Alias('Enc')]
+    [string]$Encoder = 'x265',
 
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "VMAF")]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'VMAF')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'PASS')]
     [ValidateScript( { if (Test-Path $_) { $true } else { throw 'Input path does not exist' } } )]
-    [Alias("I", "Reference", "Source")]
+    [Alias('I', 'Reference', 'Source')]
     [string]$InputPath,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'PASS')]
+    [ValidateScript(
+        {
+            if (!(Test-Path $_)) {
+                throw "Could not locate Vapoursynth script. Check the script path and try again"
+            }
+            if (($(ffmpeg 2>&1) -join ' ') -notmatch 'vapoursynth') {
+                throw "ffmpeg was not compiled with Vapoursynth. Ensure the '--enable-vapoursynth' flag was set during compilation"
+            }
+            $true
+        }
+    )]
+    [Alias('VSScript', 'VPY')]
+    [string]$VapourSynthScript,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
         'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
-    [Alias("A")]
-    [string]$Audio = "copy",
+    [Alias('A')]
+    [string]$Audio = 'copy',
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(-1, 3000)]
-    [Alias("AB", "ABitrate")]
+    [Alias('AB', 'ABitrate')]
     [int]$AudioBitrate,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("2CH", "ST")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('2CH', 'ST')]
     [switch]$Stereo,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
         'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
-    [Alias("A2")]
+    [Alias('A2')]
     [string]$Audio2 = "none",
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(-1, 3000)]
-    [Alias("AB2", "ABitrate2")]
+    [Alias('AB2', 'ABitrate2')]
     [int]$AudioBitrate2,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("2CH2", "ST2")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('2CH2', 'ST2')]
     [switch]$Stereo2,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet('all', 'a', 'copyall', 'ca', 'none', 'default', 'd', 'n', 'eng', 'fre', 'ger', 'spa', 'dut', 'dan', 
         'fin', 'nor', 'cze', 'pol', 'chi', 'zho', 'kor', 'gre', 'rum', 'rus', 'swe', 'est', 'ind', 'slv', 'tur', 'vie',
         'hin', 'heb', 'ell', 'bul', 'ara', 'por', 'nld',
         '!eng', '!fre', '!ger', '!spa', '!dut', '!dan', '!fin', '!nor', '!cze', '!pol', '!chi', '!zho', '!kor', '!ara',
         '!rum', '!rus', '!swe', '!est', '!ind', '!slv', '!tur', '!vie', '!hin', '!heb', '!gre', '!ell', '!bul', '!por',
         '!nld')]
-    [Alias("S", "Subs")]
-    [string]$Subtitles = "default",
+    [Alias('S', 'Subs')]
+    [string]$Subtitles = 'default',
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
-    [Alias("P")]
-    [string]$Preset = "slow",
+    [Alias('P')]
+    [string]$Preset = 'slow',
 
-    [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
+    [Parameter(Mandatory = $true, ParameterSetName = 'CRF')]
     [ValidateRange(0.0, 51.0)]
-    [Alias("C")]
+    [Alias('C')]
     [double]$CRF,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
-    [Alias("VBitrate")]
+    [Parameter(Mandatory = $true, ParameterSetName = 'PASS')]
+    [Alias('VBitrate')]
     [ValidateScript(
         {
             $_ -cmatch "(?<num>\d+\.?\d{0,2})(?<suffix>[K k M]+)"
             if ($Matches) {
                 switch ($Matches.suffix) {
-                    "K" { 
+                    'K' { 
                         if ($Matches.num -gt 99000 -or $Matches.num -lt 1000) {
                             throw "Bitrate out of range. Must be between 1,000-99,000 kb/s"
                         }
                         else { $true }
                     }
-                    "M" {
+                    'M' {
                         if ($Matches.num -gt 99 -or $Matches.num -le 1) {
                             throw "Bitrate out of range. Must be between 1-99 mb/s"
                         }
@@ -325,71 +350,165 @@ param (
     )]
     [string]$VideoBitrate,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(1, 2)]
     [int]$Pass = 2,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet('Default', 'd', 'Fast', 'f', 'Custom', 'c')]
-    [Alias("FPT", "PassType")]
-    [string]$FirstPassType = "Default",
+    [Alias('FPT', 'PassType')]
+    [string]$FirstPassType = 'Default',
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(-6, 6)]
     [ValidateCount(2, 2)]
-    [Alias("DBF")]
+    [Alias('DBF')]
     [int[]]$Deblock = @(-2, -2),
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(0, 4)]
-    [Alias("AQM")]
+    [Alias('AQM')]
     [int]$AqMode,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(0.0, 3.0)]
-    [Alias("AQS")]
+    [Alias('AQS')]
     [double]$AqStrength = 1.00,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("PRD", "PsyRDO")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('PRD', 'PsyRDO')]
     [string]$PsyRd,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(0.0, 50.0)]
-    [Alias("PRQ", "PsyTrellis")]
+    [Alias('PRQ', 'PsyTrellis')]
     [double]$PsyRdoq,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(1, 16)]
     [int]$Ref,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(0, 1)]
-    [Alias("MBTree", "CUTree")]
+    [Alias('MBTree', 'CUTree')]
     [int]$Tree = 1,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(1, 32768)]
-    [Alias("MR")]
+    [Alias('MR')]
     [int]$Merange,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateRange(0, 2000)]
     [ValidateCount(1, 2)]
-    [Alias("NR")]
+    [Alias('NR')]
     [int[]]$NoiseReduction = @(0, 0),
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(1, 4)]
+    [ValidateCount(2, 2)]
+    [Alias('TU')]
+    [int[]]$TuDepth = @(1, 1),
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(1, 4)]
+    [Alias('LTU')]
+    [int]$LimitTu = 0,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(0.0, 1.0)]
+    [Alias("Q")]
+    [double]$QComp = 0.60,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(0, 16)]
+    [Alias('B')]
+    [int]$BFrames,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(0, 1)]
+    [Alias('BINT')]
+    [int]$BIntra,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(0, 11)]
+    [Alias('SM', 'Subpel')]
+    [int]$Subme,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(0, 1)]
+    [Alias('SIS')]
+    [int]$StrongIntraSmoothing = 1,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateSet('1', '1b', '2', '1.1', '1.2', '1.3', '2.1', '21', '2.2', '3.1', '3.2', '4', '4.1', '4.2', '41',
+        '5', '5.1', '51', '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
+    [Alias('L')]
+    [string]$Level,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateCount(2, 2)]
+    [Alias('VideoBuffer')]
+    [int[]]$VBV,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(1, 64)]
+    [Alias('FrameThreads')]
+    [int]$Threads,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateRange(0, 250)]
+    [Alias('RCL', 'Lookahead')]
+    [int]$RCLookahead,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('FE', 'FFExtra')]
+    [array]$FFMpegExtra,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('Extra')]
+    [hashtable]$EncoderExtra,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('T', 'Test')]
+    [int]$TestFrames,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('Start', 'TS')]
+    [string]$TestStart = '00:01:30',
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('Del', 'RM')]
+    [switch]$RemoveFiles,
+
+    # Filtering related parameters
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateScript(
         {
             if ($_.Count -eq 0) { throw "NLMeans Hashtable must contain at least 1 value" }
@@ -404,146 +523,74 @@ param (
             else { throw "Invalid NLMeans hashtable. See https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1" }
         }
     )]
-    [Alias("NL")]
+    [Alias('NL')]
     [hashtable]$NLMeans,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(1, 4)]
-    [ValidateCount(2, 2)]
-    [Alias("TU")]
-    [int[]]$TuDepth = @(1, 1),
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ArgumentCompletions(
+        'luma_small', 'luma_medium', 'luma_large', 'chroma_small',
+        'chroma_medium', 'chroma_large', 'yuv_small', 'yuv_medium',
+        'yuv_large'
+    )]
+    [Alias('U')]
+    [string]$Unsharp,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(1, 4)]
-    [Alias("LTU")]
-    [int]$LimitTu = 0,
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [ValidateSet(
+        'sharpen_mild', 'sharpen_medium', 'sharpen_strong',
+        'blur_mild', 'blur_medium', 'blur_strong'
+    )]
+    [Alias('UStrength')]
+    [string]$UnsharpStrength = 'sharpen_mild',
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0.0, 1.0)]
-    #[Alias("Q")]
-    [double]$QComp = 0.60,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0, 16)]
-    [Alias("B")]
-    [int]$BFrames,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0, 1)]
-    [Alias("BINT")]
-    [int]$BIntra,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0, 11)]
-    [Alias("SM", "Subpel")]
-    [int]$Subme,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0, 1)]
-    [Alias("SIS")]
-    [int]$StrongIntraSmoothing = 1,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateSet('1', '1b', '2', '1.1', '1.2', '1.3', '2.1', '21', '2.2', '3.1', '3.2', '4', '4.1', '4.2', '41',
-    '5', '5.1', '51', '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
-    [Alias('L')]
-    [string]$Level,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateCount(2, 2)]
-    [int[]]$VBV,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(1, 64)]
-    [Alias("FrameThreads")]
-    [int]$Threads,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [ValidateRange(0, 250)]
-    [Alias("RCL", "Lookahead")]
-    [int]$RCLookahead,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("FE", "ffmpeg")]
-    [array]$FFMpegExtra,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("Extra")]
-    [hashtable]$EncoderExtra,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("T", "Test")]
-    [int]$TestFrames,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("Start", "TS")]
-    [string]$TestStart = "00:01:30",
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("Del", "RM")]
-    [switch]$RemoveFiles,
-
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("DI")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('DI')]
     [switch]$Deinterlace,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet('point', 'spline16', 'spline36', 'bilinear', 'bicubic', 'lanczos',
         'fast_bilinear', 'neighbor', 'area', 'gauss', 'sinc', 'spline', 'bicublin')]
-    [Alias("SF", "ResizeType")]
-    [string]$Scale = "bilinear",
+    [Alias('SF', 'ResizeType')]
+    [string]$Scale = 'bilinear',
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateSet('2160p', '1080p', '720p')]
-    [Alias("Res", "R")]
+    [Alias('Res', 'R')]
     [string]$Resolution,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("Report", "GR")]
+    # Utility parameters
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [alias('Report', 'GR')]
     [switch]$GenerateReport,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [Alias("NoDV", "SDV")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('NoDV', 'SDV')]
     [switch]$SkipDolbyVision,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("No10P", "STP")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [alias('No10P', 'STP')]
     [switch]$SkipHDR10Plus,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("Exit")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Alias('Exit')]
     [switch]$ExitOnError,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
-    [alias("NoProgressBar")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [alias('NoProgressBar')]
     [switch]$DisableProgress,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $false, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [ValidateScript(
         {
             $flag = $false
@@ -560,34 +607,33 @@ param (
             else { throw "Invalid MKV Tag hashtable" }
         }
     )]
-    [Alias("CreateTagFile")]
+    [Alias('CreateTagFile')]
     [hashtable]$GenerateMKVTagFile,
 
-    [Parameter(Mandatory = $true, ParameterSetName = "CRF")]
-    [Parameter(Mandatory = $true, ParameterSetName = "VMAF")]
-    [Parameter(Mandatory = $true, ParameterSetName = "Pass")]
+    [Parameter(Mandatory = $true, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'VMAF')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'PASS')]
     [ValidateNotNullOrEmpty()]
-    [Alias("O", "Encode", "Distorted")]
+    [Alias('O', 'Encode', 'Distorted')]
     [string]$OutputPath,
 
     ## VMAF-Specific Parameters
-    [Parameter(Mandatory = $true, ParameterSetName = "VMAF")]
-    [Alias("VMAF")]
+    [Parameter(Mandatory = $true, ParameterSetName = 'VMAF')]
+    [Alias('VMAF', 'EnableVMAF')]
     [switch]$CompareVMAF,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
-    [alias("SSIM")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'VMAF')]
+    [alias('SSIM')]
     [switch]$EnableSSIM,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
-    [alias("PSNR")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'VMAF')]
+    [alias('PSNR')]
     [switch]$EnablePSNR,
 
-    [Parameter(Mandatory = $false, ParameterSetName = "VMAF")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'VMAF')]
     [ValidateSet('json', 'xml', 'csv', 'sub')]
-    [alias("LogType")]
+    [Alias('LogType', 'VMAFLog')]
     [string]$LogFormat
-
 )
 
 #########################################################
@@ -650,11 +696,18 @@ function Set-ScriptPaths ([hashtable]$OS) {
     if ([File]::Exists($logPath) -and 
         ((Get-Process 'ffmpeg' -ErrorAction SilentlyContinue) -or 
         (Get-Process 'x265*' -ErrorAction SilentlyContinue))) {
+        
+        # Check if a process is writing to the current log file
+        $length1 = (Get-Content $logPath).Length
+        Start-Sleep -Seconds 1.2
+        $length2 = (Get-Content $logPath).Length
 
-        $logCount = (Get-ChildItem $root -Filter '*encode*.log' | Measure-Object).Count
-        if ($logCount) {
-            Write-Host "Existing encode detected...creating a separate log file" @warnColors
-            $logPath = [Path]::Join($root, "$title`_encode$($logCount + 1).log")
+        if ($length2 -gt $length1) {
+            $logCount = (Get-ChildItem $root -Filter '*encode*.log' | Measure-Object).Count
+            if ($logCount) {
+                Write-Host "Existing encode detected...creating a separate log file" @warnColors
+                $logPath = [Path]::Join($root, "$title`_encode$($logCount + 1).log")
+            }
         }
     }
 
@@ -674,6 +727,12 @@ function Set-ScriptPaths ([hashtable]$OS) {
         HevcPath   = $hevcPath
         OutputFile = $OutputPath
     }
+    if ($VapoursynthScript) {
+        $pathObject['VPY'] = $VapoursynthScript
+    }
+
+    Write-Verbose "PATHS OBJECT:`n  $($pathObject | Out-String)"
+    
     return $pathObject
 }
 
@@ -719,11 +778,11 @@ $console.WindowTitle = 'FFEncoder'
 [console]::TreatControlCAsInput = $false
 
 # Import FFTools module
-Import-Module -Name "$PSScriptRoot\modules\FFTools"
+Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
 Write-Verbose "`n`n---------------------------------------"
 
 # Source version functions
-. $([Path]::Join($ScriptsDirectory, 'VerifyVersions.ps1')).toString()
+. $([Path]::Join($ScriptsDirectory, 'VerifyVersions.ps1')).ToString()
 # Verify the current version of pwsh & exit if version not satisfied
 $Global:psReq = Confirm-PoshVersion
 # Check for updates to FFencoder and prompt to download if git is available
@@ -751,10 +810,10 @@ if ($PSBoundParameters['CompareVMAF']) {
     Write-Host ""
 
     $params = @{
-        Source     = $InputPath
-        Encode     = $OutputPath
-        SSIM       = $EnableSSIM
-        PSNR       = $EnablePSNR
+        Source = $InputPath
+        Encode = $OutputPath
+        SSIM   = $EnableSSIM
+        PSNR   = $EnablePSNR
     }
 
     if ($PSBoundParameters['LogFormat']) {
@@ -792,27 +851,27 @@ else {
 }
 
 <#
-    VALIDATE - Check:
+    VALIDATE:
     
-    Source resolution
-    Parameter combinations
-        - TODO: Too complicated for parameter sets...try dynamic params?
-    Primary audio type if transcoding was selected
+    Confirm test encode parameters
+    Confirm scaling parameters
+    Confirm unsharp parameters
+    Audio check
         - Warn if transcoding lossy -> lossy
-    x264 or x265 settings that use different value ranges
-#>
+        - Disable audio params if source has no audio
 
-# Check the source resolution
-$sourceResolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $InputPath
+    If Vapoursynth is used, filtering-related checks are ignored - must be handled
+    in Vapoursynth
+#>
 
 # Verify test parameters and prompt if one is missing (unless ExitOnError is present)
 if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
     Write-Host 'The -TestStart parameter was passed without a frame count duration' @errColors
     $params = @{
-        Prompt   = 'Enter the number of test frames to use: '
-        Timeout  = 25000
-        Mode     = 'Integer'
-        Count    = 3
+        Prompt  = 'Enter the number of test frames to use: '
+        Timeout = 25000
+        Mode    = 'Integer'
+        Count   = 3
     }
     try {
         $TestFrames = Read-TimedInput @params -Verbose:$setVerbose
@@ -823,53 +882,130 @@ if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
     }
 }
 
-# If scale is used, verify arguments and handle errors
-if ($PSBoundParameters['Scale']) {
-    $isScale = $true
-    try {
-        $scaleType, $filter = Confirm-ScaleFilter -Filter $Scale -Verbose:$setVerbose
-    }
-    catch {
-        Write-Host "`u{203C} $($_.Exception.Message). The output will not be scaled`n" @errColors
-        $isScale = $false
-    }
-}
-else { $isScale = $false }
+# Check the source resolution
+$sourceResolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height `
+    -of csv=s=x:p=0 $InputPath
 
-# If scaling is used, check if Resolution was passed & set hashtable
-if ($isScale) {
-    # Warn if no resolution was passed, and set to a default
-    if (!$PSBoundParameters['Resolution']) {
-        $defaultResolution = switch -Wildcard ($sourceResolution) {
-            '*3840x2160*'  { '1080p' }
-            '*1920x1080*'  { '2160p' }
-            '*1280x720*'   { '1080p' }
+# If VS is used, skip video filtering
+if (!$PSBoundParameters['VapoursynthScript']) {
+    # If scale is used, verify arguments and handle errors
+    if ($PSBoundParameters['Scale']) {
+        $isScale = $true
+        try {
+            $scaleType, $filter = Confirm-ScaleFilter -Filter $Scale -Verbose:$setVerbose
         }
-        Write-Warning "No resolution specified for scaling. Using a default based on source: $defaultResolution"
-        Write-Host ""
+        catch {
+            Write-Host "`u{203C} $($_.Exception.Message). The output will not be scaled`n" @errColors
+            $isScale = $false
+        }
+    }
+    else { $isScale = $false }
+
+    # If scaling is used, check if Resolution was passed & set hashtable
+    if ($isScale) {
+        # Warn if no resolution was passed, and set to a default
+        if (!$PSBoundParameters['Resolution']) {
+            $defaultResolution = switch -Wildcard ($sourceResolution) {
+                '*3840x2160*' { '1080p' }
+                '*1920x1080*' { '2160p' }
+                '*1280x720*'  { '1080p' }
+            }
+            Write-Warning "No resolution specified for scaling. Using a default based on source: $defaultResolution"
+            Write-Host ""
+        }
+
+        # Collect the arguments into a hashtable
+        $scaleHash = @{
+            Scale       = $scaleType
+            ScaleFilter = $filter 
+            Resolution  = $Resolution ??= $defaultResolution
+        }
     }
 
+    # Verify unsharp params and prompt for new value if necessary
+    if ($PSBoundParameters['Unsharp']) {
+        $unsharpSet = @('luma_small', 'luma_medium', 'luma_large', 'chroma_small',
+                        'chroma_medium', 'chroma_large', 'yuv_small', 'yuv_medium',
+                        'yuv_large')
+
+        if ($Unsharp -notin $unsharpSet -and $Unsharp -notlike 'custom=*') {
+            $unsharpOptions = ($unsharpSet + 'custom=<filter_string>') |
+                Join-String -Separator "`r`n`t`u{2022} " `
+                            -OutputPrefix "$($boldOn)  Valid options for Unsharp$($boldOff):`n`t`u{2022} "
+            Write-Host "Invalid option entered for Unsharp:`n$unsharpOptions"
+            $params = @{
+                Prompt      = 'Enter a valid option: '
+                Timeout     = 50000
+                Mode        = 'Select'
+                Count       = 4
+                InputObject = $unsharpSet
+            }
+            $Unsharp = Read-TimedInput @params
+            Write-Host ""
+        }
+
+        if (!$PSBoundParameters['UnsharpStrength'] -and $Unsharp -notlike 'custom=*') {
+            Write-Warning "No value was passed for -UnsharpStrength. Using default: sharpen_mild"
+            $UnsharpStrength = 'sharpen_mild'
+        }
+    }
     # Collect the arguments into a hashtable
-    $scaleHash = @{
-        Scale       = $scaleType
-        ScaleFilter = $filter 
-        Resolution  = $Resolution ??= $defaultResolution
+    if ($Unsharp -and $UnsharpStrength) {
+        $unsharpHash = @{
+            Size     = $Unsharp
+            Strength = $UnsharpStrength
+        }
+    }
+    else { $unsharpHash = $null }
+    
+    <#
+        CROP FILE GENERATION
+        HDR ELIGIBILITY VERIFICATION
+
+        If crop arguments are passed via FFMpegExtra, don't generate crop file
+        If HDR metadata is present but x264 is selected, exit on error (not supported)
+    #>
+
+    if ($PSBoundParameters['FFMpegExtra']) {
+        $custom = $FFMpegExtra.Where({ $_['-vf'] -like '*crop*' })
+        $skipCropFile = $custom ? $true : $false
+    }
+    if ($skipCropFile) {
+        Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
+        Write-Host ""
+        # Check if source is 4K for HDR metadata
+        $cropDim = ($sourceResolution -like '3840x2160*') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
+    }
+    else {
+        New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1 -Verbose:$setVerbose
+        # Calculating the crop values. Re-throw terminating error if one occurs
+        $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution -Verbose:$setVerbose
     }
 }
+# Vapoursynth is used
+else {
+    $format = "$($PSStyle.Foreground.Yellow)$($PSStyle.Bold)$($PSStyle.Italic)"
+    $msg = "Vapoursynth script detected - $format all filtering (cropping, resizing, etc.) must be done using Vapoursynth`n"
+    Write-Host $msg
 
-# Validate input audio
+    # Set dummy values for required parameters
+    $cropDim = ($sourceResolution -like '3840x2160*') ? @(-2, -2, $true) : @(-2, -2, $false)
+}
+
+# Validate audio in the input file
 $res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 `
     -show_entries "stream=codec_name,profile" `
     -i $Paths.InputFile
-
+    
+# If audio streams were found
 if ($res) {
-    $lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ? 
-                $true : $false
-    $test1 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio -match $_ })
-    $test2 = @("^c[opy]*$", "c[opy]*a[ll]*", "^n[one]?").Where({ $Audio2 -match $_ })
+    $lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ?
+        $true : $false
+    $test1 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio -match $_ }, 'SkipUntil', 1)
+    $test2 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio2 -match $_ }, 'SkipUntil', 1)
     if (!$lossless -and (!$test1 -or !$test2)) {
         $msg = "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended " +
-        "(If you're stream copying a codec by name, ignore this)"
+               "(If you're stream copying a codec by name, ignore this)"
         Write-Warning $msg
     }
 }
@@ -877,36 +1013,6 @@ elseif (!$res) {
     Write-Warning "No audio streams were found in the source file. Audio parameters will be ignored"
     $Audio = 'none'
     $Audio2 = 'none'
-}
-
-<#
-    CROP FILE GENERATION
-    HDR ELIGIBILITY VERIFICATION
-
-    If crop arguments are passed via FFMpegExtra, don't generate crop file
-    If HDR metadata is present but x264 is selected, exit on error (not supported)
-#>
-
-$skipCropFile = $false
-if ($PSBoundParameters['FFMpegExtra']) {
-    foreach ($arg in $FFMpegExtra) {
-        if ($arg -is [hashtable]) {
-            foreach ($val in $arg.Values) {
-                if ($val -match "crop") { $skipCropFile = $true }
-            }
-        }
-    }
-}
-if ($skipCropFile) {
-    Write-Host "Crop override arguments detected. Skipping crop file generation" @warnColors
-    Write-Host ""
-    # Check if source is 4K for HDR metadata
-    $cropDim = ($sourceResolution -like '3840x2160?') ? ( @(-1, -1, $true) ) : ( @(-1, -1, $false) )
-}
-else {
-    New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1 -Verbose:$setVerbose
-    # Calculating the crop values. Re-throw terminating error if one occurs
-    $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution -Verbose:$setVerbose
 }
 
 <#
@@ -972,6 +1078,7 @@ $ffmpegParams = @{
     PsyRdoq         = $PsyRdoq
     NoiseReduction  = $NoiseReduction
     NLMeans         = $NLMeans
+    Unsharp         = $unsharpHash
     TuDepth         = $TuDepth
     LimitTu         = $LimitTu
     Tree            = $Tree
@@ -1005,13 +1112,14 @@ catch {
     $params = @{
         Message           = "An error occurred during ffmpeg invocation. Exception:`n$($_.Exception)"
         RecommendedAction = 'Correct the Error Message'
-        Category          = "InvalidArgument"
-        CategoryActivity  = "FFmpeg Function Invocation"
+        Category          = 'InvalidArgument'
+        CategoryActivity  = 'FFmpeg Function Invocation'
         TargetObject      = $ffmpegParams
         ErrorId           = 55
     }
 
     $console.WindowTitle = $currentTitle
+    [console]::TreatControlCAsInput = $false
     Get-Job | Stop-Job -PassThru | Remove-Job -Force
     Write-Error @params -ErrorAction Stop
 }
@@ -1131,12 +1239,12 @@ if ([File]::Exists($Paths.StereoPath) -and !$skipBackgroundAudioMux) {
     # If mkvmerge is available, use it instead of ffmpeg
     if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
         $muxPaths = @{
-            Input          = $paths.OutputFile
-            Output         = $output
-            ExternalAudio  = $paths.StereoPath
-            Title          = $paths.Title
-            Language       = $paths.Language
-            LogPath        = $paths.LogPath
+            Input         = $paths.OutputFile
+            Output        = $output
+            ExternalAudio = $paths.StereoPath
+            Title         = $paths.Title
+            Language      = $paths.Language
+            LogPath       = $paths.LogPath
         }
         $mId = 1
         Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1 -Verbose:$setVerbose
@@ -1182,7 +1290,7 @@ if ($PSBoundParameters['GenerateMKVTagFile']) {
             Write-Host "The MKVToolnix suite is required to use the -GenerateMKVTagFile parameter" @errColors
         }
         else {
-            & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).toString() @GenerateMKVTagFile -Path $paths.OutputFile
+            & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).ToString() @GenerateMKVTagFile -Path $paths.OutputFile
         }
     }
     catch {
@@ -1201,12 +1309,12 @@ $stopwatch.Stop()
 if ($PSBoundParameters['GenerateReport']) {
     $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
     $params = @{
-        DateTimes   = @($startTime, $endTime)
-        Duration    = $stopwatch
-        Paths       = $paths
-        TwoPass     = $twoPass
-        Encoder     = $Encoder
-        Verbose     = $setVerbose
+        DateTimes = @($startTime, $endTime)
+        Duration  = $stopwatch
+        Paths     = $paths
+        TwoPass   = $twoPass
+        Encoder   = $Encoder
+        Verbose   = $setVerbose
     }
     Write-Report @params
 }

@@ -17,7 +17,7 @@ function Set-SubtitlePreference {
     }
     elseif ($UserChoice -match "n[one]*$") {
         Write-Host "$("`u{25c7}" * 2) NO SUBTITLES SELECTED $("`u{25c7}" * 2)" @progressColors
-        Write-Host "All subtitle streams will be excluded from the output file`n"
+        Write-Host "No subtitle streams will be included in the output file`n"
         return '-sn'
     }
     elseif ($UserChoice -match "d[efault]*$") {
@@ -29,7 +29,7 @@ function Set-SubtitlePreference {
         if ($UserChoice -like "!*") {
             $lang = $UserChoice.Replace('!', '').ToUpper()
             Write-Host "$("`u{25c7}" * 2) SKIP $lang SUBTITLES SELECTED $("`u{25c7}" * 2)" @progressColors
-            Write-Host "All subtitle streams of this language will be ignored"
+            Write-Host "No subtitle streams of this language will be copied"
         }
         else {
             Write-Host "$("`u{25c7}" * 2) $($UserChoice.ToUpper()) SUBTITLES SELECTED $("`u{25c7}" * 2)" @progressColors
