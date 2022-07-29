@@ -8,7 +8,7 @@
 
 # FFEncoder
 
-FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress video files for streaming or archiving.
+FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/doc/), [Mkvtoolnix](https://mkvtoolnix.download/), [ffprobe](https://ffmpeg.org/ffprobe.html), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress, filter, and multiplex multimedia files for streaming or archiving.
 
 - [FFEncoder](#ffencoder)
   - [About](#about)
@@ -48,7 +48,8 @@ Check out the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki) for addit
 
 - ffmpeg / ffprobe
 - PowerShell v. 7.0 or newer
-- [Mkvtoolnix](https://mkvtoolnix.download/) (optional, but highly recommended)
+- Mkvtoolnix (optional, but highly recommended)
+- VapourSynth (optional)
 
 The script requires PowerShell 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change. 
 
@@ -167,14 +168,15 @@ FFEncoder can accept the following parameters from the command line:
 
 > An Asterisk <b>\*</b> denotes that the parameter is mandatory only for its given parameter set (for example, you can choose either `-CRF` or `-VideoBitrate` for rate control, but not both):
 
-| Parameter Name   | Default | Mandatory     | Alias                            | Description                                                                                                                  | Mandatory For |
-| ---------------- | ------- | ------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| **InputPath**    | N/A     | True          | **I**, **Source**, **Reference** | The path to the source file, i.e. remux. Also acts as the reference path for VMAF comparisons                                | All           |
-| **OutputPath**   | N/A     | True          | **O**, **Encode**, **Distorted** | The path of the the encoded output file, or the encoded (distorted) file path during VMAF comparisons                        | All           |
-| **CRF**          | N/A     | <b>\*</b>True | **C**                            | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. Lower values result in higher quality | Rate Control  |
-| **VideoBitrate** | N/A     | <b>\*</b>True | **VBitrate**                     | Rate control parameter that targets a specific bitrate. Can be used as an alternative to CRF when file size is a priority    | Rate Control  |
-| **ScaleFilter**  | None    | <b>\*</b>True | **Resize**, **Resample**         | Scaling filter to use. Scaling options are `scale` (ffmpeg default) and `zscale` (requires `libzimg`)                        | Resizing      |
-| **CompareVMAF**  | N/A     | <b>\*</b>True | None                             | Runs a VMAF comparison on two video files                                                                                    | VMAF          |
+| Parameter Name   | Default | Mandatory     | Alias                            | Description                                                                                                                                          | Mandatory For |
+| ---------------- | ------- | ------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| **InputPath**    | N/A     | True          | **I**, **Source**, **Reference** | The path to the source file, i.e. remux. Also acts as the reference path for VMAF comparisons                                                        | All           |
+| **OutputPath**   | N/A     | True          | **O**, **Encode**, **Distorted** | The path of the the encoded output file, or the encoded (distorted) file path during VMAF comparisons                                                | All           |
+| **CRF**          | N/A     | <b>\*</b>True | **C**                            | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. Lower values result in higher quality                         | Rate Control  |
+| **VideoBitrate** | N/A     | <b>\*</b>True | **VBitrate**                     | Rate control parameter that targets a specific bitrate. Can be used as an alternative to CRF when file size is a priority                            | Rate Control  |
+| **Scale**        | None    | <b>\*</b>True | **ScaleType**, **SF**            | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info | Scaling       |
+| **Unsharp**      | None    | <b>\*</b>True | **U**                            | Enable unsharp filter and set search range, in the form `<luma\|chroma\|yuv>_<small\|medium\|large>` or `custom=<filter>`                            | Sharpen/Blur  |
+| **CompareVMAF**  | N/A     | <b>\*</b>True | None                             | Flag to enable a VMAF comparison on two video files                                                                                                  | VMAF          |
 
 ### Utility
 
@@ -206,23 +208,27 @@ FFEncoder can accept the following parameters from the command line:
 
 ### Video Filtering
 
-| Parameter Name  | Default          | Mandatory | Alias                 | Description                                                                                                                                          |
-| --------------- | ---------------- | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deinterlace** | Disabled         | False     | **DI**                | Switch to enable deinterlacing of interlaced content using yadif                                                                                     |
-| **NLMeans**     | Disabled         | False     | **NL**                | High quality de-noising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info  |
-| **Scale**       | bilinear         | False     | **ScaleType**, **SF** | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info |
-| **Resolution**  | Source Dependent | False     | **Res**, **R**        | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info             |
+> See the Mandatory section above for parameters needed to enable certain filters
+
+| Parameter Name      | Default          | Mandatory | Alias                 | Description                                                                                                                                          |
+| ------------------- | ---------------- | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deinterlace**     | Disabled         | False     | **DI**                | Switch to enable deinterlacing of interlaced content using yadif                                                                                     |
+| **NLMeans**         | Disabled         | False     | **NL**                | High quality de-noising filter. Accepts a hashtable containing 5 values. See [here](https://ffmpeg.org/ffmpeg-filters.html#nlmeans-1) for more info  |
+| **Scale**           | bilinear         | False     | **ScaleType**, **SF** | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info |
+| **Resolution**      | Source Dependent | False     | **Res**, **R**        | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info             |
+| **UnsharpStrength** | luma_mild        | False     | **UStrength**         | Specify the unsharp filters strength, in the form `<sharpen\|blur>_<mild\|medium\|strong>`                                                           |
 
 ### Encoder Config
 
-| Parameter Name      | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
-| ------------------- | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Encoder**         | x265         | False     | **Enc**               | Specifies which encoder to use - x264 or x265                                                                                                                                |
-| **FirstPassType**   | Default      | False     | **PassType**, **FTP** | Tuning option for two pass encoding. See [Two Pass Encoding Options](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#two-pass-encoding-options) for more info |
-| **SkipDolbyVision** | False        | False     | **NoDV**, **SDV**     | Switch to disable Dolby Vision encoding, even if metadata is present                                                                                                         |
-| **SkipHDR10Plus**   | False        | False     | **No10P**, **NTP**    | Switch to disable HDR10+ encoding, even if metadata is present                                                                                                               |
-| **TestFrames**      | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
-| **TestStart**       | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
+| Parameter Name        | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
+| --------------------- | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Encoder**           | x265         | False     | **Enc**               | Specifies which encoder to use - x264 or x265                                                                                                                                |
+| **FirstPassType**     | Default      | False     | **PassType**, **FTP** | Tuning option for two pass encoding. See [Two Pass Encoding Options](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#two-pass-encoding-options) for more info |
+| **SkipDolbyVision**   | False        | False     | **NoDV**, **SDV**     | Switch to disable Dolby Vision encoding, even if metadata is present                                                                                                         |
+| **SkipHDR10Plus**     | False        | False     | **No10P**, **NTP**    | Switch to disable HDR10+ encoding, even if metadata is present                                                                                                               |
+| **TestFrames**        | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
+| **TestStart**         | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
+| **VapourSynthScript** | Disabled     | False     | **VSScript**, **VPY** | Path to VapourSynth script. Video filtering parameters are ignored when enabled, and must be done in the vpy script                                                          |
 
 ### Universal Encoder Settings
 

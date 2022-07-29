@@ -191,6 +191,15 @@
         Filtering method used for rescaling input with the -Scale parameter. Compatible arguments:
             - scale: fast_bilinear, neighbor, area, gauss, sinc, spline, bilinear, bicubic, lanczos
             - zscale: point, spline16, spline36, bilinear, bicubic, lanczos
+    .PARAMETER Unsharp
+        Enable the unsharp filter and specify the search range. Use one of the presets specified in the project wiki, in the form:
+            <luma|chroma|yuv>_<small|medium|large>
+        or pass a custom filter string as:
+            'custom=<filter string>'
+        Mandatory parameter for sharpening/blurring a video source.
+        
+    .PARAMETER UnsharpStrength
+        Sets the strength of the unsharp filter. Use one of the presets defined in the project wiki, in the form: <sharpen|blur>_<mild|medium|strong>
     .PARAMETER Resolution
         Upscale/downscale resolution used with the -Scale parameter. Default value is 1080p (1920 x 1080)
     .PARAMETER SkipDolbyVision
@@ -252,7 +261,7 @@ param (
         }
     )]
     [Alias('VSScript', 'VPY')]
-    [string]$VapoursynthScript,
+    [string]$VapourSynthScript,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
