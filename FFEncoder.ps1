@@ -529,7 +529,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
-    [ArgumentCompletions(
+    [ValidateSet(
         'sharpen_mild', 'sharpen_medium', 'sharpen_strong',
         'blur_mild', 'blur_medium', 'blur_strong'
     )]
@@ -914,23 +914,13 @@ if (!$PSBoundParameters['VapoursynthScript']) {
     }
 
     # Verify unsharp params and prompt for new value if necessary
-    if ($PSBoundParameters['UnsharpStrength'] -and !$PSBoundParameters['Unsharp']) {
-        Write-Warning "No value was passed for -Unsharp. Using default: luma_small"
-        $Unsharp = 'luma_small'
-    }
-    elseif ($PSBoundParameters['Unsharp'] -and !$PSBoundParameters['UnsharpStrength']) {
-        if ($Unsharp -notlike 'custom=*') {
-            Write-Warning "No value was passed for -UnsharpStrength. Using default: sharpen_mild"
-            $UnsharpStrength = 'sharpen_mild'
-        }
-    }
-    elseif ($PSBoundParameters['Unsharp']) {
+    if ($PSBoundParameters['Unsharp']) {
         $unsharpSet = @('luma_small', 'luma_medium', 'luma_large', 'chroma_small',
                         'chroma_medium', 'chroma_large', 'yuv_small', 'yuv_medium',
                         'yuv_large')
 
         if ($Unsharp -notin $unsharpSet -and $Unsharp -notlike 'custom=*') {
-            $unsharpOptions = ($unsharpSet + 'custom=<parameters>') |
+            $unsharpOptions = ($unsharpSet + 'custom=<filter_string>') |
                 Join-String -Separator "`r`n`t`u{2022} " `
                             -OutputPrefix "$($boldOn)  Valid options for Unsharp$($boldOff):`n`t`u{2022} "
             Write-Host "Invalid option entered for Unsharp:`n$unsharpOptions"
@@ -944,25 +934,10 @@ if (!$PSBoundParameters['VapoursynthScript']) {
             $Unsharp = Read-TimedInput @params
             Write-Host ""
         }
-    }
-    elseif ($PSBoundParameters['UnsharpStrength'] -and $Unsharp -notlike 'custom=*') {
-        $strengthSet = @('sharpen_mild', 'sharpen_medium', 'sharpen_strong',
-                         'blur_mild', 'blur_medium', 'blur_strong')
-    
-        if ($UnsharpStrength -notin $strengthSet) {
-            $strengthOptions = $strengthSet |
-                Join-String -Separator "`r`n`t`u{2022} " `
-                            -OutputPrefix "$($boldOn)  Valid options for Unsharp Strength$($boldOff):`n`t`u{2022} "
-            Write-Host "Invalid option entered for Unsharp strength:`n$strengthOptions"
-            $params = @{
-                Prompt      = 'Enter a valid option: '
-                Timeout     = 50000
-                Mode        = 'Select'
-                Count       = 4
-                InputObject = $strengthSet
-            }
-            $UnsharpStrength = Read-TimedInput @params
-            Write-Host ""
+
+        if (!$PSBoundParameters['UnsharpStrength'] -and $Unsharp -notlike 'custom=*') {
+            Write-Warning "No value was passed for -UnsharpStrength. Using default: sharpen_mild"
+            $UnsharpStrength = 'sharpen_mild'
         }
     }
     # Collect the arguments into a hashtable
