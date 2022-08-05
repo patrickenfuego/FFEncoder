@@ -335,6 +335,10 @@ function Set-DVArgs {
         "$($HDR.ColorPrimaries)"
         '--transfer'
         "$($HDR.Transfer)"
+        if ($HDR.HDR10Plus -eq $true) {
+            "--dhdr10-info"
+            "`"$($Paths.HDR10Plus)`""
+        }
         '--range'
         'limited'
         '--hdr10'
