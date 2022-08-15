@@ -96,7 +96,7 @@ function Set-DVArgs {
         [int[]]$VBV,
 
         [Parameter(Mandatory = $false)]
-        [array]$FFMpegExtra,
+        [Generic.List[object]]$FFMpegExtra,
 
         [Parameter(Mandatory = $false)]
         [hashtable]$EncoderExtra,
@@ -457,13 +457,6 @@ function Set-DVArgs {
     #>
 
     if ($x265ExtraArray) { $x265BaseArray.AddRange($x265ExtraArray) }
-    
-    switch ($x265ExtraArray) {
-        { $_ -notcontains '--open-gop' }     { $x265BaseArray.Add('--no-open-gop') > $null }
-        { $_ -notcontains '--keyint' }       { $x265BaseArray.AddRange(@('--keyint', 192)) }
-        { $_ -notcontains '--min-keyint' }   { $x265BaseArray.AddRange(@('--min-keyint', 24)) }
-    }
-
 
     ($PresetParams.BIntra -eq 1) ? 
         ($x265BaseArray.Add('--b-intra') > $null) : 

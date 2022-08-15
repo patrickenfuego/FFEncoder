@@ -99,7 +99,7 @@ function Set-FFMpegArgs {
         [int[]]$VBV,
         
         [Parameter(Mandatory = $false)]
-        [array]$FFMpegExtra,
+        [Generic.List[object]]$FFMpegExtra,
 
         # Extra encoder parameters passed by user
         [Parameter(Mandatory = $false)]
@@ -138,7 +138,7 @@ function Set-FFMpegArgs {
     ## Unpack extra parameters ##
 
     if ($PSBoundParameters['FFMpegExtra']) {
-        $ffmpegExtraArray = [ArrayList]@()
+        $ffmpegExtraArray = [Generic.List[object]]@()
         foreach ($arg in $FFMpegExtra) {
             if ($arg -is [hashtable]) {
                 foreach ($entry in $arg.GetEnumerator()) {
@@ -152,20 +152,13 @@ function Set-FFMpegArgs {
         }
     }
 
-    $skip = @{}
-    @('OpenGop', 'Keyint', 'MinKeyInt', 'Sao').ForEach({ $skip.$_ = $false })
     if ($PSBoundParameters['EncoderExtra']) {
         $encoderExtraArray = [ArrayList]@()
         foreach ($arg in $EncoderExtra.GetEnumerator()) {
-            elseif ($arg.Name -eq 'open-gop') { $skip.OpenGOP = $true } 
-            elseif ($arg.Name -eq 'keyint') { $skip.Keyint = $true } 
-            elseif ($arg.Name -eq 'min-keyint') { $skip.MinKeyint = $true } 
-            else {
-                $encoderExtraArray.Add("$($arg.Name)=$($arg.Value)") > $null
-            }
+            $encoderExtraArray.Add("$($arg.Name)=$($arg.Value)") > $null
         }
     }
-
+    
     ## Base Array Declarations ##
 
     #Primary array list initialized with global values
@@ -299,13 +292,6 @@ function Set-FFMpegArgs {
             $ffmpegArgsAL.IndexOf('-i'), @($ffmpegExtraArray[$i], $ffmpegExtraArray[$i + 1])
         )
         $ffmpegExtraArray.RemoveRange($i, 2)
-    }
-    
-    # Set hard coded defaults unless overridden
-    switch ($skip) {
-        { $skip.OpenGOP -eq $false } { $encoderBaseArray.Add('open-gop=0') > $null }
-        { $skip.KeyInt -eq $false } { $encoderBaseArray.Add('keyint=192') > $null }
-        { $skip.MinKeyInt -eq $false } { $encoderBaseArray.Add('min-keyint=24') > $null }
     }
     
     # Set video specific filter arguments unless VS is used
