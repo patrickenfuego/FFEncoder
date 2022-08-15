@@ -42,16 +42,26 @@
     .EXAMPLE
         ## Scale 2160p video down to 1080p using zscale and spline36 ##
         .\FFEncoder "$HOME\Videos\Ex.Machina.2014.DTS-HD.2160p.mkv" -Scale zscale -ScaleFilter spline36 -Res 1080p -CRF 18 -o "$HOME\Videos\Ex Machina (2014) DTS-HD 1080p.mkv"
+    .EXAMPLE
+        ## Use a Vapoursynth script as input
+        .\FFEncoder 'in.mkv' -VapourSynthScript "$HOME/script.vpy -CRF 18 -o 'out.mkv'"
     .INPUTS
-        HD/FHD/UHD video file 
+        HD/FHD/UHD video file
+        Vapoursynth Script
     .OUTPUTS
-        crop.txt - File used for auto-cropping
-        4K HDR encoded video file
+        Crop file
+        Log file(s)
+        Encoded video file
     .NOTES
-        For FFEncoder to work, the ffmpeg directory must be in your system PATH (consult your OS documentation for info on how to verify this)
+        For script binaries to work, they must be included in the system PATH (consult OS documentation for more information):
+            - ffmpeg
+            - deew / dee
+            - mkvmerge
+            - mkvextract
+            - x265
 
         Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.),
-        or you may be left with a file that will not play
+        or you may be left with a file that will not play (OS dependent).
  
     .PARAMETER Help
         Displays help information for the script
@@ -217,6 +227,22 @@
         Deinterlacing filter using yadif. Currently only works with CRF encoding
     .PARAMETER GenerateReport
         Generates a user friendly report file with important encoding metrics pulled from the log file. File is saved with a .rep extension
+    .PARAMETER GenerateMKVTagFile
+        Generate an XML tag file for MKV containers using the TMDB API. Requires a valid TMDB API key
+    .PARAMETER CompareVMAF
+        Switch to enable a VMAF comparison. Mandatory to enable this feature
+    .PARAMETER EnablePSNR
+        VMAF option. Enables Peak Signal to Noise Ratio (PSNR) evaluation
+    .PARAMETER EnableSSIM
+        VMAF option. Enables Structural Similarity Index Measurement (SSIM) evaluation
+    .PARAMETER LogFormat
+        Specify the log format for VMAF. Options:
+            - json
+            - csv
+            - sub
+            - xml
+    .PARAMETER VapourSynthScript
+        Pass a VapourSynth script for filtering. Note that all filtering (including cropping) must be done in the VS script
     .lINK
         Check out the full documentation on GitHub - https://github.com/patrickenfuego/FFEncoder
     .LINK
@@ -633,7 +659,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'VMAF')]
     [ValidateSet('json', 'xml', 'csv', 'sub')]
     [Alias('LogType', 'VMAFLog')]
-    [string]$LogFormat
+    [string]$LogFormat = 'json'
 )
 
 #########################################################

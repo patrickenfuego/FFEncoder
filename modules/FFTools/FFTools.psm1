@@ -133,7 +133,7 @@ ___________      .__  __  .__                 ______________________            
 '@
 
 # Current script release version
-[version]$release = '2.1.0'
+[version]$release = '2.2.0'
 
 
 #### End module variables ####
@@ -185,7 +185,7 @@ New-Alias -Name cropdim -Value Measure-CropDimensions -Force
 $ExportModule = @{
     Alias    = @('iffmpeg', 'cropfile', 'cropdim')
     Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus',
-                 'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge', 'Invoke-DeeEncoder', 'Read-TimedInput', 'Invoke-VMAF')
+                 'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge', 'Invoke-DeeEncoder', 'Read-TimedInput', 'Invoke-VMAF', 'Read-Config')
     Variable = @('progressColors', 'warnColors', 'emphasisColors', 'errColors', 'osInfo', 'banner1', 'banner2', 'exitBanner', 'ScriptsDirectory',
                  'release' )
 }
