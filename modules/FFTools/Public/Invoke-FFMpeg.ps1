@@ -1,4 +1,5 @@
 using namespace System.IO
+using namespace System.Collections
 
 <#
     .SYNOPSIS
@@ -165,7 +166,7 @@ function Invoke-FFMpeg {
         # Additional ffmpeg options
         [Parameter(Mandatory = $false)]
         [Alias('FE', 'FFExtra')]
-        [array]$FFMpegExtra,
+        [Generic.List[object]]$FFMpegExtra,
 
         # Additional encoder-specific options
         [Parameter(Mandatory = $false)]
@@ -402,9 +403,57 @@ function Invoke-FFMpeg {
     <#
         BUILD FINAL ARGUMENT ARRAYS
 
+        Pull configuration file contents
         Set the base arguments
         Pass arguments to Set-FFMpegArgs or Set-DvArgs functions to prepare for encoding
     #>
+
+    
+    # Try to parse the config files
+    try {
+        # Read config file for additional options
+        $config = Read-Config -Encoder $Encoder
+
+        # Add multi-valued ffmpeg config options to existing hash
+        if ($config['FFMpegHash']) {
+            if ($FFMpegExtra) {
+                $index = $ffmpegExtra.FindIndex( {
+                    $args[0] -is [hashtable]
+                } )
+
+                if ($index -ne -1) {
+                    # Catch error if duplicate keys are present
+                    $FFMpegExtra[$index] += $config['FFMpegHash']
+                }
+                else { $FFMpegExtra.Add($config['FFMpegHash']) }
+            }
+            else {
+                $FFMpegExtra = @()
+                $FFMpegExtra.Add($config['FFMpegHash'])
+            }
+        }
+
+        # Add single valued ffmpeg config options
+        if ($config['FFMpegArray']) {
+            if ($FFMpegExtra) { $ffmpegExtra.AddRange($config['FFMpegArray']) }
+            else {
+                $FFMpegExtra = @()
+                $FFMpegExtra.AddRange($config['FFMpegArray'])
+            }
+        }
+
+        # Add encoder settings from config file
+        if ($config['Encoder']) { 
+            if ($EncoderExtra) {
+                $EncoderExtra += $config['Encoder']
+            }
+            else { $EncoderExtra = $config['Encoder'] }
+        }
+    }
+    catch {
+        $e = $_.Exception.Message
+        Write-Error "Failed to parse the configuration file(s): $e"
+    }
 
     $baseArgs = @{
         Encoder        = $Encoder 
