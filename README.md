@@ -23,6 +23,7 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
   - [VMAF Comparison](#vmaf-comparison)
   - [MKV Tag Generator](#mkv-tag-generator)
   - [Script Parameters](#script-parameters)
+    - [Configuration Files](#configuration-files)
     - [Mandatory](#mandatory)
     - [Utility](#utility)
     - [Audio & Subtitles](#audio--subtitles)
@@ -51,15 +52,13 @@ Check out the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki) for addit
 - Mkvtoolnix (optional, but highly recommended)
 - VapourSynth (optional)
 
-The script requires PowerShell 7.0 or newer on all systems as it utilizes new parallel processing features introduced in this version. Multi-threading prior to PowerShell 7 was prone to memory leaks which persuaded me to make the change. 
-
 For users with PowerShell 7.2 or newer, the script uses ANSI output in certain scenarios to enhance the console experience.
 
 ---
 
 ## Dependency Installation
 
-> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide)
+> You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). Some features of this script are unavailable unless these libraries are included. For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide).
 
 ### Windows
 
@@ -161,6 +160,12 @@ To use this parameter, you will need a valid TMDB API key. See [the wiki](https:
 ---
 
 ## Script Parameters
+
+### Configuration Files
+
+Two configuration files, `ffmpeg.ini` and `encoder.ini`, are included and can be used to set frequently used options not covered by script parameters. These files are located in the `config` directory and are loaded each time the script runs.
+
+See the wiki for more information.
 
 FFEncoder can accept the following parameters from the command line:
 
