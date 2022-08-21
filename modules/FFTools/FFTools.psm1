@@ -66,6 +66,10 @@ $Script:dee = @{
     DeeArgs = @('dee_ddp', 'dee_eac3', 'dee_dd', 'dee_ac3', 'dee_thd', 'dee_ddp_51', 'dee_eac3_51')
     DeeUsed = $false
 }
+# Keep track of frame count for 2-pass encodes
+$Script:frame = @{
+    FrameCount = 0
+}
 
 # Detect operating system info
 if ($isMacOs) {
@@ -133,7 +137,7 @@ ___________      .__  __  .__                 ______________________            
 '@
 
 # Current script release version
-[version]$release = '2.2.0'
+[version]$release = '2.2.1'
 
 
 #### End module variables ####
