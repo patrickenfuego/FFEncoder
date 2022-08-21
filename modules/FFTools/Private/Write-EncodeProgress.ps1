@@ -31,53 +31,35 @@ function Write-EncodeProgress {
         [bool]$DolbyVision
     )
 
-    <#
-        .SYNOPSIS
-            Watches for CTRL+C interrupts and clean exits all running jobs and scripts
-    #>
-    function Watch-ScriptTerminated ([string]$Message) {
-        if ($Host.UI.RawUI.KeyAvailable -and ($Key = $Host.UI.RawUI.ReadKey("AllowCtrlC,NoEcho,IncludeKeyUp"))) {
-            # If user hits Ctrl+C
-            if ([int]$Key.Character -eq 3) {
-                Write-Progress "Terminated" -Completed
-                Write-Warning "CTRL+C was detected - shutting down all running jobs before exiting the script"
-                # Clean up all running jobs before exiting
-                Get-Job | Stop-Job -PassThru | Remove-Job -Force -Confirm:$false
-
-                $psReq ? (Write-Host "$($aRed)$Message$($reset)") :
-                         (Write-Host $Message @errColors)
-                $console.WindowTitle = $currentTitle
-                [console]::TreatControlCAsInput = $False
-                exit 77
-            }
-            # Flush the key buffer again for the next loop
-            $Host.UI.RawUI.FlushInputBuffer()
-        }
-    }
-
     # Intercept ctrl+C for graceful shutdown of jobs
-    [console]::TreatControlCAsInput = $True
+    [console]::TreatControlCAsInput = $true
     Start-Sleep -Milliseconds 500
     $Host.UI.RawUI.FlushInputBuffer()
 
     if ($PSBoundParameters['TestFrames']) {
-        $frameCount = $TestFrames
+        $frame['FrameCount'] = $TestFrames
     }
-    # Gather total frame count without demuxing
-    else {
-        if (!$SecondPass) {
-            Write-Progress "Gathering frame count for progress display..."
-            $frameStr = ffmpeg -hide_banner -i $InputFile -map 0:v:0 -c:v copy -f null - 2>&1
-        }
+    elseif (!$SecondPass -or ($frame['FrameCount'] -le 0)) {
+        Write-Progress "Gathering frame count for progress display..."
+        $frameStr = ffmpeg -hide_banner -i $InputFile -map 0:v:0 -c:v copy -f null - 2>&1
+
         # Select-String does not work on this output for some reason?
         $tmp = $frameStr | Select-Object -Index ($frameStr.Count - 2)
-        [int]$frameCount = $tmp | 
+        [int]$frame['FrameCount'] = $tmp | 
             Select-String -Pattern '^frame=\s*(\d+)\s.*' |
                 ForEach-Object { $_.Matches.Groups[1].Value }
 
-        if (!$frameCount) {
-            Write-Progress "Could not retrieve frame count" -Completed
-            return
+        if (!$frame['FrameCount']) {
+            Write-Progress "Error" -Completed
+            $msg = "Failed to parse frame count from string"
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    ([System.ArgumentNullException]$msg),
+                    'frame',
+                    [System.Management.Automation.ErrorCategory]::InvalidResult,
+                    $frame['FrameCount']
+                )
+            )
         }
     }
     
@@ -123,9 +105,9 @@ function Write-EncodeProgress {
         }
 
         if ($currentFrame -and $fps) {
-            $progress = ($currentFrame / $frameCount) * 100
+            $progress = ($currentFrame / $frame['FrameCount']) * 100
             $status = '{0:N1}% Complete' -f $progress
-            $activity = "Encoding Frame $currentFrame of $frameCount, $('{0:N2}' -f $fps) FPS"
+            $activity = "Encoding Frame $currentFrame of $($frame['FrameCount']), $('{0:N2}' -f $fps) FPS"
 
             $params = @{
                 PercentComplete = $progress

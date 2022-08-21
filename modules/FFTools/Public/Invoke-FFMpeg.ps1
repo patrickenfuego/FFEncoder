@@ -213,7 +213,10 @@ function Invoke-FFMpeg {
         [switch]$DisableProgress
     )
 
-    # Writes the banner information during encoding
+    <#
+        .SYNOPSIS
+            Writes the banner information during encoding
+    #>
     function Write-Banner {
         if ($TestFrames) {
             $startStr = switch -Wildcard ($TestStart) {
@@ -245,6 +248,31 @@ function Invoke-FFMpeg {
             Write-Host "Get-Content `"$($Paths.LogPath)`" -Tail 10" @emphasisColors -NoNewline
             Write-Host " in a different PowerShell session`n"
         }
+    }
+
+    <#
+        .SYNOPSIS
+            Wait for encode jobs to finish if progress bar returns an error
+        .DESCRIPTION
+            If the progress bar function returns an error, this function will wait for the job
+            to complete while intercepting CTRL+C and gracefully exiting if needed
+    #>
+    function Wait-Completed ($JobName, $Exception) {
+        Write-Host "ERROR: The progress bar failed to initialize`n" @errColors
+        Write-Verbose "ERROR: $($Exception.Message)"
+        Write-Verbose "LINE: $($Exception.InvocationInfo.ScriptLineNumber)"
+
+        # Intercept ctrl+C for graceful shutdown of jobs
+        [console]::TreatControlCAsInput = $true
+        Start-Sleep -Milliseconds 500
+        $Host.UI.RawUI.FlushInputBuffer()
+
+        while ((Get-Job -Name $JobName).State -ne 'Completed') {
+            Watch-ScriptTerminated -Message $exitBanner
+            Start-Sleep -Milliseconds 750
+        }
+
+        return
     }
 
     # Infer primary language based on streams (for muxing) - NOT always accurate, but pretty close
@@ -279,7 +307,8 @@ function Invoke-FFMpeg {
             $HDR = Get-HDRMetadata @params
         }
         catch [System.ArgumentNullException] {
-            Write-Host "`u{203C} Failed to get HDR metadata: $($_.Exception.Message). Metadata will not be copied" @errColors
+            $err = $_.Exception.Message
+            Write-Host "`u{203C} Failed to get HDR metadata: $err. Metadata will not be copied" @errColors
             $HDR = $null
         }
     }
@@ -397,7 +426,13 @@ function Invoke-FFMpeg {
         RCLookahead = $RCLookahead
     }
     # Set preset based arguments based on user input
-    $presetParams = Set-PresetParameters -Settings $presetArgs -Preset $Preset -Encoder $Encoder -Verbose:$setVerbose
+    $params = @{
+        Settings = $presetArgs
+        Preset   = $Preset
+        Encoder  = $Encoder
+        Verbose  = $setVerbose
+    }
+    $presetParams = Set-PresetParameters @params
     Write-Verbose "PRESET PARAMETER VALUES:`n$($presetParams | Out-String)`n"
 
     <#
@@ -558,7 +593,12 @@ function Invoke-FFMpeg {
                     DolbyVision = $dovi
                     Verbose     = $setVerbose
                 }
-                Write-EncodeProgress @params
+                try {
+                    Write-EncodeProgress @params
+                }
+                catch {
+                    Wait-Completed -JobName '1st Pass' -Exception $_.Exception
+                }
             }
 
             Write-Host
@@ -584,7 +624,12 @@ function Invoke-FFMpeg {
                     DolbyVision = $dovi
                     Verbose     = $setVerbose
                 }
-                Write-EncodeProgress @params
+                try {
+                    Write-EncodeProgress @params
+                }
+                catch {
+                    Wait-Completed -JobName '2nd Pass' -Exception $_.Exception
+                }
             }
         }
         # CRF/One pass x265 encode
@@ -625,7 +670,12 @@ function Invoke-FFMpeg {
                     DolbyVision = $dovi
                     Verbose     = $setVerbose
                 }
-                Write-EncodeProgress @params
+                try {
+                    Write-EncodeProgress @params
+                }
+                catch {
+                    Wait-Completed -JobName 'crf' -Exception $_.Exception
+                }
             }
         }
         # Mux/convert audio and subtitle streams separately from elementary hevc stream
@@ -727,7 +777,12 @@ function Invoke-FFMpeg {
                     Verbose     = $setVerbose
                     DolbyVision = $dovi
                 }
-                Write-EncodeProgress @params
+                try {
+                    Write-EncodeProgress @params
+                }
+                catch {
+                    Wait-Completed -JobName 'ffmpeg 1st Pass' -Exception $_.Exception
+                }
             } 
         }
 
@@ -753,7 +808,12 @@ function Invoke-FFMpeg {
                 Verbose     = $setVerbose
                 DolbyVision = $dovi
             }
-            Write-EncodeProgress @params
+            try {
+                Write-EncodeProgress @params
+            }
+            catch {
+                Wait-Completed -JobName 'ffmpeg 2nd Pass' -Exception $_.Exception
+            }
         }  
     }
     # CRF encode
@@ -792,8 +852,9 @@ function Invoke-FFMpeg {
     }
     # Should be unreachable. Throw error and exit script if rate control cannot be detected
     else {
+        $msg = 'Rate control method could not be determined from input parameters'
         $params = @{
-            Exception    = [System.FieldAccessException]::new('Rate control method could not be determined from input parameters')
+            Exception    = [System.FieldAccessException]::new($msg)
             Category     = 'InvalidResult'
             TargetObject = $RateControl
             ErrorId      = 101
@@ -821,7 +882,12 @@ function Invoke-FFMpeg {
             DolbyVision = $dovi
             Verbose     = $setVerbose
         }
-        Write-EncodeProgress @params
+        try {
+            Write-EncodeProgress @params
+        }
+        catch {
+            Wait-Completed -JobName 'ffmpeg' -Exception $_.Exception
+        }
     }
 
     # Remove ffmpeg jobs
