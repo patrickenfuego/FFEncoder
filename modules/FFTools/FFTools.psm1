@@ -137,7 +137,7 @@ ___________      .__  __  .__                 ______________________            
 '@
 
 # Current script release version
-[version]$release = '2.2.1'
+[version]$release = '2.3.0'
 
 
 #### End module variables ####

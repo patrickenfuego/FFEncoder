@@ -127,6 +127,8 @@
         Constant rate factor setting for video rate control. This setting attempts to keep quality consistent from frame to frame, and is most useful for targeting a specific quality level.    
         Ranges from 0.0 to 51.0. Lower values equate to a higher bitrate (better quality). Recommended: 14.0 - 24.0. At very low values, the output file may actually grow larger than the source.
         CRF 4.0 is considered mathematically lossless in x265 (vs. CRF 0.0 in x264)
+    .PARAMETER ConstantQP
+        Constant quantizer rate control mode. Forces a consistent QP throughout the encode. Generally not recommended outside of testing.
     .PARAMETER VideoBitrate
         Average bitrate (ABR) setting for video rate control. This can be used as an alternative to CRF rate control, and is most useful for targeting a specific file size (bitrate / duration).
         Use the 'K' suffix to denote kb/s, or the 'M' suffix for mb/s:
@@ -262,6 +264,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('x264', 'x265')]
     [Alias('Enc')]
     [string]$Encoder = 'x265',
@@ -269,12 +272,14 @@ param (
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'VMAF')]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'QP')]
     [ValidateScript( { if (Test-Path $_) { $true } else { throw 'Input path does not exist' } } )]
     [Alias('I', 'Reference', 'Source')]
     [string]$InputPath,
 
     [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, Position = 1, ParameterSetName = 'QP')]
     [ValidateScript(
         {
             if (!(Test-Path $_)) {
@@ -291,6 +296,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
         'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
@@ -299,17 +305,20 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(-1, 3000)]
     [Alias('AB', 'ABitrate')]
     [int]$AudioBitrate,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('2CH', 'ST')]
     [switch]$Stereo,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
         'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
@@ -318,17 +327,20 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(-1, 3000)]
     [Alias('AB2', 'ABitrate2')]
     [int]$AudioBitrate2,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('2CH2', 'ST2')]
     [switch]$Stereo2,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('all', 'a', 'copyall', 'ca', 'none', 'default', 'd', 'n', 'eng', 'fre', 'ger', 'spa', 'dut', 'dan', 
         'fin', 'nor', 'cze', 'pol', 'chi', 'zho', 'kor', 'gre', 'rum', 'rus', 'swe', 'est', 'ind', 'slv', 'tur', 'vie',
         'hin', 'heb', 'ell', 'bul', 'ara', 'por', 'nld',
@@ -340,6 +352,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet("placebo", "veryslow", "slower", "slow", "medium", "fast", "faster", "veryfast", "superfast", "ultrafast")]
     [Alias('P')]
     [string]$Preset = 'slow',
@@ -348,6 +361,11 @@ param (
     [ValidateRange(0.0, 51.0)]
     [Alias('C')]
     [double]$CRF,
+
+    [Parameter(Mandatory = $true, ParameterSetName = 'QP')]
+    [ValidateRange(0, 51)]
+    [Alias('QP')]
+    [int]$ConstantQP,
 
     [Parameter(Mandatory = $true, ParameterSetName = 'PASS')]
     [Alias('VBitrate')]
@@ -387,6 +405,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(-6, 6)]
     [ValidateCount(2, 2)]
     [Alias('DBF')]
@@ -394,46 +413,54 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 4)]
     [Alias('AQM')]
     [int]$AqMode,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0.0, 3.0)]
     [Alias('AQS')]
     [double]$AqStrength = 1.00,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('PRD', 'PsyRDO')]
     [string]$PsyRd,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0.0, 50.0)]
     [Alias('PRQ', 'PsyTrellis')]
     [double]$PsyRdoq,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(1, 16)]
     [int]$Ref,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 1)]
     [Alias('MBTree', 'CUTree')]
     [int]$Tree = 1,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(1, 32768)]
     [Alias('MR')]
     [int]$Merange,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 2000)]
     [ValidateCount(1, 2)]
     [Alias('NR')]
@@ -441,6 +468,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(1, 4)]
     [ValidateCount(2, 2)]
     [Alias('TU')]
@@ -448,42 +476,49 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(1, 4)]
     [Alias('LTU')]
     [int]$LimitTu = 0,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0.0, 1.0)]
     [Alias("Q")]
     [double]$QComp = 0.60,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 16)]
     [Alias('B')]
     [int]$BFrames,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 1)]
     [Alias('BINT')]
     [int]$BIntra,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 11)]
     [Alias('SM', 'Subpel')]
     [int]$Subme,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 1)]
     [Alias('SIS')]
     [int]$StrongIntraSmoothing = 1,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('1', '1b', '2', '1.1', '1.2', '1.3', '2.1', '21', '2.2', '3.1', '3.2', '4', '4.1', '4.2', '41',
         '5', '5.1', '51', '5.2', '52', '6', '6.1', '61', '6.2', '62', '8.5', '85')]
     [Alias('L')]
@@ -491,50 +526,59 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateCount(2, 2)]
     [Alias('VideoBuffer')]
     [int[]]$VBV,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(1, 64)]
     [Alias('FrameThreads')]
     [int]$Threads,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateRange(0, 250)]
     [Alias('RCL', 'Lookahead')]
     [int]$RCLookahead,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('FE', 'FFExtra')]
     [array]$FFMpegExtra,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('Extra')]
     [hashtable]$EncoderExtra,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('T', 'Test')]
     [int]$TestFrames,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('Start', 'TS')]
     [string]$TestStart = '00:01:30',
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('Del', 'RM')]
     [switch]$RemoveFiles,
 
     # Filtering related parameters
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateScript(
         {
             if ($_.Count -eq 0) { throw "NLMeans Hashtable must contain at least 1 value" }
@@ -554,6 +598,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ArgumentCompletions(
         'luma_small', 'luma_medium', 'luma_large', 'chroma_small',
         'chroma_medium', 'chroma_large', 'yuv_small', 'yuv_medium',
@@ -564,6 +609,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet(
         'sharpen_mild', 'sharpen_medium', 'sharpen_strong',
         'blur_mild', 'blur_medium', 'blur_strong'
@@ -573,11 +619,13 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('DI')]
     [switch]$Deinterlace,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('point', 'spline16', 'spline36', 'bilinear', 'bicubic', 'lanczos',
         'fast_bilinear', 'neighbor', 'area', 'gauss', 'sinc', 'spline', 'bicublin')]
     [Alias('SF', 'ResizeType')]
@@ -585,6 +633,7 @@ param (
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('2160p', '1080p', '720p')]
     [Alias('Res', 'R')]
     [string]$Resolution,
@@ -592,31 +641,37 @@ param (
     # Utility parameters
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [alias('Report', 'GR')]
     [switch]$GenerateReport,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('NoDV', 'SDV')]
     [switch]$SkipDolbyVision,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [alias('No10P', 'STP')]
     [switch]$SkipHDR10Plus,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('Exit')]
     [switch]$ExitOnError,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [alias('NoProgressBar')]
     [switch]$DisableProgress,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateScript(
         {
             $flag = $false
@@ -639,6 +694,7 @@ param (
     [Parameter(Mandatory = $true, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $true, ParameterSetName = 'VMAF')]
     [Parameter(Mandatory = $true, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'QP')]
     [ValidateNotNullOrEmpty()]
     [Alias('O', 'Encode', 'Distorted')]
     [string]$OutputPath,
@@ -1056,6 +1112,9 @@ elseif ($PSBoundParameters['VideoBitrate']) {
         Default { @('-b:v', $VideoBitrate, $true, $FirstPassType) }
     }
 }
+elseif ($PSBoundParameters['ConstantQP']) {
+    $rateControl = @('-qp', $ConstantQP, $false, $false)
+}
 else {
     Write-Warning "There was an error verifying rate control. This statement should be unreachable. CRF 18.0 will be used"
     $rateControl = @('-crf', '18.0', $false, $false)
@@ -1252,7 +1311,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
 }
 
 # If stream copy and stereo are used, mux the stream back into the container
-if ([File]::Exists($Paths.StereoPath) -and !$skipBackgroundAudioMux) {
+if (([File]::Exists($Paths.StereoPath) -or (Get-Process -Name '*mkvmerge*')) -and !$skipBackgroundAudioMux) {
     if ($audioRunning) {
         Write-Host "Audio encoder background job is still running. Pausing..." @warnColors
         do {
@@ -1272,7 +1331,6 @@ if ([File]::Exists($Paths.StereoPath) -and !$skipBackgroundAudioMux) {
             Language      = $paths.Language
             LogPath       = $paths.LogPath
         }
-        $mId = 1
         Invoke-MkvMerge -Paths $muxPaths -Mode 'remux' -ModeID 1 -Verbose:$setVerbose
     }
     # if not mkv or no mkvmerge, mux with ffmpeg

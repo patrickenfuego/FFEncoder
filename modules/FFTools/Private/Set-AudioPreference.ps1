@@ -95,7 +95,7 @@ function Set-AudioPreference {
     elseif ($Userchoice -like '*thd*')                           { "TrueHD $channelStr" }
     else                                                         { '' }
 
-    if ($Stereo -and $RemuxStream) { 
+    if ($Stereo -and $UserChoice -notin $dee['DeeArgs']) {
         $trackTitle['StereoTitle'] = $trackName
     }
     elseif ($RemuxStream) {
@@ -278,7 +278,8 @@ function Set-AudioPreference {
     # If not stream copying, append track label
     if ($audioArgs -and ($audioArgs[-1] -ne 'copy') -and ($audioArgs -notin $dee['DeeArgs']) -and !$RemuxStream) {
         if ($dee['DeeUsed']) { $ident = 2 }
-        $title = $Stereo ? ("title=`"$($TrackTitle['StereoTitle'])`"") : ("title=`"$($TrackTitle["AudioTitle$($ident)"])`"")
+        $title = $Stereo ? "title=$($TrackTitle['StereoTitle'])" : 
+                           "title=$($TrackTitle["AudioTitle$($ident)"])"
         $audioArgs = $audioArgs + @("-metadata:s:a:$Stream", $title)
     }
 
@@ -395,7 +396,7 @@ function Set-AudioPreference {
             return $null
         }
 
-        Write-Host "Stream copy detected: Spawning audio encoder in a separate thread...`n" @progressColors
+        Write-Host "Stream copy detected: Spawning audio encoder in a separate thread...`n" @emphasisColors
     
         # Modify and combine arrays for background job
         #$stereoArgs[0] = '-af'
@@ -434,7 +435,7 @@ function Set-AudioPreference {
             }
             
             # Encode the audio track
-            ffmpeg -hide_banner -i $tPaths.AudioPath -metadata:s:a:0 "title=`"$Using:title`"" $Using:audioArgs -y `
+            ffmpeg -hide_banner -i $tPaths.AudioPath -metadata:s:a:0 "title=$Using:title" $Using:audioArgs -y `
                 $tPaths.StereoPath 2>$audioDebugLog
 
         } | Out-Null

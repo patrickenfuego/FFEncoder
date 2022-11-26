@@ -169,11 +169,11 @@ function Set-FFMpegArgs {
             '-f'
             'vapoursynth'
             '-i'
-            "`"$($Paths.VPY)`""
+            "$($Paths.VPY)"
         }
         else {
             '-i'
-            "`"$($Paths.InputFile)`""
+            "$($Paths.InputFile)"
         }
         if ($TrackTitle['VideoTitle']) {
             '-metadata:s:v:0'
@@ -261,6 +261,9 @@ function Set-FFMpegArgs {
             }
             elseif ($PSBoundParameters['PsyRd'] -match '\d\.?\d{0,2}.*') {
                 "psy-rd=$($PsyRd -replace '\s', ''),$($PresetParams.PsyRdoq)"
+            }
+            elseif (!$PSBoundParameters['PsyRd'] -and $PresetParams.PsyRdoq) {
+                "psy-rd=1.00,$($PresetParams.PsyRdoq)"
             }
             else {
                 'psy-rd=1.00,0.00'
