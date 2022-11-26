@@ -142,6 +142,8 @@ FFEncoder supports the following rate control options:
 - **Average Bitrate** (<u>Not</u> **Adaptive Bitrate**) - This is also sometimes referred to as Variable Constrained Bitrate encoding. Average bitrate encoding targets a specific output file size, and isn't concerned with quality. There are 2 varieties of ABR encoding that FFEncoder supports:
   - **1-Pass** - This option uses a single pass, and isn't aware of the complexities of future frames and can only be scaled based on the past. Lower quality than 2-pass, but faster
   - **2-Pass** - 2-Pass encoding uses a first pass to calculate bitrate distribution, which is then used to allocate bits more accurately on the second pass
+- **Constant QP** - Forces a constant quantization parameter value throughout the entire encode in the form of an integer value (0 - 51). This is useful for testing as well as comparing the efficacy of encoders
+  - **NOTE:** Forcing a constant QP will generally result in poor compression efficiency, and thus it is <u>**not**</u> recommended for general use (unless you know what you're doing)
 
 ---
 
