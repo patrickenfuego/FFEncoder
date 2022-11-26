@@ -26,12 +26,13 @@ FFEncoder is a cross-platform PowerShell script and module that is meant to make
     - [Configuration Files](#configuration-files)
     - [Mandatory](#mandatory)
     - [Utility](#utility)
-    - [Audio & Subtitles](#audio--subtitles)
+    - [Audio \& Subtitles](#audio--subtitles)
     - [Video Filtering](#video-filtering)
     - [Encoder Config](#encoder-config)
     - [Universal Encoder Settings](#universal-encoder-settings)
     - [x265 Only Settings](#x265-only-settings)
     - [Extra](#extra)
+  - [Acknowledgements](#acknowledgements)
 
 ---
 
@@ -45,12 +46,15 @@ Check out the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki) for addit
 
 ## Dependencies
 
-> For Windows users, PowerShell 7 is a supplemental installation and will will be installed alongside PowerShell 5.1
+> For Windows users, PowerShell 7.x is a supplemental installation and will will be installed alongside PowerShell 5.1
+
+> **NOTE**: PowerShell 7.3 completely changed the way string arguments are parsed with third party executables. I have updated the code to support this, and it should be backward compatible to version 7.0.0. If issues are found, please let me know
 
 - ffmpeg / ffprobe
 - PowerShell v. 7.0 or newer
 - Mkvtoolnix (optional, but highly recommended)
 - VapourSynth (optional)
+- Dolby Encoding Engine (DEE) (optional)
 
 For users with PowerShell 7.2 or newer, the script uses ANSI output in certain scenarios to enhance the console experience.
 
@@ -178,6 +182,7 @@ FFEncoder can accept the following parameters from the command line:
 | **InputPath**    | N/A     | True          | **I**, **Source**, **Reference** | The path to the source file, i.e. remux. Also acts as the reference path for VMAF comparisons                                                        | All           |
 | **OutputPath**   | N/A     | True          | **O**, **Encode**, **Distorted** | The path of the the encoded output file, or the encoded (distorted) file path during VMAF comparisons                                                | All           |
 | **CRF**          | N/A     | <b>\*</b>True | **C**                            | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. Lower values result in higher quality                         | Rate Control  |
+| **ConstantQP**   | N/A     | <b>\*</b>True | **QP**                           | Constant quantizer rate control mode. Forces a consistent QP throughout the encode. Generally not recommended outside of testing.                    | Rate Control  |
 | **VideoBitrate** | N/A     | <b>\*</b>True | **VBitrate**                     | Rate control parameter that targets a specific bitrate. Can be used as an alternative to CRF when file size is a priority                            | Rate Control  |
 | **Scale**        | None    | <b>\*</b>True | **ScaleType**, **SF**            | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info | Scaling       |
 | **Unsharp**      | None    | <b>\*</b>True | **U**                            | Enable unsharp filter and set search range, in the form `<luma\|chroma\|yuv>_<small\|medium\|large>` or `custom=<filter>`                            | Sharpen/Blur  |
@@ -277,3 +282,13 @@ FFEncoder can accept the following parameters from the command line:
 | ---------------- | ------- | --------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | **FFMpegExtra**  | N/A     | False     | **FE** | Pass additional settings to ffmpeg as a generic array of single and multi-valued elements. Useful for options not covered by other parameters |
 | **EncoderExtra** | N/A     | False     | **XE** | Pass additional settings to the specified encoder as a hashtable of values. Useful for options not covered by other parameters                |
+
+---
+
+## Acknowledgements
+
+This section contains acknowledgements for the authors of tools distributed with this project. All credit goes to them!
+
+- [dovi_tool](https://github.com/quietvoid/dovi_tool) - Developed by **quietvoid**
+- [hdr10plus_tool](https://github.com/quietvoid/hdr10plus_tool) - Developed by **quietvoid**
+- [deew](https://github.com/pcroland/deew) - While this project contains a modified, custom compiled version of `deew`, the original project was developed by **pcroland**
