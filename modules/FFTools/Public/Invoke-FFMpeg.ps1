@@ -817,11 +817,12 @@ function Invoke-FFMpeg {
         }  
     }
     # CRF encode
-    elseif ($RateControl[0] -eq '-crf') {
-        Write-Host "$("`u{2726}" * 3) CRF $($RateControl[1]) Selected $("`u{2726}" * 3)" @emphasisColors
+    elseif ($RateControl[0] -eq '-crf' -or $RateControl[0] -eq '-qp') {
+        $rc = ($RateControl[0] -eq '-crf') ? 'CRF' : 'Constant QP'
+        Write-Host "$("`u{2726}" * 3) $rc $($RateControl[1]) Selected $("`u{2726}" * 3)" @emphasisColors
         Write-Host "$boldOn$("`u{25c7}" * 4) STARTING FFMPEG - $Encoder $("`u{25c7}" * 4)$boldOff" @progressColors
         Write-Banner
-
+    
         if ($DisableProgress) {
             ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
         }
