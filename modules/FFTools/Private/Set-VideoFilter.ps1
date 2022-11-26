@@ -240,7 +240,7 @@ function Set-VideoFilter {
     # If string is not empty, generate array
     if ($tmpArray) {
         $vfString = $tmpArray -join ','
-        $vfArray = @('-vf', "`"$vfString`"")
+        $vfArray = @('-vf', "$vfString")
     }
     else { $vfArray = $null }
 
