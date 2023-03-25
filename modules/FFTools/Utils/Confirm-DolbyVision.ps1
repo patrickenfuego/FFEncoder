@@ -27,8 +27,14 @@ function Confirm-DolbyVision {
         [string]$InputFile,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [string]$DolbyVisionPath
+        [string]$DolbyVisionPath,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$DropHDR10Plus
     )
+
+    # Path to edited RPU file
+    $editedRPU = $DolbyVisionPath.replace('.bin', '_edited.bin')
 
     # if x265 not found in PATH, cannot generate RPU
     if (!(Get-Command -Name 'x265*')) {
@@ -37,7 +43,13 @@ function Confirm-DolbyVision {
     }
 
     # Check for existing RPU file. Verification based on file size, can be improved
-    if ([File]::Exists($DolbyVisionPath)) {
+    if ([File]::Exists($editedRPU)) {
+        if ([math]::round(([FileInfo]($editedRPU)).Length / 1MB, 2) -gt 12) {
+            Write-Host "Existing edited Dolby Vision RPU file found" @emphasisColors
+            return $true
+        }
+    }
+    elseif ([File]::Exists($DolbyVisionPath) -or [File]::Exists($editedRPU)) {
         if ([math]::round(([FileInfo]($DolbyVisionPath)).Length / 1MB, 2) -gt 12) {
             Write-Host "Existing Dolby Vision RPU file found" @emphasisColors
             return $true
@@ -53,13 +65,13 @@ function Confirm-DolbyVision {
         $InputFile = [regex]::Escape($InputFile)
         $parserPath = [regex]::Escape($parserPath)
         $dvPath = [regex]::Escape($DolbyVisionPath)
-        bash -c "ffmpeg -loglevel panic -i $InputFile -frames:v 5 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath --crop -m 2 extract-rpu - -o $dvPath"
+        bash -c "ffmpeg -loglevel panic -i $InputFile -frames:v 5 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath -m 0 extract-rpu - -o $dvPath"
     }
     else {
         $path = [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin\windows")
         $env:PATH += ";$path"
 
-        cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -frames:v 5 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool --crop -m 2 extract-rpu - -o `"$DolbyVisionPath`""
+        cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -frames:v 5 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool -m 0 extract-rpu - -o `"$DolbyVisionPath`""
     }
     # If size is 0, DV metadata was not found
     if (([FileInfo]($DolbyVisionPath)).Length -eq 0) {
@@ -74,10 +86,22 @@ function Confirm-DolbyVision {
         [File]::Delete($DolbyVisionPath)
 
         if ($IsMacOS -or $IsLinux) {
-            bash -c "ffmpeg -loglevel panic -i $InputFile -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath --crop -m 2 extract-rpu - -o $dvPath"
+            # Being lazy. I don't feel like tokenizing the args
+            if ($DropHDR10Plus) {
+                bash -c "ffmpeg -loglevel panic -i $InputFile -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath -m 0 --drop-hdr10plus extract-rpu - -o $dvPath"
+            }
+            else {
+                bash -c "ffmpeg -loglevel panic -i $InputFile -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath -m 0 extract-rpu - -o $dvPath"
+            }
         }
         else {
-            cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool --crop -m 2 extract-rpu - -o `"$DolbyVisionPath`""
+            # Being lazy. I don't feel like tokenizing the args
+            if ($DropHDR10Plus) {
+                cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool --drop-hdr10plus -m 0 extract-rpu - -o `"$DolbyVisionPath`""
+            }
+            else {
+                cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -c:v copy -vbsf hevc_mp4toannexb -f hevc - | dovi_tool -m 0 extract-rpu - -o `"$DolbyVisionPath`""
+            }
         }
 
         if ([math]::round(([FileInfo]($DolbyVisionPath)).Length / 1MB, 2) -gt 1) {

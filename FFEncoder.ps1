@@ -218,6 +218,8 @@
         Skip Dolby Vision encoding, even if metadata is present
     .PARAMETER SkipHDR10Plus
         Skip HDR10+ encoding, even if metadata is present
+    .PARAMETER HDR10PlusSkipReorder
+        Fix for HDR10+ decoding order. Whether this parameter should be used must be validated manually
     .PARAMETER ExitOnError
         Converts certain non-terminating errors to terminating ones, such as input validation prompts. This can prevent blocking on automation when one
         running instance encounters an error
@@ -660,6 +662,12 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
+    [alias('SkipReorder')]
+    [switch]$HDR10PlusSkipReorder,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('Exit')]
     [switch]$ExitOnError,
 
@@ -1013,7 +1021,7 @@ if (!$PSBoundParameters['VapoursynthScript']) {
         if ($Unsharp -notin $unsharpSet -and $Unsharp -notlike 'custom=*') {
             $unsharpOptions = ($unsharpSet + 'custom=<filter_string>') |
                 Join-String -Separator "`r`n`t`u{2022} " `
-                            -OutputPrefix "$($boldOn)  Valid options for Unsharp$($boldOff):`n`t`u{2022} "
+                    -OutputPrefix "$($boldOn)  Valid options for Unsharp$($boldOff):`n`t`u{2022} "
             Write-Host "Invalid option entered for Unsharp:`n$unsharpOptions"
             $params = @{
                 Prompt      = 'Enter a valid option: '
@@ -1149,51 +1157,53 @@ $audioArray = @($audioHash1, $audioHash2)
 #>
 
 $ffmpegParams = @{
-    Encoder         = $Encoder
-    CropDimensions  = $cropDim
-    AudioInput      = $audioArray
-    Subtitles       = $Subtitles
-    Preset          = $Preset
-    RateControl     = $rateControl
-    Deblock         = $Deblock
-    Deinterlace     = $Deinterlace
-    AqMode          = $AqMode
-    AqStrength      = $AqStrength
-    PsyRd           = $PsyRd
-    PsyRdoq         = $PsyRdoq
-    NoiseReduction  = $NoiseReduction
-    NLMeans         = $NLMeans
-    Unsharp         = $unsharpHash
-    TuDepth         = $TuDepth
-    LimitTu         = $LimitTu
-    Tree            = $Tree
-    Merange         = $Merange
-    Ref             = $Ref 
-    Qcomp           = $QComp
-    BFrames         = $BFrames
-    BIntra          = $BIntra
-    Subme           = $Subme 
-    IntraSmoothing  = $StrongIntraSmoothing
-    Threads         = $Threads
-    RCLookahead     = $RCLookahead
-    Level           = $Level
-    VBV             = $VBV
-    FFMpegExtra     = $FFMpegExtra
-    EncoderExtra    = $EncoderExtra
-    Scale           = $scaleHash
-    Paths           = $paths
-    Verbose         = $setVerbose
-    TestFrames      = $TestFrames
-    TestStart       = $TestStart
-    SkipDolbyVision = $SkipDolbyVision
-    SkipHDR10Plus   = $SkipHDR10Plus
-    DisableProgress = $DisableProgress
+    Encoder              = $Encoder
+    CropDimensions       = $cropDim
+    AudioInput           = $audioArray
+    Subtitles            = $Subtitles
+    Preset               = $Preset
+    RateControl          = $rateControl
+    Deblock              = $Deblock
+    Deinterlace          = $Deinterlace
+    AqMode               = $AqMode
+    AqStrength           = $AqStrength
+    PsyRd                = $PsyRd
+    PsyRdoq              = $PsyRdoq
+    NoiseReduction       = $NoiseReduction
+    NLMeans              = $NLMeans
+    Unsharp              = $unsharpHash
+    TuDepth              = $TuDepth
+    LimitTu              = $LimitTu
+    Tree                 = $Tree
+    Merange              = $Merange
+    Ref                  = $Ref 
+    Qcomp                = $QComp
+    BFrames              = $BFrames
+    BIntra               = $BIntra
+    Subme                = $Subme 
+    IntraSmoothing       = $StrongIntraSmoothing
+    Threads              = $Threads
+    RCLookahead          = $RCLookahead
+    Level                = $Level
+    VBV                  = $VBV
+    FFMpegExtra          = $FFMpegExtra
+    EncoderExtra         = $EncoderExtra
+    Scale                = $scaleHash
+    Paths                = $paths
+    Verbose              = $setVerbose
+    TestFrames           = $TestFrames
+    TestStart            = $TestStart
+    SkipDolbyVision      = $SkipDolbyVision
+    SkipHDR10Plus        = $SkipHDR10Plus
+    HDR10PlusSkipReorder = $HDR10PlusSkipReorder
+    DisableProgress      = $DisableProgress
 }
 
 try {
     Invoke-FFMpeg @ffmpegParams
 }
 catch {
+    $_.Exception | Select-Object *
     $params = @{
         Message           = "An error occurred during ffmpeg invocation. Exception:`n$($_.Exception)"
         RecommendedAction = 'Correct the Error Message'

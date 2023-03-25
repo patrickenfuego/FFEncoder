@@ -301,7 +301,12 @@ function Set-DVArgs {
         '-probesize'
         '100MB'
         '-i'
-        "`"$($Paths.InputFile)`""
+        if ($psReq) {
+            $($Paths.InputFile)
+        }
+        else {
+           "`"$($Paths.InputFile)`"" 
+        }
         '-map_chapters'
         '0'
         '-vn'
