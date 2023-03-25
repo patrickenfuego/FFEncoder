@@ -8,7 +8,11 @@
 
 # FFEncoder
 
-FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/doc/), [Mkvtoolnix](https://mkvtoolnix.download/), [ffprobe](https://ffmpeg.org/ffprobe.html), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress, filter, and multiplex multimedia files for streaming or archiving.
+FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/doc/), [Mkvtoolnix](https://mkvtoolnix.download/), [ffprobe](https://ffmpeg.org/ffprobe.html), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 H.265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress, filter, and multiplex multimedia files for streaming or archiving.
+
+Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
+
+---
 
 - [FFEncoder](#ffencoder)
   - [About](#about)
@@ -125,7 +129,10 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 - Maximum Content Light Level
 - Maximum Frame Average Light Level
 - HDR10+ Metadata
+  - **WARNING**: Depending on the source, the metadata ordering may be incorrect after extraction. Evaluate the generated JSON file manually and use the `-HDR10PlusSkipReorder` parameter if necessary to correct this
+    - Read [the author's documentation](https://github.com/quietvoid/hdr10plus_tool) to learn why this parameter might be required and when to use it
 - Dolby Vision Metadata
+  - Automatically edits the generated RPU file to ensure the metadata is accurate
   - Requires `x265` (mods are fine) to be available via PATH because ffmpeg still doesn't handle RPU files correctly, even in version 5. If there is more than one `x265*` option in PATH, the first option returned is selected
   - Currently, only profile 8.1 is supported due it it's backwards compatibility with HDR10
   - It is recommended to have `mkvmerge`/`mkvextract` available. The script will multiplex tracks back together after encoding
@@ -232,15 +239,16 @@ FFEncoder can accept the following parameters from the command line:
 
 ### Encoder Config
 
-| Parameter Name        | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
-| --------------------- | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Encoder**           | x265         | False     | **Enc**               | Specifies which encoder to use - x264 or x265                                                                                                                                |
-| **FirstPassType**     | Default      | False     | **PassType**, **FTP** | Tuning option for two pass encoding. See [Two Pass Encoding Options](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#two-pass-encoding-options) for more info |
-| **SkipDolbyVision**   | False        | False     | **NoDV**, **SDV**     | Switch to disable Dolby Vision encoding, even if metadata is present                                                                                                         |
-| **SkipHDR10Plus**     | False        | False     | **No10P**, **NTP**    | Switch to disable HDR10+ encoding, even if metadata is present                                                                                                               |
-| **TestFrames**        | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
-| **TestStart**         | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
-| **VapourSynthScript** | Disabled     | False     | **VSScript**, **VPY** | Path to VapourSynth script. Video filtering parameters are ignored when enabled, and must be done in the vpy script                                                          |
+| Parameter Name           | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
+| ------------------------ | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Encoder**              | x265         | False     | **Enc**               | Specifies which encoder to use - x264 or x265                                                                                                                                |
+| **FirstPassType**        | Default      | False     | **PassType**, **FTP** | Tuning option for two pass encoding. See [Two Pass Encoding Options](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#two-pass-encoding-options) for more info |
+| **SkipDolbyVision**      | False        | False     | **NoDV**, **SDV**     | Switch to disable Dolby Vision encoding, even if metadata is present                                                                                                         |
+| **SkipHDR10Plus**        | False        | False     | **No10P**, **NTP**    | Switch to disable HDR10+ encoding, even if metadata is present                                                                                                               |
+| **HDR10PlusSkipReorder** | False        | False     | **SkipReorder**       | Switch to correct improper HDR10+ metadata ordering on some sources. **You must verify yourself if this is required or not**                                                 |
+| **TestFrames**           | 0 (Disabled) | False     | **T**, **Test**       | Integer value representing the number of test frames to encode. When `-TestStart` is not set, encoding starts at 00:01:30 so that title screens are skipped                  |
+| **TestStart**            | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
+| **VapourSynthScript**    | Disabled     | False     | **VSScript**, **VPY** | Path to VapourSynth script. Video filtering parameters are ignored when enabled, and must be done in the vpy script                                                          |
 
 ### Universal Encoder Settings
 
