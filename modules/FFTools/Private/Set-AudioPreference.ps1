@@ -53,13 +53,13 @@ function Set-AudioPreference {
     function Write-BitrateInfo ($channels, $bitsPerChannel) {
         Write-Host "Audio stream 0 has $channels channels. " -NoNewline
         if (@("eac3", "dts", "ac3", "dd") -contains $UserChoice) {
-            Write-Host "7.1 channel layout will be downmixed to 5.1" @warnColors
+            Write-Host "7.1 channel layout will be downmixed to 5.1`n" @warnColors
         }
         elseif ($bitsPerChannel -like '*0 kb/s*') {
             Write-Host "Bits per channel unknown (no bitrate specified or VBR selected)`n"
         }
         elseif ($bitsPerChannel -eq 'variable') {
-            Write-Host "The selected option uses variable bitrate encoding"
+            Write-Host "The selected option uses variable bitrate encoding`n"
         }
         else {
             Write-Host "Bitrate per channel: ~ $bitsPerChannel`n"
@@ -134,7 +134,14 @@ function Set-AudioPreference {
         }
         "^dts$" {
             Write-Host "$("`u{25c7}" * 2) DTS AUDIO SELECTED $("`u{25c7}" * 2)" @progressColors
-            if ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
+            $res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 `
+                -show_entries "stream=codec_name,profile" `
+                -i $Paths.InputFile
+            if ($res -contains 'DTS-HD MA') {
+                Write-Host "DTS-HD MA track detected. Extracting core" @emphasisColors
+                @('-map', '0:a:0', "-bsf:a", 'dca_core', "-c:a:$Stream", 'copy')
+            }
+            elseif ($Bitrate) { @('-map', '0:a:0', "-c:a:$Stream", 'dca', '-b:a', "$Bitrate`k") }
             else {
                 $i = Get-AudioStream -Codec $UserChoice -InputFile $Paths.InputFile
                 if ($i) {
@@ -277,7 +284,7 @@ function Set-AudioPreference {
 
     # If not stream copying, append track label
     if ($audioArgs -and ($audioArgs[-1] -ne 'copy') -and ($audioArgs -notin $dee['DeeArgs']) -and !$RemuxStream) {
-        if ($dee['DeeUsed']) { $ident = 2 }
+        $ident = $dee['DeeUsed'] ? 2 : 1
         $title = $Stereo ? "title=$($TrackTitle['StereoTitle'])" : 
                            "title=$($TrackTitle["AudioTitle$($ident)"])"
         $audioArgs = $audioArgs + @("-metadata:s:a:$Stream", $title)

@@ -59,7 +59,7 @@ function Confirm-PoshVersion {
         $console.WindowTitle = $currentTitle
         Write-Error @params -ErrorAction Stop
     }
-    elseif (($PSVersionTable.PSVersion -lt [version]'7.2.0.0')) {
+    elseif (($PSVersionTable.PSVersion -lt [version]'7.3.0.0')) {
         $latestRelease = Get-ReleaseVersion -Repository Pwsh
         
         Write-Host "You are not running the latest version of PowerShell 7:" @warnColors

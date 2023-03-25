@@ -54,12 +54,15 @@ function Set-TestParameters {
         $fpsStr = $(ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $InputFile)
         $fpsStr = ($fpsStr -is [array]) ? $fpsStr[0] : $fpsStr
         #Calculate starting timestamp: Frame number / FPS
-        $timestamp = $TestStart / $(Invoke-Expression $fpsStr)
-        $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', $timestamp))
+        $TestStart = $TestStart / $(Invoke-Expression $fpsStr)
+        $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', $TestStart))
     }
     # Default: Start encode at 00:01:30
     else {
         $PrimaryArguments.InsertRange($PrimaryArguments.IndexOf('-i'), @('-ss', '00:01:30'))
+        $TestStart = '00:01:30'
     }
     $PrimaryArguments.AddRange($a)
+
+    $frame['TestStart'] = $TestStart
 }

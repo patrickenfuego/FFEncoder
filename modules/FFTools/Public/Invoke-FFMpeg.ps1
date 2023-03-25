@@ -3,7 +3,7 @@ using namespace System.Collections
 
 <#
     .SYNOPSIS
-        Calls ffmpeg to encode the input file using CRF or 1 Pass ABR rate control
+        Calls ffmpeg to encode the input file using CRF, CQP or 1/2 Pass ABR rate control
     .DESCRIPTION
         This function takes the input parameters and uses them to encode a 4K HDR file.
         It uses module functions from FFTools to set video metadata, audio, and
@@ -207,7 +207,12 @@ function Invoke-FFMpeg {
         [Alias('No10P', 'Skip10P')]
         [switch]$SkipHDR10Plus,
 
-        # Skip HDR10+ even if present
+        # Don't reorder HDR10+ metadata
+        [Parameter(Mandatory = $false)]
+        [Alias('SkipReorder')]
+        [switch]$HDR10PlusSkipReorder,
+
+        # Disable progress bar
         [Parameter(Mandatory = $false)]
         [Alias('NoProgressBar')]
         [switch]$DisableProgress
@@ -294,21 +299,26 @@ function Invoke-FFMpeg {
     if ($CropDimensions[2]) {
         $skipDv = ($SkipDolbyVision) ? $true : $false
         $skip10P = ($SkipHDR10Plus) ? $true : $false
-        # Get HDR metadata. Re-throw any errors from function & exit call stack
+        # Get HDR metadata. Edit DoVi RPU if present
         try {
             $params = @{
-                InputFile       = $Paths.InputFile
-                HDR10PlusPath   = $Paths.HDR10Plus
-                DolbyVisionPath = $Paths.DvPath
-                SkipDolbyVision = $skipDv
-                SkipHDR10Plus   = $skip10P
-                Verbose         = $setVerbose
+                InputFile            = $Paths.InputFile
+                HDR10PlusPath        = $Paths.HDR10Plus
+                DolbyVisionPath      = $Paths.DvPath
+                SkipDolbyVision      = $skipDv
+                SkipHDR10Plus        = $skip10P
+                HDR10PlusSkipReorder = $HDR10PlusSkipReorder
+                Verbose              = $setVerbose
             }
             $HDR = Get-HDRMetadata @params
+            if ($HDR['DV']) {
+                Edit-RPU -CropDimensions $CropDimensions -HDRMetadata $HDR -Paths $Paths
+            }
         }
         catch [System.ArgumentNullException] {
             $err = $_.Exception.Message
             Write-Host "`u{203C} Failed to get HDR metadata: $err. Metadata will not be copied" @errColors
+            $_.Exception
             $HDR = $null
         }
     }
@@ -410,9 +420,10 @@ function Invoke-FFMpeg {
         AQMode  = ([ref]$AqMode)
         Threads = ([ref]$Threads)
         Level   = ([ref]$Level)
+        Verbose = $setVerbose
     }
     
-    Confirm-Parameters @settings -Verbose:$setVerbose
+    Confirm-Parameters @settings
 
     # Gather preset-related parameters
     $presetArgs = @{ 
@@ -443,52 +454,7 @@ function Invoke-FFMpeg {
         Pass arguments to Set-FFMpegArgs or Set-DvArgs functions to prepare for encoding
     #>
 
-    
-    # Try to parse the config files
-    try {
-        # Read config file for additional options
-        $config = Read-Config -Encoder $Encoder
-
-        # Add multi-valued ffmpeg config options to existing hash
-        if ($config['FFMpegHash']) {
-            if ($FFMpegExtra) {
-                $index = $ffmpegExtra.FindIndex( {
-                    $args[0] -is [hashtable]
-                } )
-
-                if ($index -ne -1) {
-                    # Catch error if duplicate keys are present
-                    $FFMpegExtra[$index] += $config['FFMpegHash']
-                }
-                else { $FFMpegExtra.Add($config['FFMpegHash']) }
-            }
-            else {
-                $FFMpegExtra = @()
-                $FFMpegExtra.Add($config['FFMpegHash'])
-            }
-        }
-
-        # Add single valued ffmpeg config options
-        if ($config['FFMpegArray']) {
-            if ($FFMpegExtra) { $ffmpegExtra.AddRange($config['FFMpegArray']) }
-            else {
-                $FFMpegExtra = @()
-                $FFMpegExtra.AddRange($config['FFMpegArray'])
-            }
-        }
-
-        # Add encoder settings from config file
-        if ($config['Encoder']) { 
-            if ($EncoderExtra) {
-                $EncoderExtra += $config['Encoder']
-            }
-            else { $EncoderExtra = $config['Encoder'] }
-        }
-    }
-    catch {
-        $e = $_.Exception.Message
-        Write-Error "Failed to parse the configuration file(s): $e"
-    }
+    $EncoderExtra, $FFMpegExtra = Import-Config -EncoderExtra $EncoderExtra -FFMpegExtra $FFMpegExtra
 
     $baseArgs = @{
         Encoder        = $Encoder 
@@ -684,7 +650,7 @@ function Invoke-FFMpeg {
             $Paths.TmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 # Cut stream at video frame marker
-                ffmpeg -hide_banner -loglevel panic -ss 00:01:30 $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) `
+                ffmpeg -hide_banner -loglevel panic -ss $frame['TestStart'] $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) `
                     -y $Paths.tmpOut 2>>$Paths.LogPath
             }
             else {

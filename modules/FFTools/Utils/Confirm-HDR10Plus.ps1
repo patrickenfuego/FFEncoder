@@ -7,10 +7,11 @@ using namespace System.IO
         Path to the input file (file to be encoded)
     .PARAMETER HDR10PlusPath
         Output path to the json metadata file. Path is generated dynamically based on input path
+    .PARAMETER HDR10PlusSkipReorder
+        Switch to disable metadata reordering. Fix for incorrect presentation order
     .OUTPUTS
-        Boolean (if hdr10plus_parser is present)
+        Boolean (if hdr10plus_tool is present)
 #>
-
 function Confirm-HDR10Plus {
     [CmdletBinding()]
     param (
@@ -18,14 +19,17 @@ function Confirm-HDR10Plus {
         [string]$InputFile,
 
         [Parameter(Mandatory = $true, Position = 1)]
-        [string]$HDR10PlusPath
+        [string]$HDR10PlusPath,
+
+        [Parameter(Mandatory = $true, Position = 1)]
+        [switch]$HDR10PlusSkipReorder
     )
 
     # Load parser path for UNIX systems
     if ($IsLinux -or $IsMacOS) {
         $parserPath = $IsLinux ?
-        ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/linux/hdr10plus_tool")) :
-        ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/mac/hdr10plus_tool"))
+            ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/linux/hdr10plus_tool")) :
+            ([Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, "bin/mac/hdr10plus_tool"))
 
         # Verify that the parser path exists
         if (![File]::Exists($parserPath)) {
@@ -67,13 +71,31 @@ function Confirm-HDR10Plus {
             Write-Host "Generating JSON file" @emphasisColors
             if ($IsLinux -or $IsMacOS) {
                 $HDR10PlusPath = [regex]::Escape($HDR10PlusPath)
-                bash -c "ffmpeg -loglevel panic -i $InputFile -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath extract -o $HDR10PlusPath -"
+                # Being lazy. Don't feel like tokenizing args
+                if ($HDR10PlusSkipReorder) {
+                    bash -c "ffmpeg -loglevel panic -i $InputFile -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath --skip-reorder extract -o $HDR10PlusPath -"
+                }
+                else {
+                    bash -c "ffmpeg -loglevel panic -i $InputFile -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | $parserPath extract -o $HDR10PlusPath -"
+                }
             }
             else {
-                cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o `"$HDR10PlusPath`" -"
+                # Being lazy. Don't feel like tokenizing args
+                if ($HDR10PlusSkipReorder) {
+                    cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool --skip-reorder extract -o `"$HDR10PlusPath`" -"
+                }
+                else {
+                    cmd.exe /c "ffmpeg -loglevel panic -i `"$InputFile`" -map 0:v:0 -c:v copy -vbsf hevc_mp4toannexb -f hevc - | hdr10plus_tool extract -o `"$HDR10PlusPath`" -"
+                }
+                
             }
         }
-        return $true
+        # Ensure file was extracted
+        if ([File]::Exists($HDR10PlusPath)) { return $true }
+        else {
+            Write-Warning "HDR10+ JSON metadata file failed to extract. Metadata will not be copied"
+            return $false
+        } 
     }
     else { return $false }
 }

@@ -69,6 +69,7 @@ $Script:dee = @{
 # Keep track of frame count for 2-pass encodes
 $Script:frame = @{
     FrameCount = 0
+    TestStart = 0
 }
 
 # Detect operating system info
@@ -137,7 +138,7 @@ ___________      .__  __  .__                 ______________________            
 '@
 
 # Current script release version
-[version]$release = '2.3.0'
+[version]$release = '2.4.0'
 
 
 #### End module variables ####

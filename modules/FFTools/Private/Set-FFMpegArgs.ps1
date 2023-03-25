@@ -406,8 +406,15 @@ function Set-FFMpegArgs {
             $x265SecondPassArray = $encoderBaseArray.Clone()
             $x265SecondPassArray.AddRange(@('pass=2', "stats='$($Paths.X265Log)'", "subme=$($PresetParams.Subme)"))
  
-            $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265FirstPassArray -join ':')`"")) 
-            $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "`"$($x265SecondPassArray -join ':')`""))
+            # Fix for pwsh 7.3 string parsing
+            if ($psReq) {
+                $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265FirstPassArray -join ':')`"")) 
+                $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "`"$($x265SecondPassArray -join ':')`""))
+            }
+            else {
+                $ffmpegArgsAL.AddRange(@('-x265-params', "$($x265FirstPassArray -join ':')")) 
+                $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "$($x265SecondPassArray -join ':')"))
+            }
         }
         else {
             $x264FirstPassArray = $encoderBaseArray.Clone()
@@ -415,8 +422,15 @@ function Set-FFMpegArgs {
             $x264SecondPassArray = $x264FirstPassArray.Clone()
             $x264SecondPassArray[$x264SecondPassArray.IndexOf('pass=1')] = 'pass=2'
 
-            $ffmpegArgsAL.AddRange(@('-x264-params', "`"$($x264FirstPassArray -join ':')`"")) 
-            $ffmpegPassTwoArgsAL.AddRange(@('-x264-params', "`"$($x264SecondPassArray -join ':')`""))
+            # Fix for pwsh 7.3 string parsing
+            if ($PSVersionTable.PSVersion -lt [version]'7.3') {
+                $ffmpegArgsAL.AddRange(@('-x264-params', "`"$($x264FirstPassArray -join ':')`"")) 
+                $ffmpegPassTwoArgsAL.AddRange(@('-x264-params', "`"$($x264SecondPassArray -join ':')`""))
+            }
+            else {
+                $ffmpegArgsAL.AddRange(@('-x264-params', "$($x264FirstPassArray -join ':')")) 
+                $ffmpegPassTwoArgsAL.AddRange(@('-x264-params', "$($x264SecondPassArray -join ':')"))
+            }
         }
         
         Write-Verbose "FFMPEG FIRST PASS ARRAY IS: `n $($ffmpegArgsAL -join " ")`n"
@@ -426,12 +440,20 @@ function Set-FFMpegArgs {
     }
     # CRF/1-Pass
     else {
-        #Add remaining argument and join with ffmpeg array
+        # Add remaining argument and join with ffmpeg array
         $encoderBaseArray.Add("subme=$($PresetParams.Subme)") > $null
 
-        ($Encoder -eq 'x265') ?
-        ($ffmpegArgsAL.AddRange(@('-x265-params', "`"$($encoderBaseArray -join ':')`""))) :
-        ($ffmpegArgsAL.AddRange(@('-x264-params', "`"$($encoderBaseArray -join ':')`"")))
+        # Fix for pwsh 7.3 string parsing
+        if ($PSVersionTable.PSVersion -lt [version]'7.3') {
+            ($Encoder -eq 'x265') ?
+                ($ffmpegArgsAL.AddRange(@('-x265-params', "`"$($encoderBaseArray -join ':')`""))) :
+                ($ffmpegArgsAL.AddRange(@('-x264-params', "`"$($encoderBaseArray -join ':')`"")))
+        }
+        else {
+            ($Encoder -eq 'x265') ?
+                ($ffmpegArgsAL.AddRange(@('-x265-params', "$($encoderBaseArray -join ':')"))) :
+                ($ffmpegArgsAL.AddRange(@('-x264-params', "$($encoderBaseArray -join ':')")))
+        }
 
         Write-Verbose "FFMPEG ARGUMENT ARRAY IS:`n $($ffmpegArgsAL -join " ")`n"
 
