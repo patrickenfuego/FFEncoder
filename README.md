@@ -38,6 +38,7 @@ Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
       - [x265 Only Settings](#x265-only-settings)
       - [Extra](#extra)
   - [Acknowledgements](#acknowledgements)
+    - [Special Mention](#special-mention)
 
 ---
 
@@ -307,4 +308,9 @@ This section contains acknowledgements for the authors of tools distributed with
 - [dovi_tool](https://github.com/quietvoid/dovi_tool) - Developed by **quietvoid**
 - [hdr10plus_tool](https://github.com/quietvoid/hdr10plus_tool) - Developed by **quietvoid**
 - [deew](https://github.com/pcroland/deew) - While this project contains a modified, custom compiled version of `deew`, the original project was developed by **pcroland**
-- [MkvToolNix](https://mkvtoolnix.download/index.html) - Developed by **Mortiz Bunkus**. An invaluable collection of tools for any video enthusiast
+
+### Special Mention
+
+Not distributed with the project, although used frequently in various pieces of the automation for those who have it installed. An invaluable tool for any video enthusiast (consider contributing to their development!):
+
+- [MkvToolNix](https://mkvtoolnix.download/index.html) - Developed by **Mortiz Bunkus**
