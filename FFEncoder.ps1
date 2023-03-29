@@ -662,7 +662,7 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
-    [alias('SkipReorder')]
+    [Alias('SkipReorder')]
     [switch]$HDR10PlusSkipReorder,
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
@@ -840,6 +840,7 @@ function Set-ScriptPaths ([hashtable]$OS) {
     Verbose preference
     Verify PowerShell version
     Import Module
+    Import configuration file contents
 #>
 
 # Print help content and exit
@@ -870,6 +871,71 @@ $console.WindowTitle = 'FFEncoder'
 # Import FFTools module
 Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
 Write-Verbose "`n`n---------------------------------------"
+
+# Import config file contents
+$params = @{
+    EncoderExtra = $EncoderExtra
+    FFMpegExtra  = $FFMpegExtra
+    Encoder      = $Encoder
+    Verbose      = $setVerbose
+}
+$EncoderExtra, $FFMpegExtra, $scriptHash = Import-Config @params
+# Set switch params from config if not passed
+if ($scriptHash) {
+    foreach ($item in $scriptHash.GetEnumerator()) {
+        if (!$PSBoundParameters[$item.Name]) {
+            Set-Variable "$($item.Name)" -Value $item.Value
+            Write-Verbose "Variable set: $($item.Name) = $(Get-Variable "$($item.Name)" -ValueOnly)"
+        }
+        else {
+            Write-Verbose "$($item.Name) set via parameter. Skipping..."
+        }
+    }
+    Write-Host ""
+}
+# Override config with script params if present
+if ($EncoderExtra) {
+    if ($EncoderExtra.ContainsKey('aq-mode') -and $PSBoundParameters['aq-mode']) { $EncoderExtra.Remove('aq-mode') }
+    if ($EncoderExtra.ContainsKey('aq-strength') -and $PSBoundParameters['AqStrength']) { $EncoderExtra.Remove('aq-strength') } 
+    if ($EncoderExtra.ContainsKey('bframes') -and $PSBoundParameters['BFrames']) { $EncoderExtra.Remove('bframes') } 
+    if ($EncoderExtra.ContainsKey('rc-lookahead') -and $PSBoundParameters['RCLookahead']) { $EncoderExtra.Remove('rc-lookahead') }
+    if ($EncoderExtra.ContainsKey('subme') -and $PSBoundParameters['Subme']) { $EncoderExtra.Remove('subme') }
+    if ($EncoderExtra.ContainsKey('qcomp') -and $PSBoundParameters['QComp']) { $EncoderExtra.Remove('qcomp') }
+    if ($EncoderExtra.ContainsKey('limit-tu') -and $PSBoundParameters['LimitTu']) { $EncoderExtra.Remove('limit-tu') }
+    if ($EncoderExtra.ContainsKey('ref') -and $PSBoundParameters['Ref']) { $EncoderExtra.Remove('ref') }
+    if ($EncoderExtra.ContainsKey('merange') -and $PSBoundParameters['Merange']) { $EncoderExtra.Remove('merange') }
+    if ($EncoderExtra.ContainsKey('strong-intra-smoothing') -and $PSBoundParameters['StrongIntraSmoothing']) { 
+        $EncoderExtra.Remove('strong-intra-smoothing') 
+    }
+    if ($EncoderExtra.ContainsKey('deblock') -and $PSBoundParameters['Deblock']) { 
+        $EncoderExtra.Remove('deblock')
+    }
+    if ($EncoderExtra.ContainsKey('vbv-bufsize') -and $PSBoundParameters['VBV']) {
+        $EncoderExtra.Remove('vbv-bufsize')
+        if ($EncoderExtra.ContainsKey('vbv-maxrate')) { $EncoderExtra.Remove('vbv-maxrate') }
+    }
+    if ($EncoderExtra.ContainsKey('vbv-maxrate') -and $PSBoundParameters['VBV']) { 
+        $EncoderExtra.Remove('vbv-maxrate')
+        if ($EncoderExtra.ContainsKey('vbv-bufsize')) { $EncoderExtra.Remove('vbv-bufsize') }
+    }
+    if ($EncoderExtra.ContainsKey('tu-intra-depth') -and $PSBoundParameters['TUDepth']) { 
+        $EncoderExtra.Remove('tu-intra-depth')
+        if ($EncoderExtra.ContainsKey('tu-inter-depth')) { $EncoderExtra.Remove('tu-inter-depth') }
+        Write-Verbose "Overriding config file TU Depths with parameters"
+    }
+    if ($EncoderExtra.ContainsKey('tu-inter-depth') -and $PSBoundParameters['TUDepth']) { 
+        $EncoderExtra.Remove('tu-inter-depth')
+        if ($EncoderExtra.ContainsKey('tu-intra-depth')) { $EncoderExtra.Remove('tu-intra-depth') }
+    }
+    if ($EncoderExtra.ContainsKey('cutree') -or $EncoderExtra.ContainsKey('mbtree') -and $PSBoundParameters['Tree']) {
+        $key = $EncoderExtra.Keys.Where({ $_ -like '*tree' })
+        $EncoderExtra.Remove($key)
+    }
+    if ($EncoderExtra.ContainsKey('level') -or $EncoderExtra.ContainsKey('level-idc') -and $PSBoundParameters['Level']) {
+        $key = $EncoderExtra.Keys.Where({ $_ -like 'level*' })
+        $EncoderExtra.Remove($key)
+    }
+}
 
 # Source version functions
 . $([Path]::Join($ScriptsDirectory, 'VerifyVersions.ps1')).ToString()
@@ -927,12 +993,12 @@ $paths = Set-ScriptPaths -OS $osInfo
 
 # if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
 if ([File]::Exists($paths.OutputFile)) { 
-    Remove-FilePrompt -Path $paths.OutputFile -Type "Primary" 
+    Remove-FilePrompt -Path $paths.OutputFile -Type "Primary"
 }
 else { 
-    if (![Directory]::Exists($(Split-Path $paths.OutputFile -Parent))) {
+    if (![Directory]::Exists(([FileInfo]$paths.OutputFile).DirectoryName)) {
         Write-Host "Creating output path directory structure..." @progressColors
-        [Directory]::CreateDirectory($(Split-Path $paths.OutputFile -Parent)) > $null
+        [Directory]::CreateDirectory(([FileInfo]$paths.OutputFile).DirectoryName) > $null
         if (!$?) {
             $console.WindowTitle = $currentTitle
             Write-Error "Could not create the specified output directory" -ErrorAction Stop
@@ -1035,11 +1101,11 @@ if (!$PSBoundParameters['VapoursynthScript']) {
         }
 
         if (!$PSBoundParameters['UnsharpStrength'] -and $Unsharp -notlike 'custom=*') {
-            Write-Warning "No value was passed for -UnsharpStrength. Using default: sharpen_mild"
+            Write-Warning "No value was passed for -UnsharpStrength. Using default: 'sharpen_mild'"
             $UnsharpStrength = 'sharpen_mild'
         }
     }
-    # Collect the arguments into a hashtable
+
     if ($Unsharp -and $UnsharpStrength) {
         $unsharpHash = @{
             Size     = $Unsharp
@@ -1089,14 +1155,15 @@ $res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=nopr
     
 # If audio streams were found
 if ($res) {
-    $lossless = (($res[0] -like 'truehd') -xor ($res[1] -like 'DTS-HD MA') -xor ($res[0] -like 'flac')) ?
+    $lossless = (($res[0] -like 'truehd') -xor ($res -contains 'DTS-HD MA') -xor ($res[0] -like 'flac')) ?
         $true : $false
-    $test1 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio -match $_ }, 'SkipUntil', 1)
-    $test2 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio2 -match $_ }, 'SkipUntil', 1)
-    if (!$lossless -and (!$test1 -or !$test2)) {
-        $msg = "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended " +
-               "(If you're stream copying a codec by name, ignore this)"
-        Write-Warning $msg
+    $test1 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio -notmatch $_ }, 'SkipUntil', 1)
+    $test2 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio2 -notmatch $_ }, 'SkipUntil', 1)
+    $test3 = @('^aac$', '^dts$', 'eac3', 'ddp', 'ac3', 'dd').Where({ $Audio -match $_ }, 'SkipUntil', 1)
+    $test4 = @('^aac$', '^dts$', 'eac3', 'ddp', 'ac3', 'dd').Where({ $Audio2 -match $_ }, 'SkipUntil', 1)
+    $allChecks = $test1, $test2, $test3, $test4 -contains $true
+    if (!$lossless -and !$allChecks) {
+        Write-Warning "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended"
     }
 }
 elseif (!$res) {
@@ -1249,6 +1316,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
         do {
             Start-Sleep -Seconds 1
         } until ((Get-Job 'Audio Encoder').State -eq 'Completed')
+        Write-Host "Multiplexing audio track back into the output file..." @progressColors
         Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
     }
     
@@ -1265,7 +1333,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
 
     if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
         #Find the dee encoded output file
-        $deePath = Get-ChildItem $(Split-Path $Paths.OutputFile -Parent) |
+        $deePath = Get-ChildItem ([FileInfo]$Paths.OutputFile).DirectoryName |
             Where-Object { $_.Name -like "$($paths.Title)_audio.*3" -or $_.Name -like "$($paths.Title)_audio.thd" } |
                 Select-Object -First 1 -ExpandProperty FullName
 
@@ -1317,7 +1385,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
     }
 
     # Remove the DEE audio file if switch is present
-    if ($PSBoundParameters['RemoveFiles']) { Remove-Item $deePath -Force }
+    if ($PSBoundParameters['RemoveFiles']) { [File]::Delete($deePath) }
 }
 
 # If stream copy and stereo are used, mux the stream back into the container
@@ -1400,7 +1468,7 @@ $stopwatch.Stop()
 "Encoding Time: {0:dd} days, {0:hh} hours, {0:mm} minutes and {0:ss} seconds`n" -f $stopwatch.Elapsed
 
 # Generate the report file if parameter is present
-if ($PSBoundParameters['GenerateReport']) {
+if ($GenerateReport) {
     $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
     $params = @{
         DateTimes = @($startTime, $endTime)
@@ -1414,7 +1482,7 @@ if ($PSBoundParameters['GenerateReport']) {
 }
 
 # Delete extraneous files if switch is present
-if ($PSBoundParameters['RemoveFiles']) {
+if ($RemoveFiles) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
     $delArray = @("*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin", "*_audio.*")
@@ -1425,7 +1493,7 @@ if ($PSBoundParameters['RemoveFiles']) {
 
 # If deew log exists, copy content to main log and delete
 if ($Audio -like 'dee*' -or $Audio2 -like 'dee*') {
-    $deeLog = [Path]::Join($(Split-Path $InputPath -Parent), 'dee.log')
+    $deeLog = [Path]::Join(([FileInfo]$InputPath).DirectoryName, 'dee.log')
     if ([File]::Exists($deeLog)) {
         Add-Content $paths.LogPath -Value "`n`n-------- Deew Encoder Log --------`n`n"
         Add-Content $paths.LogPath -Value (Get-Content -Path $deeLog)
