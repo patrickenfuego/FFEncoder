@@ -454,8 +454,6 @@ function Invoke-FFMpeg {
         Pass arguments to Set-FFMpegArgs or Set-DvArgs functions to prepare for encoding
     #>
 
-    $EncoderExtra, $FFMpegExtra = Import-Config -EncoderExtra $EncoderExtra -FFMpegExtra $FFMpegExtra
-
     $baseArgs = @{
         Encoder        = $Encoder 
         Audio          = $audio
@@ -657,12 +655,12 @@ function Invoke-FFMpeg {
                 ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther -y $Paths.tmpOut 2>>$Paths.LogPath
             }
         }
-        else { 
+        else {
             if ((Get-Command 'mkvextract') -and $Paths.InputFile.EndsWith('mkv')) {
                 # Extract chapters if no other streams are copied
                 Write-Verbose "No additional streams selected. Generating chapter file..."
-                $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')"
                 if (!(Test-Path -Path $Paths.ChapterPath -ErrorAction SilentlyContinue)) {
+                    $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.xml')"
                     mkvextract "$($Paths.InputFile)" chapters "$($Paths.ChapterPath)"
                     if (!$?) { 
                         Write-Host "Extracting chapters FAILED. Verify that the input file contains chapters" @warnColors
@@ -671,7 +669,10 @@ function Invoke-FFMpeg {
                 } 
                 else { Write-Verbose "Chapter file already exists. Skipping creation..." }
             }
-            else { $Paths.ChapterPath = $null }
+            else {
+                $Paths.ChapterPath = "$($Paths.OutputFile -replace '^(.*)\.(.+)$', '$1_chapters.txt')"
+                ffmpeg -i $Paths.InputFile -f ffmetadata -an -sn -vn -map_chapters 0 $Paths.ChapterPath 2>$null 
+            }
         }
 
         # If mkvmerge is available and output stream is mkv, mux streams back together
@@ -703,7 +704,7 @@ function Invoke-FFMpeg {
     } # End DoVi
 
     # Two pass encode
-    elseif ($ffmpegArgs.Count -eq 2 -and $RateControl[0] -eq '-b:v') {
+    elseif ($null -ne $ffmpegArgs.ffmpegArgs2 -and $RateControl[0] -eq '-b:v') {
         Write-Host "$("`u{2726}" * 3) 2-Pass ABR Selected @ $($RateControl[1] -replace '(.*)(\w+)$', '$1 $2')b/s $("`u{2726}" * 3)" @emphasisColors
         Write-Host "$boldOn$("`u{25c7}" * 4) STARTING FFMPEG PASS 1 - $Encoder $("`u{25c7}" * 4)$boldOff" @progressColors
         Write-Host "Generating 1st pass encoder metrics...`n"
@@ -721,11 +722,11 @@ function Invoke-FFMpeg {
         }
         else {
             if ($DisableProgress) {
-                ffmpeg $ffmpegArgs[0] -f null - 2>$Paths.LogPath
+                ffmpeg $ffmpegArgs.ffmpegArgs1 -f null - 2>$Paths.LogPath
             }
             else {
-                $ffArgsPass1 = $ffmpegArgs[0]
-                $ffArgsPass2 = $ffmpegArgs[1]
+                $ffArgsPass1 = $ffmpegArgs.ffmpegArgs1
+                $ffArgsPass2 = $ffmpegArgs.ffmpegArgs2
                 $log = $Paths.LogPath
 
                 Start-ThreadJob -Name 'ffmpeg 1st Pass' -ArgumentList $ffArgsPass1, $log -ScriptBlock {
@@ -756,7 +757,7 @@ function Invoke-FFMpeg {
         Write-Banner
 
         if ($DisableProgress) {
-            ffmpeg $ffmpegArgs[1] $Paths.OutputFile 2>>$Paths.LogPath
+            ffmpeg $ffmpegArgs.ffmpegArgs2 $Paths.OutputFile 2>>$Paths.LogPath
         }
         else {
             Start-ThreadJob -Name 'ffmpeg 2nd Pass' -ArgumentList $ffArgsPass2, $Paths.OutputFile, $log -ScriptBlock {
@@ -790,10 +791,10 @@ function Invoke-FFMpeg {
         Write-Banner
     
         if ($DisableProgress) {
-            ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+            ffmpeg $ffmpegArgs.ffmpegArgs1 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
-            Start-ThreadJob -Name ffmpeg -ArgumentList $ffmpegArgs, $Paths.OutputFile, $Paths.LogPath -ScriptBlock {
+            Start-ThreadJob -Name ffmpeg -ArgumentList $ffmpegArgs.ffmpegArgs1, $Paths.OutputFile, $Paths.LogPath -ScriptBlock {
                 param ($ffmpegArgs, $out, $log)
     
                 ffmpeg $ffmpegArgs $out 2>$log
@@ -807,10 +808,10 @@ function Invoke-FFMpeg {
         Write-Banner
 
         if ($DisableProgress) {
-            ffmpeg $ffmpegArgs $Paths.OutputFile 2>$Paths.LogPath
+            ffmpeg $ffmpegArgs.ffmpegArgs1 $Paths.OutputFile 2>$Paths.LogPath
         }
         else {
-            Start-ThreadJob -Name ffmpeg -ArgumentList $ffmpegArgs, $Paths.OutputFile, $Paths.LogPath -ScriptBlock {
+            Start-ThreadJob -Name ffmpeg -ArgumentList $ffmpegArgs.ffmpegArgs1, $Paths.OutputFile, $Paths.LogPath -ScriptBlock {
                 param ($ffmpegArgs, $out, $log)
     
                 ffmpeg $ffmpegArgs $out 2>$log
@@ -839,7 +840,7 @@ function Invoke-FFMpeg {
         TODO: Find a way to call function once for all modes
     #>
 
-    if ($ffmpegArgs.Count -ne 2 -and !$DisableProgress -and !$dovi) {
+    if ($null -eq $ffmpegArgs.ffmpegArgs2 -and !$DisableProgress -and !$dovi) {
         $params = @{
             InputFile   = $Paths.InputFile
             LogPath     = $Paths.LogPath
@@ -860,5 +861,55 @@ function Invoke-FFMpeg {
     # Remove ffmpeg jobs
     Get-Job -State Completed | Remove-Job
     Write-Host ""
+
+    # Encode and mux in audio/subs/chapters if Vapoursynth
+    if ($null -ne $ffmpegArgs.Vapoursynth) {
+        $final = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-FINAL.$2'
+        # If audio or subs were selected
+        if ($audio -ne '-an' -or ($null -ne $audio2 -and $audio2 -ne '-an') -or $subs -ne '-sn') {
+            Write-Host "VapourSynth: Encoding/copying audio, subtitles, and chapters..." @progressColors
+            $temp = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
+
+            $vsArgs = @(
+                if ($PSBoundParameters['TestFrames']) {
+                    '-ss'
+                    $frame['TestStart']
+                }
+                $ffmpegArgs.Vapoursynth
+                '-y'
+                $temp
+            )
+
+            ffmpeg $vsArgs 2>$null
+        }
+        # Only extract chapters
+        else {
+            Write-Host "VapourSynth: Extracting chapters..." @progressColors
+            $temp = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.txt'
+
+            ffmpeg -i $Paths.InputFile -f ffmetadata -an -sn -vn -map_chapters 0 $temp 2>$null
+        }
+
+        # Mux together
+        if ([File]::Exists($temp)) {
+            ffmpeg -hide_banner -i $Paths.OutputFile -i $temp -map_chapters 1 -map 0 -map 1 -c copy `
+                -shortest $final 2>$null
+
+            [File]::Delete($temp)
+        }
+        else {
+            Write-Warning "VapourSynth: Audio/subtitles/chapters file does not exist"
+            return
+        }
+        # Make sure output exists, delete extra file and rename
+        if ([File]::Exists($final) -and ([FileInfo]$final).Length -ge ([FileInfo]$Paths.OutputFile).Length) {
+            Write-Verbose "Vapoursynth: Successfully muxed files together"
+            [File]::Delete($Paths.OutputFile)
+            $Paths.OutputFile = (Rename-Item $final -NewName "$($Paths.Title).$($Paths.Extension)" -PassThru).FullName
+        }
+        else {
+            Write-Warning "Vapoursynth: The muxed file is smaller than expected. Investigate the 'FINAL' file manually"
+        }
+    }
 }
 
