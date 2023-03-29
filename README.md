@@ -29,14 +29,14 @@ Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
   - [Script Options](#script-options)
     - [Configuration Files](#configuration-files)
     - [Parameters](#parameters)
-    - [Mandatory](#mandatory)
-    - [Utility](#utility)
-    - [Audio \& Subtitles](#audio--subtitles)
-    - [Video Filtering](#video-filtering)
-    - [Encoder Config](#encoder-config)
-    - [Universal Encoder Settings](#universal-encoder-settings)
-    - [x265 Only Settings](#x265-only-settings)
-    - [Extra](#extra)
+      - [Mandatory](#mandatory)
+      - [Utility](#utility)
+      - [Audio \& Subtitles](#audio--subtitles)
+      - [Video Filtering](#video-filtering)
+      - [Encoder Config](#encoder-config)
+      - [Universal Encoder Settings](#universal-encoder-settings)
+      - [x265 Only Settings](#x265-only-settings)
+      - [Extra](#extra)
   - [Acknowledgements](#acknowledgements)
 
 ---
@@ -185,7 +185,7 @@ See [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/Configuration-Fi
 
 FFEncoder can accept the following parameters from the command line:
 
-### Mandatory
+#### Mandatory
 
 > An Asterisk <b>\*</b> denotes that the parameter is mandatory only for its given parameter set (for example, you can choose either `-CRF` or `-VideoBitrate` for rate control, but not both):
 
@@ -200,7 +200,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Unsharp**      | None    | <b>\*</b>True | **U**                            | Enable unsharp filter and set search range, in the form `<luma\|chroma\|yuv>_<small\|medium\|large>` or `custom=<filter>`                            | Sharpen/Blur  |
 | **CompareVMAF**  | N/A     | <b>\*</b>True | None                             | Flag to enable a VMAF comparison on two video files                                                                                                  | VMAF          |
 
-### Utility
+#### Utility
 
 | Parameter Name         | Default | Mandatory | Alias              | Description                                                                                                                                         |
 | ---------------------- | ------- | --------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -214,7 +214,7 @@ FFEncoder can accept the following parameters from the command line:
 | **EnableSSIM**         | False   | False     | **SSIM**           | Enables an additional Structural Similarity Index (SSIM) measurement during VMAF comparisons                                                        |
 | **DisableProgress**    | False   | False     | **NoProgressBar**  | Switch to disable the progress bar during encoding                                                                                                  |
 
-### Audio & Subtitles
+#### Audio & Subtitles
 
 > See [Audio Options](https://github.com/patrickenfuego/FFEncoder/wiki/Audio-Options) and [Subtitle Options](https://github.com/patrickenfuego/FFEncoder/wiki/Subtitle-Options) in the wiki for more info
 
@@ -230,7 +230,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Stereo2**       | False   | False     | **2CH2**, **ST2**      | Switch to downmix the second audio track to stereo                                                                  |
 | **Subtitles**     | Default | False     | **S**, **Subs**        | Subtitle passthrough preference                                                                                     |
 
-### Video Filtering
+#### Video Filtering
 
 > See the Mandatory section above for parameters needed to enable certain filters
 
@@ -242,7 +242,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Resolution**      | Source Dependent | False     | **Res**, **R**        | Scaling resolution. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info             |
 | **UnsharpStrength** | luma_mild        | False     | **UStrength**         | Specify the unsharp filters strength, in the form `<sharpen\|blur>_<mild\|medium\|strong>`                                                           |
 
-### Encoder Config
+#### Encoder Config
 
 | Parameter Name           | Default      | Mandatory | Alias                 | Description                                                                                                                                                                  |
 | ------------------------ | ------------ | --------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -255,7 +255,7 @@ FFEncoder can accept the following parameters from the command line:
 | **TestStart**            | Disabled     | False     | **Start**, **TS**     | Starting point for test encodes. Accepts formats `00:01:30` (sexagesimal time), `200f` (frame start), `200t` (decimal time in seconds)                                       |
 | **VapourSynthScript**    | Disabled     | False     | **VSScript**, **VPY** | Path to VapourSynth script. Video filtering parameters are ignored when enabled, and must be done in the vpy script                                                          |
 
-### Universal Encoder Settings
+#### Universal Encoder Settings
 
 > **NOTE**: *Encoder* means the default is specific to the encoder used. *System* is based on system hardware
 
@@ -280,7 +280,7 @@ FFEncoder can accept the following parameters from the command line:
 | **Tree**           | 1 (Enabled) | False     | **CUTree**, **MBTree** | Enable or disable encoder-specific lowres motion vector lookahead algorithm. 1 is enabled, 0 is disabled. Best disabled for noisy content                              |
 | **VBV**            | `Level`     | False     | None                   | Video buffering verifier. Default is based on the encoder level (except DoVi, which defaults to level 5.1). Requires 2 arguments: (`vbv-bufsize`, `vbv-maxrate`)       |
 
-### x265 Only Settings
+#### x265 Only Settings
 
 | Parameter Name           | Default | Mandatory | Alias    | Description                                                                                                                                                              |
 | ------------------------ | ------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -289,7 +289,7 @@ FFEncoder can accept the following parameters from the command line:
 | **TuDepth**              | 1, 1    | False     | **TU**   | Transform Unit recursion depth. Accepted values are 1-4. First value represents intra depth, and the second value inter depth, i.e. (`tu-intra-depth`, `tu-inter-depth`) |
 | **StrongIntraSmoothing** | 1 (on)  | False     | **SIS**  | Enable/disable strong-intra-smoothing. Accepted values are 1 (on) and 0 (off)                                                                                            |
 
-### Extra
+#### Extra
 
 > See [here](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#using-the-extra-parameter-options) for examples of how to use these parameters
 
