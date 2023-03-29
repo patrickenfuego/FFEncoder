@@ -165,6 +165,7 @@ function Set-FFMpegArgs {
     [ArrayList]$ffmpegArgsAL = @(
         '-probesize'
         '100MB'
+        '-hide_banner'
         if (![string]::IsNullOrEmpty($Paths.VPY)) {
             '-f'
             'vapoursynth'
@@ -185,12 +186,26 @@ function Set-FFMpegArgs {
         '0:v:0'
         '-c:v'
         ($Encoder -eq 'x265') ? 'libx265' : 'libx264'
-        $Audio
-        $Subtitles
+        # $Audio
+        # $Subtitles
         '-preset'
         $Preset
         $RateControl
     )
+
+    # Handle audio/subs separate for VS encodes
+    if (![string]::isNullOrEmpty($Paths.VPY)) {
+        $vsArray = @(
+            '-probesize'
+            '100MB'
+            '-hide_banner'
+            '-i'
+            "$($Paths.InputFile)"
+            '-vn'
+            $Audio
+            $Subtitles
+        )
+    }
 
     # Settings common to both encoders
     [ArrayList]$baseArray = @(
@@ -407,7 +422,7 @@ function Set-FFMpegArgs {
             $x265SecondPassArray.AddRange(@('pass=2', "stats='$($Paths.X265Log)'", "subme=$($PresetParams.Subme)"))
  
             # Fix for pwsh 7.3 string parsing
-            if ($psReq) {
+            if ($PSVersionTable.PSVersion -lt [version]'7.3') {
                 $ffmpegArgsAL.AddRange(@('-x265-params', "`"$($x265FirstPassArray -join ':')`"")) 
                 $ffmpegPassTwoArgsAL.AddRange(@('-x265-params', "`"$($x265SecondPassArray -join ':')`""))
             }
@@ -436,7 +451,10 @@ function Set-FFMpegArgs {
         Write-Verbose "FFMPEG FIRST PASS ARRAY IS: `n $($ffmpegArgsAL -join " ")`n"
         Write-Verbose "FFMPEG SECOND PASS ARRAY IS: `n $($ffmpegPassTwoArgsAL -join " ")`n"
 
-        return @($ffmpegArgsAL, $ffmpegPassTwoArgsAL)
+        $ffmpegHash = @{
+            ffmpegArgs1 = $ffmpegArgsAL
+            ffmpegArgs2 = $ffmpegPassTwoArgsAL
+        }
     }
     # CRF/1-Pass
     else {
@@ -457,6 +475,14 @@ function Set-FFMpegArgs {
 
         Write-Verbose "FFMPEG ARGUMENT ARRAY IS:`n $($ffmpegArgsAL -join " ")`n"
 
-        return $ffmpegArgsAL
+        $ffmpegHash = @{
+            ffmpegArgs1 = $ffmpegArgsAL
+            ffmpegArgs2 = $null
+        }
     }
+
+    $ffmpegHash['Vapoursynth'] = $vsArray ? $vsArray : $null
+    Write-Verbose "VAPOURSYNTH ARGUMENT ARRAY IS:`n $($vsArray -join " ")`n"
+
+    return $ffmpegHash
 }
