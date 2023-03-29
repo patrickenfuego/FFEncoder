@@ -13,20 +13,23 @@ function Import-Config {
 
         [Parameter(Mandatory = $true)]
         [AllowNull()]
-        [hashtable]$EncoderExtra
+        [hashtable]$EncoderExtra,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Encoder
     )
 
     # Try to parse the config files
     try {
         # Read config file for additional options
-        $config = Read-Config -Encoder $Encoder
+        $config = Read-Config -Encoder $Encoder -Verbose:$setVerbose
 
         # Add multi-valued ffmpeg config options to existing hash
         if ($config['FFMpegHash']) {
             if ($FFMpegExtra) {
                 $index = $ffmpegExtra.FindIndex( {
-                    $args[0] -is [hashtable]
-                } )
+                        $args[0] -is [hashtable]
+                    } )
 
                 if ($index -ne -1) {
                     # Catch error if duplicate keys are present
@@ -39,7 +42,13 @@ function Import-Config {
                 $FFMpegExtra.Add($config['FFMpegHash'])
             }
         }
+    }
+    catch {
+        $e = $_.Exception.Message
+        Write-Error "Failed to parse ffmpeg extra config file: $e"
+    }
 
+    try {
         # Add single valued ffmpeg config options
         if ($config['FFMpegArray']) {
             if ($FFMpegExtra) { $ffmpegExtra.AddRange($config['FFMpegArray']) }
@@ -59,8 +68,10 @@ function Import-Config {
     }
     catch {
         $e = $_.Exception.Message
-        Write-Error "Failed to parse the configuration file(s): $e"
+        Write-Error "Failed to parse encoder extra config file: $e"
     }
 
-    return $EncoderExtra, $FFMpegExtra
+    $scriptHash = $config['ScriptHash'] ? $config['ScriptHash'] : $null
+
+    return $EncoderExtra, $FFMpegExtra, $scriptHash
 }

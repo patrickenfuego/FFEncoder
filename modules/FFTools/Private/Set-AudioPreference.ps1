@@ -1,3 +1,5 @@
+using namespace System.IO
+
 <#
     .SYNOPSIS
         Helper function which builds the audio argument arrays for ffmpeg based on user input
@@ -223,7 +225,7 @@ function Set-AudioPreference {
             if (!$Bitrate) {
                 $deeDefault = switch ($channels) {
                     6       { 640 }
-                    8       { 960 }
+                    2       { 256 }
                     default { 640 }
                 }
                 $Bitrate = $deeDefault
@@ -355,10 +357,10 @@ function Set-AudioPreference {
     elseif ($RemuxStream) {
         # Set audio paths based on container
         if ($Paths.InputFile.EndsWith('mkv')) {
-            $Paths.AudioPath = [System.IO.Path]::Join($(Split-Path $Paths.InputFile -Parent), "$($Paths.Title)_audio.mka")
+            $Paths.AudioPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, "$($Paths.Title)_audio.mka")
         }
         elseif ($Paths.InputFile.EndsWith('mp4')) {
-            $Paths.AudioPath = [System.IO.Path]::Join($(Split-Path $Paths.InputFile -Parent), "$($Paths.Title)_audio.m4a")
+            $Paths.AudioPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, "$($Paths.Title)_audio.m4a")
         }
         else {
             Write-Warning "Could not determine container format for background encoding. Encode the audio manually"
@@ -367,15 +369,15 @@ function Set-AudioPreference {
 
         # If dee encoder is running, wait for audio multiplex to finish
         if ((Get-Job -Name 'Dee Encoder' -ErrorAction SilentlyContinue) -and
-            (![System.IO.File]::Exists($Paths.AudioPath))) {
+            (![File]::Exists($Paths.AudioPath))) {
             $method = 0
             Start-Sleep -Seconds 160
         }
-        elseif ([System.IO.File]::Exists($Paths.AudioPath)) {
+        elseif ([File]::Exists($Paths.AudioPath)) {
             # Delete empty file if it exists
-            if ((Get-Item $Paths.AudioPath).Length -eq 0) {
+            if (([FileInfo]$Paths.AudioPath).Length -eq 0) {
                 Write-Verbose "Empty audio file found. Deleting..."
-                [System.IO.File]::Delete($Paths.AudioPath)
+                [File]::Delete($Paths.AudioPath)
                 if ((Get-Command 'mkvmerge') -and $Paths.InputFile.EndsWith('mkv')) {
                     $method = 1
                 }
@@ -406,10 +408,8 @@ function Set-AudioPreference {
         Write-Host "Stream copy detected: Spawning audio encoder in a separate thread...`n" @emphasisColors
     
         # Modify and combine arrays for background job
-        #$stereoArgs[0] = '-af'
         $index = [array]::IndexOf($audioArgs, "-c:a:$Stream")
         $audioArgs[$index] = '-c:a:0'
-        #$fullArgs = $audioArgs + $stereoArgs
 
         if ($Stereo) {
             $stereoArgs[0] = '-af'

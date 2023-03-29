@@ -176,9 +176,9 @@ To use this parameter, you will need a valid TMDB API key. See [the wiki](https:
 
 ### Configuration Files
 
-Two configuration files, `ffmpeg.ini` and `encoder.ini`, are included and can be used to set frequently used options not covered by script parameters. These files are located in the `config` directory and are loaded each time the script runs.
+Three configuration files, `ffmpeg.ini`, `encoder.ini`, and `script.ini`, are included and can be leveraged to set frequently used options. These files are located in the `config` directory and are loaded each time the script runs.
 
-See the wiki for more information.
+See [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/Configuration-Files) for more information.
 
 FFEncoder can accept the following parameters from the command line:
 
@@ -214,6 +214,8 @@ FFEncoder can accept the following parameters from the command line:
 ### Audio & Subtitles
 
 > See [Audio Options](https://github.com/patrickenfuego/FFEncoder/wiki/Audio-Options) and [Subtitle Options](https://github.com/patrickenfuego/FFEncoder/wiki/Subtitle-Options) in the wiki for more info
+
+> Using deew requires some initial configuration before it will work properly. See [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/Audio-Options#using-the-dee-encoding-options) for more info
 
 | Parameter Name    | Default | Mandatory | Alias                  | Description                                                                                                         |
 | ----------------- | ------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------- |

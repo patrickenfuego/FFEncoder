@@ -36,8 +36,8 @@ function Invoke-DeeEncoder {
         [switch]$Stereo
     )
 
-    $logPath = [Path]::Join($(Split-Path $Paths.InputFile -Parent), 'dee.log')
-    $outputPath = Split-Path $Paths.OutputFile -Parent
+    $logPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, 'dee.log')
+    $outputPath = ([FileInfo]$Paths.OutputFile).DirectoryName
 
     Write-Output "Preparing DEE encoder..." >$logPath
     Write-Verbose "Parameters:`n`n$([pscustomobject]$PSBoundParameters | Out-String)" 4>>$logPath
@@ -59,7 +59,7 @@ function Invoke-DeeEncoder {
     }
 
     $audioBase = ($Paths.InputFile.EndsWith('mkv')) ? ("$($Paths.Title)_audio.mka") : ("$($Paths.Title)_audio.m4a")
-    $Paths.AudioPath = [Path]::Join($(Split-Path $Paths.InputFile -Parent), $audioBase)
+    $Paths.AudioPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, $audioBase)
 
     if (![File]::Exists($Paths.AudioPath)) {
         Write-Verbose "ThreadJob: Multiplexing audio for DEE...`n" 4>>$logPath
@@ -88,7 +88,7 @@ function Invoke-DeeEncoder {
     }
 
     # Create the directory structure
-    $tmpPath = [Path]::Join($(Split-Path $Paths.InputFile -Parent), 'dee_tmp')
+    $tmpPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, 'dee_tmp')
     if (![Directory]::Exists($tmpPath)) {
         [Directory]::CreateDirectory($tmpPath) > $null
     }

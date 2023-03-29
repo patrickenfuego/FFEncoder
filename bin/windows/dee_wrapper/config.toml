@@ -28,8 +28,8 @@ max_instances = '50%'
     dd_5_1 = 640
     ddp_1_0 = 128
     ddp_2_0 = 256
-    ddp_5_1 = 1024
-    ddp_7_1 = 1536
+    ddp_5_1 = 768
+    ddp_7_1 = 1280
 
 # You can toggle what sections you would like to see in the encoding summary
 [summary_sections]

@@ -230,7 +230,7 @@ function Set-DVArgs {
         }
     }
 
-    # Add parameters passed via -x265Extra
+    # Add parameters passed via -EncoderExtra
     if ($PSBoundParameters['EncoderExtra']) {
         $x265ExtraArray = [ArrayList]@()
         foreach ($arg in $EncoderExtra.GetEnumerator()) {
@@ -301,7 +301,7 @@ function Set-DVArgs {
         '-probesize'
         '100MB'
         '-i'
-        if ($psReq) {
+        if ($PSVersionTable.PSVersion -lt [version]'7.3') {
             $($Paths.InputFile)
         }
         else {
@@ -486,7 +486,7 @@ function Set-DVArgs {
             '*k' {
                 [int]( $_ -replace 'k', '')
             }
-            default { Write-Error "Unknown bitrate suffix for two pass" -ErrorAction Stop }
+            default { Write-Error "Unknown bitrate suffix for two pass encode" -ErrorAction Stop }
         }
         $x265BaseArray.AddRange(@('--bitrate', $val))
     }

@@ -14,6 +14,8 @@ using namespace System.IO
         Location of encoder configuration file. Default is ../../../config/encoder.ini
     .PARAMETER FFMpegConfigFile
         Location of ffmpeg configuration file. Default is ../../../config/ffmpeg.ini
+    .PARAMETER FFMpegConfigFile
+        Location of script configuration file. Default is ../../../config/script.ini
 #>
 function Read-Config {
     [CmdletBinding()]
@@ -27,23 +29,34 @@ function Read-Config {
 
         [Parameter(Mandatory = $false)]
         [string]$FFMpegConfigFile = 
-            [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'config', 'ffmpeg.ini')
+            [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'config', 'ffmpeg.ini'),
+
+        [Parameter(Mandatory = $false)]
+        [string]$ScriptConfigFile = 
+            [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'config', 'script.ini')
     )
 
     $encoderHash = @{}
     $ffmpegHash = @{}
+    $scriptHash = @{}
     $ffmpegArray = [System.Collections.Generic.List[string]]@()
-    $skipEncoder, $skipFFMpeg = $false, $false
+    $skipEncoder = $skipFFMpeg = $skipScript = $false
+    # Acceptable keys for the script config
+    $scriptKeys = @('RemoveFiles', 'DisableProgress', 'ExitOnError', 'SkipHDR10Plus', 'SkipDolbyVision', 'GenerateReport', 'HDR10PlusSkipReorder')
 
     if (![File]::Exists($EncoderConfigFile)) {
         $skipEncoder = $true
     }
     if (![File]::Exists($FFMpegConfigFile)) {
-        Write-Host "Skipping ffmpeg config"
+        Write-Warning "Skipping ffmpeg config...file does not exist"
         $skipFFMpeg = $true
     }
+    if (![File]::Exists($ScriptConfigFile)) {
+        Write-Warning "Skipping script config...file does not exist"
+        $skipScript = $true
+    }
 
-    if ($skipEncoder -and $skipFFMpeg) {
+    if ($skipEncoder -and $skipFFMpeg -and $skipScript) {
         Write-Warning "Could not locate configuration file paths. Configurations will not be copied"
         return
     }
@@ -81,10 +94,33 @@ function Read-Config {
             }
         }
     }
+    if (!$skipScript) {
+        $scriptINI = [File]::ReadAllLines($ScriptConfigFile)
+        foreach ($line in $scriptINI[1..($scriptINI.Length - 1)]) {
+            if ($line -and $line -notlike ';*' -and $line -like '*=*') {
+                $name, $value = ($line -split '=', 2).Trim()
+                if ($name -in $scriptKeys) {
+                    try {
+                        $scriptHash[$name] = [Convert]::ToBoolean($value)
+                    }
+                    catch {
+                        Write-Host "`nParse Config: Expected Boolean value for '$name'. Received '$value'" @errColors
+                        $scriptHash[$name] = $false
+                    }
+                }
+                else {
+                    $keys = $scriptKeys -join ', '
+                    Write-Host "`nParse Config: $name is not a valid configuration option for script.ini. Options:`n`t$keys" `
+                        @errColors
+                }
+            }
+        }
+    }
 
     $returnHash = @{
         Encoder     = ($encoderHash.Count -gt 0) ? $encoderHash : $null
         FFMpegHash  = ($ffmpegHash.Count -gt 0) ? $ffmpegHash : $null
+        ScriptHash  = ($scriptHash.Count -gt 0) ? $scriptHash : $null
         FFMpegArray = ($ffmpegArray.Count -gt 0) ? $ffmpegArray : $null
     }
 
