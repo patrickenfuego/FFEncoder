@@ -307,3 +307,4 @@ This section contains acknowledgements for the authors of tools distributed with
 - [dovi_tool](https://github.com/quietvoid/dovi_tool) - Developed by **quietvoid**
 - [hdr10plus_tool](https://github.com/quietvoid/hdr10plus_tool) - Developed by **quietvoid**
 - [deew](https://github.com/pcroland/deew) - While this project contains a modified, custom compiled version of `deew`, the original project was developed by **pcroland**
+- [MkvToolNix](https://mkvtoolnix.download/index.html) - Developed by **Mortiz Bunkus**. An invaluable collection of tools for any video enthusiast
