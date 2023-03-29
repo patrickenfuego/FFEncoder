@@ -26,8 +26,9 @@ Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
   - [Rate Control Options](#rate-control-options)
   - [VMAF Comparison](#vmaf-comparison)
   - [MKV Tag Generator](#mkv-tag-generator)
-  - [Script Parameters](#script-parameters)
+  - [Script Options](#script-options)
     - [Configuration Files](#configuration-files)
+    - [Parameters](#parameters)
     - [Mandatory](#mandatory)
     - [Utility](#utility)
     - [Audio \& Subtitles](#audio--subtitles)
@@ -172,13 +173,15 @@ To use this parameter, you will need a valid TMDB API key. See [the wiki](https:
 
 ---
 
-## Script Parameters
+## Script Options
 
 ### Configuration Files
 
 Three configuration files, `ffmpeg.ini`, `encoder.ini`, and `script.ini`, are included and can be leveraged to set frequently used options. These files are located in the `config` directory and are loaded each time the script runs.
 
 See [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/Configuration-Files) for more information.
+
+### Parameters
 
 FFEncoder can accept the following parameters from the command line:
 
