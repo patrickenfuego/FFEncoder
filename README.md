@@ -8,7 +8,7 @@
 
 # FFEncoder
 
-FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [VapourSynth](https://www.vapoursynth.com/doc/), [Mkvtoolnix](https://mkvtoolnix.download/), [ffprobe](https://ffmpeg.org/ffprobe.html), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 H.265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress, filter, and multiplex multimedia files for streaming or archiving.
+FFEncoder is a cross-platform PowerShell script and module that is meant to make high definition video encoding workflows easier. FFEncoder uses [ffmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html), [VapourSynth](https://www.vapoursynth.com/doc/), [Mkvtoolnix](https://mkvtoolnix.download/), the [x264 H.264 encoder](https://x264.org/en/), and the [x265 H.265 HEVC encoder](https://x265.readthedocs.io/en/master/index.html) to compress, filter, and multiplex multimedia files for streaming or archiving.
 
 Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
 
@@ -17,16 +17,18 @@ Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
 - [FFEncoder](#ffencoder)
   - [About](#about)
   - [Dependencies](#dependencies)
-  - [Dependency Installation](#dependency-installation)
+  - [Dependency Installation \& Setup](#dependency-installation--setup)
     - [Windows](#windows)
     - [Linux](#linux)
     - [macOS](#macos)
-  - [Auto-Cropping](#auto-cropping)
-  - [Automatic HDR Metadata](#automatic-hdr-metadata)
-  - [Rate Control Options](#rate-control-options)
-  - [VMAF Comparison](#vmaf-comparison)
-  - [MKV Tag Generator](#mkv-tag-generator)
-  - [Script Options](#script-options)
+    - [Adding Contents to PATH](#adding-contents-to-path)
+  - [Features](#features)
+    - [Auto-Cropping](#auto-cropping)
+    - [Automatic HDR Metadata](#automatic-hdr-metadata)
+    - [Rate Control Options](#rate-control-options)
+    - [VMAF Comparison](#vmaf-comparison)
+    - [MKV Tag Generator](#mkv-tag-generator)
+  - [Usage](#usage)
     - [Configuration Files](#configuration-files)
     - [Parameters](#parameters)
       - [Mandatory](#mandatory)
@@ -45,6 +47,8 @@ Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
 ## About
 
 FFEncoder is a simple script that allows you to pass dynamic parameters to ffmpeg without needing to modify complicated CLI arguments for each source. As much as I love the ffmpeg suite, it can be complicated to learn and use; the syntax is extensive, and many of the arguments are not easy to remember unless you use them often. The goal of FFEncoder is to take common encoding workflows and make them easier, while continuing to leverage the power and flexibility of the ffmpeg tool chain.
+
+Capability can be further expanded with the [VapourSynth](https://www.vapoursynth.com/) frameserver. FFEncoder fully supports audio, subtitle, and chapter options and will mux the streams together for you after the encode finishes. Other than video filtering options, every parameter available works with VapourSynth scripts.
 
 Check out the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki) for additional information.
 
@@ -66,7 +70,10 @@ For users with PowerShell 7.2 or newer, the script uses ANSI output in certain s
 
 ---
 
-## Dependency Installation
+## Dependency Installation & Setup
+
+<details>
+<summary>Expand</summary>
 
 > You can compile ffmpeg manually from source on all platforms, which allows you to select additional libraries (like Fraunhofer's libfdk AAC encoder). Some features of this script are unavailable unless these libraries are included. For more information, see [here](https://trac.ffmpeg.org/wiki/CompilationGuide).
 
@@ -106,9 +113,46 @@ To install PowerShell, run the following command using Homebrew:
 brew install --cask powershell
 ```
 
+### Adding Contents to PATH
+
+The following binaries are expected to be available via system PATH in order for the script to work properly:
+
+- ffmpeg
+- ffprobe
+- x265 (Dolby Vision Only)
+- mkvextract, mkvmerge, mkvpropedit (optional, but recommended)
+  - These should be added to PATH automatically when you install MkvToolNix
+- Dolby Encoding Engine, AKA dee (Optional)
+
+Adding contents to PATH is relatively straightforward and platform dependent. Below are some examples of how you can add software to your system PATH:
+
+```powershell
+# Whatever the path is to your ffmpeg install
+$ffmpeg = 'C:\Users\SomeUser\Software\ffmpeg.exe'
+$ffprobe = 'C:\Users\SomeUser\Software\ffprobe.exe'
+$newPath = $env:PATH + ";$ffmpeg;$ffprobe"
+[Environment]::SetEnvironmentVariable('PATH', $newPath, 'User')
+# Now close and reopen PowerShell to update
+```
+
+Here is a quick example using bash/zsh on Linux/macOS:
+
+```bash
+# Set this equal to wherever ffmpeg is
+ffmpeg="/home/someuser/software/ffmpeg"
+# If you're using zsh (mac default), replace .bashrc with .zshrc
+echo "export PATH=${ffmpeg}:${PATH}" >> ~/.bashrc
+# Source the file to update
+source ~/.bashrc
+```
+
+</details>
+
 ---
 
-## Auto-Cropping
+## Features
+
+### Auto-Cropping
 
 > **NOTE**: FFEncoder uses modulus 2 rounding to detect black borders. I've found this to be the most consistent choice for the majority content. If you do not want the script to auto-crop your video, you may pass **override crop values** via the `-FFMpegExtra` parameter (see [here](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#overriding-crop-arguments) for more info)
 
@@ -116,7 +160,7 @@ FFEncoder will auto-crop your video, and works similarly to programs like [Handb
 
 ---
 
-## Automatic HDR Metadata
+### Automatic HDR Metadata
 
 FFEncoder will automatically fetch and fill HDR metadata before encoding begins. This includes:
 
@@ -141,7 +185,7 @@ FFEncoder will automatically fetch and fill HDR metadata before encoding begins.
 
 ---
 
-## Rate Control Options
+### Rate Control Options
 
 FFEncoder supports the following rate control options:
 
@@ -156,7 +200,7 @@ FFEncoder supports the following rate control options:
 
 ---
 
-## VMAF Comparison
+### VMAF Comparison
 
 The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply enable the switch parameter `-compareVMAF` (or its alias, `-VMAF`) and pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison.
 
@@ -166,7 +210,7 @@ Additionally, you may add `SSIM` and `PSNR` measurements as well during the same
 
 ---
 
-## MKV Tag Generator
+### MKV Tag Generator
 
 If the selected output format is Matroska (MKV), you can use the parameter `-GenerateMKVTagFile` (or its alias, `-CreateTagFile`) to dynamically pull down metadata from TMDB, create a valid XML file, and multiplex it into the output file. This allows you to add useful metadata to your container for things like Plex and Emby to detect, or add other cool properties like Directors, Writers, and Actors for your own reference; any parameter that is available via the TMDB API can be added to your container.
 
@@ -174,7 +218,7 @@ To use this parameter, you will need a valid TMDB API key. See [the wiki](https:
 
 ---
 
-## Script Options
+## Usage
 
 ### Configuration Files
 
