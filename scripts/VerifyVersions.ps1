@@ -1,3 +1,4 @@
+using namespace System.IO
 <#
     .SYNOPSIS
         Utility function to retrieve current FFencoder or Pwsh version from GitHub
@@ -10,9 +11,9 @@
 function Get-ReleaseVersion ([string]$Repository) {
     $repo = switch ($Repository) {
         'PowerShell' { 'PowerShell/PowerShell' }
-        'Pwsh'       { 'PowerShell/PowerShell' }
-        'Posh'       { 'PowerShell/PowerShell' }
-        'FFEncoder'  { 'patrickenfuego/FFEncoder' }
+        'Pwsh' { 'PowerShell/PowerShell' }
+        'Posh' { 'PowerShell/PowerShell' }
+        'FFEncoder' { 'patrickenfuego/FFEncoder' }
     }
 
     $uri = "https://api.github.com/repos/$repo/releases"
@@ -122,48 +123,51 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
     if ($response) {
         Write-Host "The updated repository will be cloned with the suffix '-latest' inside the parent directory" @progressColors
 
-        if (Get-Command 'git') {
-            $repoPath = ([System.IO.Path]::Join((Get-Location).Path, 'FFEncoder-latest')).ToString()
+        $repoPath = ([Path]::Join(([FileInfo](Get-Location).Path).DirectoryName, 'FFEncoder.zip')).ToString()
+        $destPath = $repoPath.replace('.zip', '-latest')
 
-            if ([System.IO.Directory]::Exists($repoPath)) {
-                Write-Host "Repository directory already exists. Rename or delete the old one before pulling the update" @warnColors
-                Pop-Location
+        if ([Directory]::Exists($repoPath)) {
+            Write-Host "Repository directory already exists. Rename or delete the old one before pulling the update" @warnColors
+            Pop-Location
+            return
+        }
+            
+        Push-Location (Get-Location).Path && Push-Location ((Get-Item (Get-Location)).Parent).FullName
+        # Clone the repo and save it with the -latest suffix in the same parent directory
+        Write-Host "Cloned repository location:" $repoPath
+        $params = @{
+            Uri     = 'https://github.com/patrickenfuego/FFEncoder/archive/refs/heads/main.zip'
+            Method  = 'GET'
+            OutFile = $repoPath
+        }
+        Invoke-WebRequest @params
+        Expand-Archive -Path $repoPath -DestinationPath $destPath
+        [File]::Delete($repoPath)
+        Pop-Location
+
+        if ([Directory]::Exists($destPath)) {
+            $params = @{
+                Prompt  = "Repository successfully cloned. Would you like to exit this script and use the new release? $yn`: "
+                Timeout = 15000
+                Mode    = 'Yes/No'
+                Count   = 3
+            }
+
+            try {
+                $response = Read-TimedInput @params
+            }
+            catch {
+                Write-Host "`u{203C} $($_.Exception.Message). Returning..." @errColors
                 return
             }
-            
-            Push-Location (Get-Location).Path && Push-Location ((Get-Item (Get-Location)).Parent).FullName
-            # Clone the repo and save it with the -latest suffix in the same parent directory
-            git clone https://github.com/patrickenfuego/FFEncoder.git $repoPath
-            Pop-Location
 
-            if ([System.IO.Directory]::Exists($repoPath)) {
-                $params = @{
-                    Prompt  = "Repository successfully cloned. Would you like to exit this script and use the new release? $yn`: "
-                    Timeout = 15000
-                    Mode    = 'Yes/No'
-                    Count   = 3
-                }
-
-                try {
-                    $response = Read-TimedInput @params
-                }
-                catch {
-                    Write-Host "`u{203C} $($_.Exception.Message). Returning..." @errColors
-                    return
-                }
-
-                if ($response) {
-                    Write-Host "Yes was selected. Exiting script`n" @successColors
-                    $console.WindowTitle = $currentTitle
-                    Write-Host $exitBanner @errColors
-                    exit 0
-                }
-                else { return }
+            if ($response) {
+                Write-Host "Yes was selected. Exiting script`n" @successColors
+                $console.WindowTitle = $currentTitle
+                Write-Host $exitBanner @errColors
+                exit 0
             }
-        }
-        else {
-            Write-Error "git could not be found. Ensure it is available via PATH. Repository will not be cloned"
-            return
+            else { return }
         }
     }
     else {
