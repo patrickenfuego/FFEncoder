@@ -141,10 +141,17 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
             OutFile = $repoPath
         }
         Invoke-WebRequest @params
-        Expand-Archive -Path $repoPath -DestinationPath $destPath
-        [File]::Delete($repoPath)
-        Pop-Location
-
+        # Ensure request was successful before proceeding
+        if ($? -and [Path]::Exists($repoPath)) {
+            Expand-Archive -Path $repoPath -DestinationPath $destPath
+            [File]::Delete($repoPath)
+            Pop-Location
+        }
+        else {
+            Write-Warning "The return code indicates that the update failed. Download manually"
+            return
+        }
+        
         if ([Directory]::Exists($destPath)) {
             $params = @{
                 Prompt  = "Repository successfully cloned. Would you like to exit this script and use the new release? $yn`: "
