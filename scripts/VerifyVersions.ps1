@@ -149,6 +149,7 @@ function Update-FFEncoder ([version]$CurrentRelease, [switch]$Verbose) {
         }
         else {
             Write-Warning "The return code indicates that the update failed. Download manually"
+            Pop-Location
             return
         }
         
