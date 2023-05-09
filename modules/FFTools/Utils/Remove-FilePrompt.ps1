@@ -27,7 +27,7 @@ function Remove-FilePrompt {
             [System.IO.File]::Delete($Path)
             if ($?) {
                 if ($psReq) {
-                    $msg = "$aGreen`File $($aCyan+$ul)$Path$($ulOff)$aGreen was successfully deleted"
+                    $msg = "`n$aGreen`File $($aCyan+$ul)$Path$($ulOff)$aGreen was successfully deleted"
                     Write-Host $msg
                 }
                 else {
@@ -38,7 +38,7 @@ function Remove-FilePrompt {
             }
             else {
                 if ($psReq) {
-                    $msg = "$aRed`File $($aBlue+$ul)$Path$($ulOff+$aRed) could not be deleted. Make sure it is not in use by another process. Exiting script..."
+                    $msg = "`n$aRed`File $($aBlue+$ul)$Path$($ulOff+$aRed) could not be deleted. Make sure it is not in use by another process. Exiting script..."
                     Write-Host $msg
                     exit 68
                 }

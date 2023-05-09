@@ -202,11 +202,11 @@ FFEncoder supports the following rate control options:
 
 ### VMAF Comparison
 
-The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement. Simply enable the switch parameter `-compareVMAF` (or its alias, `-VMAF`) and pass it a source via `-Source`/`-Reference` (aliases for `-InputPath`) and an encode via `-Encode`/`-Distorted` (aliases for `-OutputPath`) to begin comparison.
+The script can compare two files using Netflix's [Video Multi-Method Assessment Fusion (VMAF)](https://github.com/Netflix/vmaf) as a quality measurement.
 
 The machine Learning model files are already provided, and Frames-Per-Second (FPS), resolution/cropping, and scaling are handled automatically; `libvmaf` requires that these parameters be identical before it will run.
 
-Additionally, you may add `SSIM` and `PSNR` measurements as well during the same VMAF run using their respective switch parameters - see the table below.
+Additionally, you may add `SSIM` and `PSNR` measurements as well during the same VMAF run - see [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/Quality-Assessment#introduction) for full details.
 
 ---
 
@@ -241,7 +241,7 @@ FFEncoder can accept the following parameters from the command line:
 | **CRF**          | N/A     | <b>\*</b>True | **C**                            | Rate control parameter that targets a specific quality level. Ranges from 0.0 to 51.0. Lower values result in higher quality                         | Rate Control  |
 | **ConstantQP**   | N/A     | <b>\*</b>True | **QP**                           | Constant quantizer rate control mode. Forces a consistent QP throughout the encode. Generally not recommended outside of testing.                    | Rate Control  |
 | **VideoBitrate** | N/A     | <b>\*</b>True | **VBitrate**                     | Rate control parameter that targets a specific bitrate. Can be used as an alternative to CRF when file size is a priority                            | Rate Control  |
-| **Scale**        | None    | <b>\*</b>True | **ScaleType**, **SF**            | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info | Scaling       |
+| **ScaleKernel**  | None    | <b>\*</b>True | **ResizeKernel**                 | Scaling/resizing filter to use. See [Rescaling Video](https://github.com/patrickenfuego/FFEncoder/wiki/Video-Options#rescaling-videos) for more info | Scaling       |
 | **Unsharp**      | None    | <b>\*</b>True | **U**                            | Enable unsharp filter and set search range, in the form `<luma\|chroma\|yuv>_<small\|medium\|large>` or `custom=<filter>`                            | Sharpen/Blur  |
 | **CompareVMAF**  | N/A     | <b>\*</b>True | None                             | Flag to enable a VMAF comparison on two video files                                                                                                  | VMAF          |
 
@@ -255,8 +255,9 @@ FFEncoder can accept the following parameters from the command line:
 | **GenerateMKVTagFile** | False   | False     | **CreateTagFile**  | Generates an MKV tag file using the TMDB API (key required). See the [wiki](https://github.com/patrickenfuego/FFEncoder/wiki/MKV-Tag-Generator)     |
 | **Verbose**            | False   | False     | None               | `CmdletBinding` switch to enable verbose logging - cascaded down to relevant functions for additional information. Useful for debugging             |
 | **ExitOnError**        | False   | False     | **Exit**           | Switch that forcibly exits the script on certain non-terminating errors that prompt for re-input. Can be used to prevent blocking during automation |
-| **EnablePSNR**         | False   | False     | **SSIM**           | Enables an additional Peak Signal-to-Noise (PSNR) measurement during VMAF comparisons                                                               |
-| **EnableSSIM**         | False   | False     | **SSIM**           | Enables an additional Structural Similarity Index (SSIM) measurement during VMAF comparisons                                                        |
+| **EnablePSNR**         | False   | False     | **PSNR**           | Enables an additional Peak Signal-to-Noise (PSNR) measurement during VMAF comparisons                                                               |
+| **EnableSSIM**         | False   | False     | **SSIM**           | Specify the resizing kernel used for upscaling/downscaling encodes for comparison                                                                   |
+| **VMAFResizeKernel**   | BiCubic | False     | **VMAFKernel**     | Enables an additional Structural Similarity Index (SSIM) measurement during VMAF comparisons                                                        |
 | **DisableProgress**    | False   | False     | **NoProgressBar**  | Switch to disable the progress bar during encoding                                                                                                  |
 
 #### Audio & Subtitles
