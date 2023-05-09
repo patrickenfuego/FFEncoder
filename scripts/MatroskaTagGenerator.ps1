@@ -173,6 +173,10 @@ function Get-ID {
     else { $queryID = $query.results[0].id }
     
     if ($queryID) {
+        if ($queryID.Count -gt 1) {
+            Write-Host "More than 1 ID returned. Selecting the first option"
+            $queryID = $queryID[0]
+        }
         Write-Host "ID successfully retrieved! ID: " -NoNewline
         Write-Host $queryID @progressColors
         if ('TMDbID' -in $SkipProperties) {
@@ -210,10 +214,12 @@ function Get-Metadata {
     }
     else { $obj = @{} }
 
-    # Pull general info including IMDb ID
+    # Pull general info to collect other props
+    $genQuery = Invoke-RestMethod -Uri "https://api.themoviedb.org/3/movie/$($id)?api_key=$($APIKey)" -Method GET
+
+    # Pull IMDb ID
     if ('IMDbID' -notin $SkipProperties) {
         Write-Host "Requesting IMDB ID..."
-        $genQuery = Invoke-RestMethod -Uri "https://api.themoviedb.org/3/movie/$($id)?api_key=$($APIKey)" -Method GET
         if ($imdbID = $genQuery | Select-Object -ExpandProperty imdb_id) {
             Write-Host "IMDb ID successfully retrieved! ID: " -NoNewline
             Write-Host $imdbID @progressColors
@@ -224,7 +230,7 @@ function Get-Metadata {
             Write-Warning "Failed to retrieve IMDb ID. Property will be skipped"
         }
     }
-    else { Write-Host "Skipping IMDb ID..." @warnColors  }
+    else { Write-Host "Skipping IMDb ID..." @warnColors }
 
     Write-Host "---------------------------------------------" @dividerColor
 
@@ -365,6 +371,16 @@ function New-XMLTagFile {
 #########################################################
 # Main Script Logic                                     #                                           
 #########################################################
+
+if (!$APIKey) {
+    $params = @{
+        CategoryActivity  = 'MKV Tag Generator'
+        Category          = 'InvalidArgument'
+        Message           = "MatroskaTagGenerator: An API key is required"
+        ErrorId           = 77
+    }
+    Write-Error "MatroskaTagGenerator: An API key is required" -ErrorAction Stop
+}
 
 if ($Path.EndsWith('.xml')) {
     $outXML = $Path
