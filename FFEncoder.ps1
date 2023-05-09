@@ -847,7 +847,7 @@ function Set-ScriptPaths ([hashtable]$OS) {
     Verbose preference
     Verify PowerShell version
     Import Module
-    Import configuration file contents
+    Import Config File contents
 #>
 
 # Print help content and exit
@@ -879,70 +879,14 @@ $console.WindowTitle = 'FFEncoder'
 Import-Module -Name "$PSScriptRoot\modules\FFTools" -Force
 Write-Verbose "`n`n---------------------------------------"
 
-# Import config file contents
+# Import config file options
 $params = @{
     EncoderExtra = $EncoderExtra
     FFMpegExtra  = $FFMpegExtra
     Encoder      = $Encoder
     Verbose      = $setVerbose
 }
-$EncoderExtra, $FFMpegExtra, $scriptHash = Import-Config @params
-# Set switch params from config if not passed
-if ($scriptHash) {
-    foreach ($item in $scriptHash.GetEnumerator()) {
-        if (!$PSBoundParameters[$item.Name]) {
-            Set-Variable "$($item.Name)" -Value $item.Value
-            Write-Verbose "Variable set: $($item.Name) = $(Get-Variable "$($item.Name)" -ValueOnly)"
-        }
-        else {
-            Write-Verbose "$($item.Name) set via parameter. Skipping..."
-        }
-    }
-    Write-Host ""
-}
-# Override config with script params if present
-if ($EncoderExtra) {
-    if ($EncoderExtra.ContainsKey('aq-mode') -and $PSBoundParameters['aq-mode']) { $EncoderExtra.Remove('aq-mode') }
-    if ($EncoderExtra.ContainsKey('aq-strength') -and $PSBoundParameters['AqStrength']) { $EncoderExtra.Remove('aq-strength') } 
-    if ($EncoderExtra.ContainsKey('bframes') -and $PSBoundParameters['BFrames']) { $EncoderExtra.Remove('bframes') } 
-    if ($EncoderExtra.ContainsKey('rc-lookahead') -and $PSBoundParameters['RCLookahead']) { $EncoderExtra.Remove('rc-lookahead') }
-    if ($EncoderExtra.ContainsKey('subme') -and $PSBoundParameters['Subme']) { $EncoderExtra.Remove('subme') }
-    if ($EncoderExtra.ContainsKey('qcomp') -and $PSBoundParameters['QComp']) { $EncoderExtra.Remove('qcomp') }
-    if ($EncoderExtra.ContainsKey('limit-tu') -and $PSBoundParameters['LimitTu']) { $EncoderExtra.Remove('limit-tu') }
-    if ($EncoderExtra.ContainsKey('ref') -and $PSBoundParameters['Ref']) { $EncoderExtra.Remove('ref') }
-    if ($EncoderExtra.ContainsKey('merange') -and $PSBoundParameters['Merange']) { $EncoderExtra.Remove('merange') }
-    if ($EncoderExtra.ContainsKey('strong-intra-smoothing') -and $PSBoundParameters['StrongIntraSmoothing']) { 
-        $EncoderExtra.Remove('strong-intra-smoothing') 
-    }
-    if ($EncoderExtra.ContainsKey('deblock') -and $PSBoundParameters['Deblock']) { 
-        $EncoderExtra.Remove('deblock')
-    }
-    if ($EncoderExtra.ContainsKey('vbv-bufsize') -and $PSBoundParameters['VBV']) {
-        $EncoderExtra.Remove('vbv-bufsize')
-        if ($EncoderExtra.ContainsKey('vbv-maxrate')) { $EncoderExtra.Remove('vbv-maxrate') }
-    }
-    if ($EncoderExtra.ContainsKey('vbv-maxrate') -and $PSBoundParameters['VBV']) { 
-        $EncoderExtra.Remove('vbv-maxrate')
-        if ($EncoderExtra.ContainsKey('vbv-bufsize')) { $EncoderExtra.Remove('vbv-bufsize') }
-    }
-    if ($EncoderExtra.ContainsKey('tu-intra-depth') -and $PSBoundParameters['TUDepth']) { 
-        $EncoderExtra.Remove('tu-intra-depth')
-        if ($EncoderExtra.ContainsKey('tu-inter-depth')) { $EncoderExtra.Remove('tu-inter-depth') }
-        Write-Verbose "Overriding config file TU Depths with parameters"
-    }
-    if ($EncoderExtra.ContainsKey('tu-inter-depth') -and $PSBoundParameters['TUDepth']) { 
-        $EncoderExtra.Remove('tu-inter-depth')
-        if ($EncoderExtra.ContainsKey('tu-intra-depth')) { $EncoderExtra.Remove('tu-intra-depth') }
-    }
-    if ($EncoderExtra.ContainsKey('cutree') -or $EncoderExtra.ContainsKey('mbtree') -and $PSBoundParameters['Tree']) {
-        $key = $EncoderExtra.Keys.Where({ $_ -like '*tree' })
-        $EncoderExtra.Remove($key)
-    }
-    if ($EncoderExtra.ContainsKey('level') -or $EncoderExtra.ContainsKey('level-idc') -and $PSBoundParameters['Level']) {
-        $key = $EncoderExtra.Keys.Where({ $_ -like 'level*' })
-        $EncoderExtra.Remove($key)
-    }
-}
+$EncoderExtra, $FFMpegExtra, $scriptHash, $tagHash, $vmafHash = Import-Config @params
 
 # Source version functions
 . $([Path]::Join($ScriptsDirectory, 'VerifyVersions.ps1')).ToString()
@@ -992,6 +936,120 @@ if ($PSBoundParameters['CompareVMAF']) {
         Write-Error "An exception occurred during VMAF: $($_.Exception.Message)"
         $console.WindowTitle = $currentTitle
         exit 43
+    }
+}
+
+# Set switch params from config if not passed via param
+if ($scriptHash) {
+    foreach ($item in $scriptHash.GetEnumerator()) {
+        if (!$PSBoundParameters[$item.Name]) {
+            Set-Variable "$($item.Name)" -Value $item.Value
+            Write-Verbose "Switch Variable set: $($item.Name) = $(Get-Variable "$($item.Name)" -ValueOnly)"
+        }
+        else {
+            Write-Verbose "Switch variable $($item.Name) set via parameter. Skipping..."
+        }
+    }
+    Write-Host ""
+}
+
+# Set tag generator hash. Parameter option overrides config
+if (!$PSBoundParameters['GenerateMKVTagFile'] -and $tagHash) {
+    $GenerateMKVTagFile = $tagHash
+}
+
+# Validate and set script params from config file values
+if ($EncoderExtra) {
+    Write-Host "Parsing encoder configuration...`n" @progressColors
+    $removeKeys = [System.Collections.ArrayList]::new()
+    $x = $PsStyle.Bold + "`u{2717}" + $PSStyle.BoldOff
+    $c1 = $PSStyle.Foreground.Blue
+    $c2 = $PSStyle.Foreground.Red
+    
+    # Create hash mapping between script params and associated encoder settings
+    $paramHash = @{
+        'Deblock'              = 'deblock'
+        'AqMode'               = 'aq-mode'
+        'AqStrength'           = 'aq-strength'
+        'PsyRd'                = 'psy-rd'
+        'PsyRdoq'              = 'psy-rdoq'
+        'Ref'                  = 'ref'
+        'Tree'                 = 'cutree', 'mbtree'
+        'Merange'              = 'Merange'
+        'NoiseReduction'       = 'nr', 'nr-inter', 'nr-intra'
+        'TuDepth'              = 'tu-inter-depth', 'tu-intra-depth'
+        'LimitTu'              = 'limit-tu'
+        'QComp'                = 'qcomp'
+        'Bframes'              = 'bframes'
+        'BIntra'               = 'b-intra'
+        'Subme'                = 'subme'
+        'StrongIntraSmoothing' = 'strong-intra-smoothing'
+        'Level'                = 'level', 'level-idc'
+        'VBV'                  = 'vbv-bufsize', 'vbv-maxrate'
+        'Threads'              = 'threads', 'frame-threads', 'F'
+        'RcLookahead'          = 'rc-lookahead'
+    }
+    foreach ($item in $EncoderExtra.GetEnumerator()) {
+        # If setting is in hash, get the key
+        if ($paramHash.Values.Contains($item.Name.ToLower())) {
+            $key = $paramHash.Keys.Where({ $paramHash[$_] -contains $item.Name })
+        }
+        else {
+            continue
+        }
+        # Related setting param not passed via CLI
+        if (!$PSBoundParameters[$key]) {
+            if ($key -eq 'VBV') {
+                $v1, $v2 = $EncoderExtra['vbv-bufsize', 'vbv-maxrate']
+                if ($v1 -and $v2) {
+                    [int[]]$val = $v1, $v2
+                    Set-Variable -Name $key -Value $val
+                }
+                else {
+                    $def = ($null -eq $v1) ? $v2 : $v1
+                    $msg = "$c2$x Missing value for VBV: Expected $c1'vbv-bufsize','vbv-maxrate'$c2 set, received " +
+                           "$c1'$($v1 ?? 'null')','$($v2 ?? 'null')'$c2. Setting VBV default to $c1'$def,$def'"
+                    Write-Host $msg
+                    [int[]]$val = $def, $def
+                    Set-Variable -Name $key -Value $val
+                }
+            }
+            elseif ($key -eq 'TuDepth') {
+                $v1, $v2 = $EncoderExtra['tu-intra-depth', 'tu-intra-depth']
+                if ($v1 -and $v2) { 
+                    [int[]]$val = $v1, $v2
+                    Set-Variable -Name $key -Value $val
+                }
+                else {
+                    $def = ($null -eq $v1) ? $v2 : $v1
+                    $msg = "$c2$x Missing value for TUDepth: Expected $c1'tu-intra-depth','tu-inter-depth'$c2 set, " +
+                           "received $c1'$($v1 ?? 'null')','$($v2 ?? 'null')'$c2. Setting TUDepth to $c1'$def,$def'"
+                    Write-Host $msg
+                    [int[]]$val = $def, $def
+                    Set-Variable -Name $key -Value $val
+                }
+            }
+            elseif ($key -eq 'Deblock') {
+                if (([regex]::Match($item.Value, '\d,\d')).Success) {
+                    [int[]]$val = $item.Value -split ','
+                    Set-Variable -Name $key -Value $val
+                }
+                else {
+                    [string]$d = $Deblock -join ','
+                    Write-host "$c2$x Invalid format for 'deblock': Expected $c1'<int>,<int>'$c2. Using default: $c1$d"
+                }
+            }
+            else {
+                Set-Variable -Name $key -Value $item.Value
+            }
+        }
+        # Can't delete keys during iteration. Delete after
+        $removeKeys.Add($item.Name) > $null
+    }
+
+    if ($removeKeys) {
+        Write-Verbose "Encoder keys to remove: $($removeKeys -join ',')"
+        $removeKeys.ForEach({ $EncoderExtra.Remove($_) })
     }
 }
 
