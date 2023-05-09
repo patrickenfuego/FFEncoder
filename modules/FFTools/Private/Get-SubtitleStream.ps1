@@ -40,7 +40,8 @@ function Get-SubtitleStream {
         'slv' { 'Slovenian' }
         'tur' { 'Turkish' }
         'vie' { 'Vietnamese' }
-        Default { 
+        'tha' { 'Thai' }
+        default { 
             Write-Host "'$Language' is not supported. No subtitles will be copied. Use the -Help parameter to view supported languages"
             return $null
         }
@@ -49,24 +50,24 @@ function Get-SubtitleStream {
     $probe = ffprobe -hide_banner -loglevel error -show_streams -select_streams s -show_entries stream=codec_name -print_format json  `
         -i $InputFile
     
-    [int]$i = 0
-    [string[]]$subArray = $probe | ConvertFrom-Json | Select-Object -ExpandProperty streams | ForEach-Object {
-        if (($_.tags.language -like $Language) -and $Language -notlike '!*') { $i }
-        # Add subs that don't match the negation
-        elseif ($Language -like '!*' -and ($_.tags.language -notlike $Language.Replace('!', ''))) { $i }
+    [string[]]$subArray = $probe | ConvertFrom-Json | Select-Object -ExpandProperty streams | 
+        ForEach-Object -Begin { $i = 0 } -Process {
+            if (($_.tags.language -like $Language) -and $Language -notlike '!*') { $i }
+            # Add subs that don't match the negation
+            elseif ($Language -like '!*' -and ($_.tags.language -notlike "*$cleanLanguage*")) { $i }
 
-        $i++
-    }
+            $i++
+        }
 
     if ($subArray.Count -gt 0) {
         ($Language -notlike '!*') ?
-        ( Write-Host "$langStr subtitles found! $($subArray.Count) stream(s) will be copied") :
-        ( Write-Host "Non-$langStr subtitles found! $($subArray.Count) stream(s) will be copied")
+            ( Write-Host "$langStr subtitles found! $($subArray.Count) stream(s) will be copied") :
+            ( Write-Host "Non-$langStr subtitles found! $($subArray.Count) stream(s) will be copied")
        
         return $subArray
     }
     else {
-        Write-Warning "No subtitles matching '$cleanLanguage' were found. Subtitles will not be copied" @warnColors
+        Write-Warning "No subtitles matching '$langStr' were found. Subtitles will not be copied" @warnColors
         Write-Host
         return $null
     }
