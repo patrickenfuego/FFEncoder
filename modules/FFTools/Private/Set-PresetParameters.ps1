@@ -13,7 +13,6 @@ function Set-PresetParameters {
         [Parameter(Mandatory = $true, Position = 0)]
         [hashtable]$Settings,
 
-        # Parameter help description
         [Parameter(Mandatory = $true, Position = 1)]
         [string]$Preset,
 
@@ -54,10 +53,10 @@ function Set-PresetParameters {
     }
 
     # If user passes custom params, set them. Otherwise, use preset defaults
-    $subme = $Settings.Subme ? $Settings.Subme : $pSubme
+    $subme = $Settings.Subme     ? $Settings.Subme : $pSubme
     $bframes = $Settings.BFrames ? $Settings.BFrames : $pBframes
-    $aqMode = $Settings.AqMode ? $Settings.AqMode : $pAqMode
-    $ref = $Settings.Ref ? $Settings.Ref : $pRef
+    $aqMode = $Settings.AqMode   ? $Settings.AqMode : $pAqMode
+    $ref = $Settings.Ref         ? $Settings.Ref : $pRef
     $merange = $Settings.Merange ? $Settings.Merange : $pMerange
     $RCL = $Settings.RCLookahead ? $Settings.RCLookahead : $pRCLookahead
     $psyRdoq = $Settings.PsyRdoq ? $Settings.PsyRdoq : $pPsyRdoq
