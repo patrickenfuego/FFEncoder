@@ -142,6 +142,8 @@ function Set-DVArgs {
         'rect'
         'amp'
         'sao'
+        'b-intra'
+        'strong-intra-smoothing'
         'early-skip'
         'splitrd-skip'
         'fast-intra'
@@ -301,8 +303,8 @@ function Set-DVArgs {
         '-probesize'
         '100MB'
         '-i'
-        if ($PSVersionTable.PSVersion -lt [version]'7.3') {
-            $($Paths.InputFile)
+        if ($PSVersionTable.PSVersion -ge [version]'7.3') {
+            $Paths.InputFile
         }
         else {
            "`"$($Paths.InputFile)`"" 
