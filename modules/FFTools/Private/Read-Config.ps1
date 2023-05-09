@@ -36,13 +36,25 @@ function Read-Config {
             [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'config', 'script.ini')
     )
 
+    # Internal helper function to write warnings about invalid keys
+    function Write-KeyWarning([string[]]$ValidKeys, [string]$Type, [string]$KeyName) {
+        $keys = $ValidKeys -join ', '
+        Write-Host "`nParse Config: '$KeyName' is not a valid configuration option for [$Type]. Options:`n`t$keys" @errColors
+    }
+
     $encoderHash = @{}
     $ffmpegHash = @{}
-    $scriptHash = @{}
+    $switchOptHash = @{}
+    $tagHash = @{}
+    $vmafHash = @{}
     $ffmpegArray = [System.Collections.Generic.List[string]]@()
     $skipEncoder = $skipFFMpeg = $skipScript = $false
     # Acceptable keys for the script config
-    $scriptKeys = @('RemoveFiles', 'DisableProgress', 'ExitOnError', 'SkipHDR10Plus', 'SkipDolbyVision', 'GenerateReport', 'HDR10PlusSkipReorder')
+    $scriptKeys = @('RemoveFiles', 'DisableProgress', 'ExitOnError', 'SkipHDR10Plus', 
+                    'SkipDolbyVision', 'GenerateReport', 'HDR10PlusSkipReorder')
+    $tagKeys = @('Path', 'APIKey', 'Properties', 'SkipProperties', 'Title', 'Year',
+                 'NoMux', 'AllowClobber')
+    $vmafKeys = @('EnableSSIM', 'EnablePSNR', 'LogFormat', 'VMAFResizeKernel')
 
     if (![File]::Exists($EncoderConfigFile)) {
         $skipEncoder = $true
@@ -80,51 +92,114 @@ function Read-Config {
     if (!$skipFFMpeg) {
         $ffmpegINI = [File]::ReadAllLines($FFMpegConfigFile)
         $noArgs = $ffmpegINI.IndexOf('[NoArguments]')
-        # Parse Arguments
+        # Parse [Arguments]
         foreach ($line in $ffmpegINI[1..($noArgs - 1)]) {
             if ($line -and $line -notlike ';*' -and $line -like '*=*') {
                 $name, $value = ($line -split '=', 2).Trim()
+                # Append leading dash if not present
+                if ($name -notlike '-*') { $name = "-$name" }
                 $ffmpegHash[$name] = $value
             }
         }
-        # Parse NoArguments
+        # Parse [NoArguments]
         foreach ($line in $ffmpegINI[($noArgs + 1)..($ffmpegINI.Length - 1)]) {
             if ($line -and $line -notlike ';*' -and $line -notlike '*=*') {
-                $ffmpegArray.Add($line)
+                # Append leading dash if not present
+                $value = ($line -notlike '-*') ? "-$line" : $line
+                $ffmpegArray.Add($value)
             }
         }
     }
     if (!$skipScript) {
         $scriptINI = [File]::ReadAllLines($ScriptConfigFile)
-        foreach ($line in $scriptINI[1..($scriptINI.Length - 1)]) {
+        $tagGen = $scriptINI.IndexOf('[MKVTagGenerator]')
+        $vmaf = $scriptINI.IndexOf('[VMAF]')
+        # Parse [Script] options
+        foreach ($line in $scriptINI[1..($tagGen - 1)]) {
             if ($line -and $line -notlike ';*' -and $line -like '*=*') {
                 $name, $value = ($line -split '=', 2).Trim()
                 if ($name -in $scriptKeys) {
                     try {
-                        $scriptHash[$name] = [Convert]::ToBoolean($value)
+                        $switchOptHash[$name] = [Convert]::ToBoolean($value)
                     }
                     catch {
                         Write-Host "`nParse Config: Expected Boolean value for '$name'. Received '$value'" @errColors
-                        $scriptHash[$name] = $false
+                        $switchOptHash[$name] = $false
                     }
                 }
                 else {
-                    $keys = $scriptKeys -join ', '
-                    Write-Host "`nParse Config: $name is not a valid configuration option for script.ini. Options:`n`t$keys" `
-                        @errColors
+                    Write-KeyWarning -ValidKeys $scriptKeys -Type 'SwitchOptions' -KeyName $name
+                }
+            }
+        }
+        # Parse [MKVTagGenerator] options
+        foreach ($line in $scriptINI[($tagGen + 1)..($vmaf - 1)]) {
+            if ($line -and $line -notlike ';*' -and $line -like '*=*') {
+                # Skip unset values
+                if ($line -like '*None') { continue }
+                $name, $value = ($line -split '=', 2).Trim()
+                if ($name -in $tagKeys) {
+                    if ($name -in 'NoMux', 'AllowClobber') {
+                        try {
+                            $tagHash[$name] = [Convert]::ToBoolean($value)
+                        }
+                        catch {
+                            Write-Host "`nParse Config: Expected Boolean value for '$name'. Received '$value'" @errColors
+                            $tagHash[$name] = $false
+                        }
+                    }
+                    elseif ($name -in 'Properties', 'SkipProperties') {
+                        $value = ($value -split ',').Trim()
+                        $tagHash[$name] = $value
+                    }
+                    else { $tagHash[$name] = $value }
+                }
+                else {
+                    Write-KeyWarning -ValidKeys $tagKeys -Type 'MKVTagGenerator' -KeyName $name
+                }
+            }
+        }
+        # Parse [VMAF] options
+        foreach ($line in $scriptINI[($vmaf + 1)..($scriptINI.Length - 1)]) {
+            if ($line -and $line -notlike ';*' -and $line -like '*=*') {
+                $name, $value = ($line -split '=', 2).Trim()
+                if ($name -in $vmafKeys) {
+                    if ($name -in 'EnableSSIM', 'EnablePSNR') {
+                        try {
+                            $vmafHash[$name] = [Convert]::ToBoolean($value)
+                        }
+                        catch {
+                            Write-Host "`nParse Config: Expected Boolean value for '$name'. Received '$value'" @errColors
+                            $vmafHash[$name] = $false
+                        }
+                    }
+                    else {
+                        $vmafHash[$name] = $value
+                    }
+                }
+                else {
+                    Write-KeyWarning -ValidKeys $vmafKeys -Type 'VMAF' -KeyName $name
                 }
             }
         }
     }
 
     $returnHash = @{
-        Encoder     = ($encoderHash.Count -gt 0) ? $encoderHash : $null
-        FFMpegHash  = ($ffmpegHash.Count -gt 0) ? $ffmpegHash : $null
-        ScriptHash  = ($scriptHash.Count -gt 0) ? $scriptHash : $null
-        FFMpegArray = ($ffmpegArray.Count -gt 0) ? $ffmpegArray : $null
+        Encoder     = ($encoderHash.Count -gt 0)   ? $encoderHash   : $null
+        FFMpegHash  = ($ffmpegHash.Count -gt 0)    ? $ffmpegHash    : $null
+        ScriptHash  = ($switchOptHash.Count -gt 0) ? $switchOptHash : $null
+        FFMpegArray = ($ffmpegArray.Count -gt 0)   ? $ffmpegArray   : $null
+        TagHash     = ($tagHash.Count -gt 0)       ? $tagHash       : $null
+        VMAFHash    = ($vmafHash.Count -gt 0)      ? $vmafHash      : $null
     }
 
-    Write-Verbose "Parsed config file contents:`n  $($returnHash | Out-String)"
+    Write-Verbose "`n-------------------- Configuration File Contents --------------------`n"
+    Write-Verbose "Parsed Encoder Hash: $($encoderHash | Out-String)"
+    Write-Verbose "Parsed FFMpeg Argument Hash: $($ffmpegHash | Out-String)"
+    Write-Verbose "Parsed FFMpeg NoArgument Array: $ffmpegArray"
+    Write-Verbose "Parsed Tag Hash: $($tagHash | Out-String)"
+    Write-Verbose "Parsed Script Switch Option Hash: $($switchOptHash | Out-String)"
+    Write-Verbose "Parsed VMAF Hash: $($vmafHash | Out-String)"
 
     return $returnHash
 }
