@@ -730,7 +730,13 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'VMAF')]
     [ValidateSet('json', 'xml', 'csv', 'sub')]
     [Alias('LogType', 'VMAFLog')]
-    [string]$LogFormat = 'json'
+    [string]$LogFormat = 'json',
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'VMAF')]
+    [ValidateSet('point', 'spline16', 'spline36', 'bilinear', 'bicubic', 'lanczos',
+        'fast_bilinear', 'neighbor', 'area', 'gauss', 'sinc', 'spline', 'bicublin')]
+    [Alias('VMAFKernel')]
+    [string]$VMAFResizeKernel = 'bicubic'
 )
 
 #########################################################
@@ -913,27 +919,41 @@ Write-Host "--------------------------------------------------------------------
 Write-Host "Start Time: $startTime`n"
 
 if ($PSBoundParameters['CompareVMAF']) {
-    Write-Host "** VMAF Selected **" @emphasisColors
+    Write-Host "   $("`u{25c7}" * 3) VMAF Selected $("`u{25c7}" * 3)" @emphasisColors
+    Write-Host "$("`u{25c7}" * 4) STARTING ASSESSMENT $("`u{25c7}" * 4)" @progressColors
     Write-Host ""
 
-    $params = @{
-        Source = $InputPath
-        Encode = $OutputPath
-        SSIM   = $EnableSSIM
-        PSNR   = $EnablePSNR
+    # Check params from config file
+    if ($vmafHash) {
+        foreach ($item in $vmafHash.GetEnumerator()) {
+            if (!$PSBoundParameters[$item.Name]) {
+                Set-Variable "$($item.Name)" -Value $item.Value
+                Write-Verbose "VMAF Variable set: $($item.Name) = $(Get-Variable "$($item.Name)" -ValueOnly)"
+            }
+            else {
+                Write-Verbose "VMAF variable $($item.Name) set via parameter. Skipping..."
+            }
+        }
+        Write-Host ""
     }
 
-    if ($PSBoundParameters['LogFormat']) {
-        $params['LogFormat'] = $LogFormat.ToLower()
+    $params = @{
+        Source        = $InputPath
+        Encode        = $OutputPath
+        SSIM          = $EnableSSIM
+        PSNR          = $EnablePSNR
+        LogFormat     = $LogFormat
+        ResizeKernel  = $VMAFResizeKernel
+        Verbose       = $setVerbose
     }
 
     try {
-        Invoke-VMAF @params -Verbose:$setVerbose
+        Invoke-VMAF @params
         $console.WindowTitle = $currentTitle
         exit 0
     }
     catch {
-        Write-Error "An exception occurred during VMAF: $($_.Exception.Message)"
+        Write-Error "An exception occurred during VMAF comparison: $($_.Exception.Message)"
         $console.WindowTitle = $currentTitle
         exit 43
     }

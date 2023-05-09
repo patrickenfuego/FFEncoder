@@ -34,6 +34,11 @@ function Invoke-VMAF {
         [string]$LogFormat = 'json',
 
         [Parameter(Mandatory = $false)]
+        [ValidateSet('point', 'spline16', 'spline36', 'bilinear', 'bicubic', 'lanczos',
+            'fast_bilinear', 'neighbor', 'area', 'gauss', 'sinc', 'spline', 'bicublin')]
+        [string]$ResizeKernel = 'bicubic',
+
+        [Parameter(Mandatory = $false)]
         [switch]$SSIM,
 
         [Parameter(Mandatory = $false)]
@@ -58,15 +63,135 @@ function Invoke-VMAF {
         return $width, $height
     }
 
-    Write-Verbose "Source Path: $Source"
-    Write-Verbose "Encode path: $Encode"
+    # Format and output assessment scores. Backward compatible with older pwsh versions
+    function Write-Score {
+        [CmdletBinding()]
+        param (
+            [Parameter(ValueFromPipeline = $true)]
+            [hashtable]$ScoreData
+        )
     
+        begin {
+            $blinkify = $boldOn + $blinkOn
+        }
+        process {
+            $style =
+    
+            # Pwsh 7.2+
+            if ($psReq) {
+                switch ($ScoreData.Type) {
+                    'vmaf' {
+                        if ($ScoreData.Score -ge 90) {
+                            $PSStyle.Foreground.FromRgb('#2bf502') + $blinkify
+                        }
+                        elseif ($ScoreData.Score -gt 70 -and $ScoreData.Score -lt 90) {
+                            $PSStyle.Foreground.FromRgb('#f5a802') + $blinkify
+                        }
+                        else {
+                            $PSStyle.Foreground.FromRgb('#f51a02') + $blinkify
+                        }
+                    }
+                    'ms-ssim' {
+                        if ($ScoreData.Score -ge 0.97) {
+                            $PSStyle.Foreground.FromRgb('#2bf502') + $blinkify
+                        }
+                        elseif ($ScoreData.Score -ge 0.95 -and $ScoreData.Score -lt 0.97) {
+                            $PSStyle.Foreground.FromRgb('#f5a802') + $blinkify
+                        }
+                        else {
+                            $PSStyle.Foreground.FromRgb('#f51a02') + $blinkify
+                        }
+                    }
+                    'psnr' {
+                        if ($ScoreData.Score -ge 38) {
+                            $PSStyle.Foreground.FromRgb('#2bf502') + $blinkify
+                        }
+                        elseif ($ScoreData.Score -ge 33 -and $ScoreData.Score -lt 38) {
+                            $PSStyle.Foreground.FromRgb('#f5a802') + $blinkify
+                        }
+                        else {
+                            $PSStyle.Foreground.FromRgb('#f51a02') + $blinkify
+                        }
+                    }
+                }
+            }
+            # Pwsh 7, 7.1
+            else {
+                switch ($ScoreData.Type) {
+                    'vmaf' {
+                        if ($ScoreData.Score -ge 90) {
+                            'Green'
+                        }
+                        elseif ($ScoreData.Score -gt 70 -and $ScoreData.Score -lt 90) {
+                            'Yellow'
+                        }
+                        else {
+                            'Red'
+                        }
+                    }
+                    'ms-ssim' {
+                        if ($ScoreData.Score -ge 0.97) {
+                            'Green'
+                        }
+                        elseif ($ScoreData.Score -ge 0.95 -and $ScoreData.Score -lt 0.97) {
+                            'Yellow'
+                        }
+                        else {
+                            'Red'
+                        }
+                    }
+                    'psnr' {
+                        if ($ScoreData.Score -ge 38) {
+                            'Green'
+                        }
+                        elseif ($ScoreData.Score -ge 33 -and $ScoreData.Score -lt 38) {
+                            'Yellow'
+                        }
+                        else {
+                            'Red'
+                        }
+                    }
+                }
+            }
+    
+            $psReq ? 
+                (Write-Host "$($ScoreData.Type.ToUpper()) Score:`t$($style)$($ScoreData.Score)$($reset)") : 
+                (Write-Host "$($ScoreData.Type.ToUpper()) Score:`t$($ScoreData.Score)" -ForegroundColor $style -BackgroundColor Black)
+        }
+    }
+
     <#
         SETUP
 
+        Configure display & formatting variables
+        Set temp log path for score parsing
         Sanitize LogFormat if present
-        Title
+        Set title
     #>
+
+    # Display stuff
+    $refInfo = [FileInfo]$Source
+    $distInfo = [FileInfo]$Encode
+
+    $refName = $refInfo.BaseName
+    $refExt = $refInfo.Extension.Replace('.', '')
+    $distName = $distInfo.BaseName
+    $distExt = $distInfo.Extension.Replace('.', '')
+
+    if ($psReq) {
+        $c1 = $PSStyle.Foreground.FromRgb('#8507ed')
+        $c2 = $PSStyle.Foreground.FromRgb('#027cf5') # #0255fa
+        $c3 = $PSStyle.Foreground.FromRgb('#02fa86')
+
+        Write-Host "$ul`Reference$ulOff`: $c1$refName$reset.$c2$refExt"
+        Write-Host "$ul`Distorted$ulOff`: $c3$distName$reset.$c2$distExt`n"
+    }
+    else {
+        Write-Host "Reference: " -NoNewline
+        Write-Host "$refName.$refExt" @progressColors
+        Write-Host "Distorted: " -NoNewline
+        Write-Host "$distName.$distExt`n" @emphasisColors
+    }
 
     $LogFormat = $LogFormat.ToLower()
     $title = Split-Path $Encode -LeafBase
@@ -89,17 +214,12 @@ function Invoke-VMAF {
     # # Get the resolution of the encode (distorted) for cropping
     $w, $h = Get-Resolution -FilePath $Encode -Type 'Encode'
 
-    # Check for downscale - upscale encode back using lanczos
-    if (($sw - $w) -gt 200) {
+    # Check for downscale/upscale
+    if ($sw -ne $w) {
         $referenceString = "[0:v]crop=$($sw):$($sh)[reference]"
-        $distortedString = "[1:v]$scale=$($sw):$($sh):$set=lanczos[distorted]"
+        $distortedString = "[1:v]$scale=$($sw):$($sh):$set=$ResizeKernel[distorted]"
     }
-    # Check for upscale - downscale encode back using bicubic
-    elseif (($sw - $w) -lt 0) {
-        $referenceString = "[0:v]crop=$($sw):$($sh)[reference]"
-        $distortedString = "[1:v]$scale=$($sw):$($sh):$set=bicubic[distorted]"
-    }
-    # Both videos are the same base resolution - crop reference to source
+    # Both videos are the same base resolution - crop source to reference
     else {
         $referenceString = "[0:v]crop=$w`:$h`[reference]"
         $distortedString = "[1:v]crop=$w`:$h`[distorted]"
@@ -135,9 +255,9 @@ function Invoke-VMAF {
         Write-Error "VMAF: Cannot locate json model file" -ErrorAction Stop
     }
 
-    # Perform all the path fuckery required by VMAF & ffmpeg on Windows
+    # Set paths and calculate system resources
     if ($IsWindows) {
-        # Set the model path and format for libvmaf
+        # Perform all the path fuckery required by VMAF & ffmpeg on Windows
         $modelDrive = (Split-Path $jsonFile -Qualifier) -replace ':', '\\:'
         $modelPath = (Split-Path $jsonFile -NoQualifier) -replace '\\', '/'
         $modelPath = "$modelDrive$modelPath"
@@ -148,18 +268,19 @@ function Invoke-VMAF {
         $logPath = "$logDrive$logPath/$title`_vmaf_log.json"
 
         # Get CPU count. Use ~ 50% of system capability
-        $coreCount = Get-CimInstance Win32_Processor | Select-Object -ExpandProperty NumberOfCores
+        $coreCount = (Get-CimInstance Win32_Processor).NumberOfCores
     }
     elseif ($IsLinux -or $IsMacOS) {
         $modelPath = $jsonFile
         $logPath = [Path]::Join($(Split-Path $Encode -Parent), "$title`_vmaf_log.json")
+        $logPath = [Regex]::Escape($logPath)
 
         # Get CPU count. Use ~ 50% of system capability
         $cpuStr = $IsLinux ? 
             (grep 'cpu cores' /proc/cpuinfo | uniq) :
             (sysctl -a | grep machdep.cpu.core_count)
         
-        $countStr = [regex]::Match($cpuStr, '\d+') |
+        $countStr = [regex]::Match($cpuStr, '\d+')
         if ($countStr) {
             if (($coreCount.Value -as [int]) -is [int]) {
                 $coreCount = $countStr.Value
@@ -190,10 +311,10 @@ function Invoke-VMAF {
     # Set the VMAF string with options and paths
     $vmafStr = "log_fmt=$LogFormat`:log_path=$logPath`:model_path=$modelPath`:n_threads=$coreCount"
     if ($SSIM) {
-        $vmafStr += ":feature=name=ssim"
+        $vmafStr += ":feature=name=float_ms_ssim"
     }
     if ($PSNR) {
-        $vmafStr += ":feature=name=psnr"
+        $vmafStr += ":feature=name=float_psnr"
     }
 
     # Run VMAF
@@ -203,14 +324,45 @@ function Invoke-VMAF {
         -filter_complex "$referenceString;`
                          $distortedString;`
                          [distorted][reference]libvmaf=$vmafStr" `
-        -f null -
+        -f null - 2>$null
 
     Write-Verbose "Last Exit Code: $LASTEXITCODE"
     if ($LASTEXITCODE -ne 1) {
-        Write-Host "`nAnalysis complete!" -NoNewline @successColors
-        Write-Host "The log file can be found at: $($ul)$($aMagenta)$logPath"
+        Write-Host "Analysis Complete! " -NoNewline
+
+        # Unfuck the log escaping to make it parsable
+        if ($isWindows) {
+            $logPath = [Regex]::Unescape($logPath).Replace('\:', ':') | 
+                Resolve-Path | 
+                    Select-Object -ExpandProperty Path
+        }
+        else {
+            $logPath = [Regex]::Unescape($logPath)
+        }
+
+        [File]::Exists($logPath) ? 
+            (Write-Host "Scores:`n") : 
+            (Write-Host "Unfortunately, the log file doesn't exist and scores couldn't be extracted" @warnColors)
+
+        # Get score from log for processing
+        $scoreData = [File]::ReadAllLines($logPath) | 
+            ConvertFrom-Json | 
+                Select-Object -ExpandProperty pooled_metrics
+
+        $scores = @(
+            @{ Type = 'vmaf'; Score = $scoreData.vmaf.harmonic_mean }
+            if ($SSIM) {
+                @{ Type = 'ms-ssim'; Score = $scoreData.float_ms_ssim.harmonic_mean }
+            }
+            if ($PSNR) {
+                @{ Type = 'psnr'; Score = $scoreData.float_psnr.harmonic_mean }
+            }
+        )
+        $scores | Write-Score
+
+        Write-Host "`nThe full log file can be found at: $($ul)$($aMagenta)$logPath`n"
     }
     else {
-        Write-Host "The exit code for ffmpeg indicates that a problem occurred. " @warnColors -NoNewline
+        Write-Host "The exit code for ffmpeg indicates that a problem occurred.`n" @warnColors
     }
 }
