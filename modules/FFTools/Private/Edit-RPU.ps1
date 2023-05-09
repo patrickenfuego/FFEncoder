@@ -28,6 +28,7 @@ function Edit-RPU {
     $edited = $Paths.DvPath.replace('.bin', '_edited.bin')
     if ([File]::Exists($edited)) {
         Write-Verbose "Existing edited RPU file found"
+        $Paths.DvPath = $edited
         return
     }
 
