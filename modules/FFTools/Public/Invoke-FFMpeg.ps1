@@ -400,16 +400,18 @@ function Invoke-FFMpeg {
     elseif ($null -eq $audio -and $null -ne $audio2) { $audio = $audio2 }
     elseif ($null -ne $audio2) { $audio = $audio + $audio2 }
     
-    Write-Verbose "AUDIO ARGUMENTS:`n$($audio -join " ")`n"
+    Write-Verbose "AUDIO ARGUMENTS:`n$($audio -join ' ')`n"
 
     # Builds the subtitle argument array based on user input
     $subs = Set-SubtitlePreference -InputFile $Paths.InputFile -UserChoice $Subtitles
+    
+    Write-Verbose "SUBTITLE ARGUMENTS:`n$($subs -join ' ')`n"
     
     <#
         VERIFY CROSS-ENCODER ARGUMENTS
         PRESET PARAMETERS
 
-        If user does not modify the defaults via parameters, revert to preset values
+        If user does not modify the defaults via parameters or config files, revert to preset values
     #>
 
     # Confirm shared encoder settings are within valid ranges
@@ -648,11 +650,11 @@ function Invoke-FFMpeg {
             $Paths.TmpOut = $Paths.OutputFile -replace '^(.*)\.(.+)$', '$1-TMP.$2'
             if ($PSBoundParameters['TestFrames']) {
                 # Cut stream at video frame marker
-                ffmpeg -hide_banner -loglevel panic -ss $frame['TestStart'] $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) `
-                    -y $Paths.tmpOut 2>>$Paths.LogPath
+                ffmpeg -ss $frame['TestStart'] $dvArgs.FFMpegOther -frames:a $($TestFrames + 100) `
+                    -y $Paths.tmpOut 2>$null
             }
             else {
-                ffmpeg -hide_banner -loglevel panic $dvArgs.FFMpegOther -y $Paths.tmpOut 2>>$Paths.LogPath
+                ffmpeg -hide_banner $dvArgs.FFMpegOther -y $Paths.tmpOut 2>$null
             }
         }
         else {
