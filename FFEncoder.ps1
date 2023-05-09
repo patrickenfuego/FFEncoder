@@ -1,6 +1,6 @@
 <#
     .SYNOPSIS
-        Cross-platform script for encoding HD/FHD/UHD video content using ffmpeg and x265
+        Cross-platform script for encoding HD/FHD/UHD audio/video content using ffmpeg, VapourSynth, x264, and x265
     .DESCRIPTION
         This script that is meant to make video encoding easier with ffmpeg. Instead of manually changing
         the script parameters for each encode, you can pass dynamic parameters to this script using a  
@@ -21,6 +21,9 @@
     .EXAMPLE
         ## Copy English subtitles and all audio streams ##
         ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -CRF 22.0 -Subtitles eng -Audio copyall -o "~/Movies/Ex Machina (2014) DTS-HD.mkv"
+    .EXAMPLE
+        ## Copy everything EXCEPT English subtitles and all audio streams ##
+        ./FFEncoder.ps1 -i "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -CRF 22.0 -Subtitles !eng -Audio copyall -o "~/Movies/Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE 
         ## Copy existing AC3 stream, or transcode to AC3 if no existing streams are found ##
         .\FFEncoder.ps1 -i "C:\Users\user\Videos\Ex.Machina.2014.DTS-HD.mkv" -Audio ac3 -Subtitles default -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
@@ -40,7 +43,7 @@
         ## Pass additional x265 arguments not covered by other script parameters ##
         ./FFEncoder.ps1 "~/Movies/Ex.Machina.2014.DTS-HD.mkv" -PsyRd 4.0 -CRF 20 -x265Extra @{'max-merge' = 1} -o "C:\Users\user\Videos\Ex Machina (2014) DTS-HD.mkv"
     .EXAMPLE
-        ## Scale 2160p video down to 1080p using zscale and spline36 ##
+        ## ScaleKernel 2160p video down to 1080p using zscale and spline36 ##
         .\FFEncoder "$HOME\Videos\Ex.Machina.2014.DTS-HD.2160p.mkv" -Scale zscale -ScaleFilter spline36 -Res 1080p -CRF 18 -o "$HOME\Videos\Ex Machina (2014) DTS-HD 1080p.mkv"
     .EXAMPLE
         ## Use a Vapoursynth script as input
@@ -51,6 +54,7 @@
     .OUTPUTS
         Crop file
         Log file(s)
+        Intermediary/temporary files
         Encoded video file
     .NOTES
         For script binaries to work, they must be included in the system PATH (consult OS documentation for more information):
@@ -59,36 +63,36 @@
             - mkvmerge
             - mkvextract
             - x265
-
-        Be sure to include an extension at the end of your output file (.mkv, .mp4, .ts, etc.),
-        or you may be left with a file that will not play (OS dependent).
- 
     .PARAMETER Help
         Displays help information for the script
     .PARAMETER TestFrames
         Performs a test encode with the number of frames provided
     .PARAMETER TestStart
         Starting point for test encodes. Accepts 3 formats:
-            - 00:01:30 - Standard time format. This is the default
+            - 00:01:30 - Sexagesimal time format. This is the default
             - 200f     - Frame specifier. Add the 'f' modifier after the frame number to specify a starting frame. Accurate to +/- 1 frame
             - 200t     - Time specifier, in seconds. Add the 't' modifier after the number to specify a starting time. Accepts floating point values
     .PARAMETER InputPath
         Location of the file to be encoded
     .PARAMETER Audio
-        Audio selection options. FFEncoder has 5 audio options:
-            * copy/c       - Pass through the primary audio stream without re-encoding
-            * copyall/ca   - Pass through all audio streams without re-encoding
-            * none/n       - No audio will be copied
-            * aac          - Convert primary audio stream to AAC. Default setting is 512 kb/s for multi-channel, and 128 kb/s for stereo
-            * fdkaac/faac  - Convert primary audio stream to AAC using FDK AAC. Default setting is -vbr 3
-            * aac_at       - Convert the primary audio stream to AAC using Apple's Core AudioToolbox encoder. MacOS only
-            * dts          - Convert/copy DTS to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing DTS stream will be copied
-            * ac3          - Convert/copy AC3 to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing AC3 stream will be copied
-            * eac3         - Convert/copy E-AC3 to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing E-AC3 stream will be copied
-            * flac/f       - Convert the primary audio stream to FLAC lossless audio
-            * Stream #    - Copy an audio stream by its identifier in ffmpeg 
+        Audio selection options. FFEncoder has several audio options:
+            * copy/c           - Pass through the primary audio stream without re-encoding
+            * copyall/ca       - Pass through all audio streams without re-encoding
+            * none/n           - No audio will be copied
+            * aac              - Convert primary audio stream to AAC. Default setting is 512 kb/s for multi-channel, and 128 kb/s for stereo
+            * fdkaac/faac      - Convert primary audio stream to AAC using FDK AAC. Default setting is -vbr 3
+            * aac_at           - Convert the primary audio stream to AAC using Apple's Core AudioToolbox encoder. MacOS only
+            * dts              - Convert/copy DTS to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing DTS stream will be copied
+            * ac3              - Convert/copy AC3 to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing AC3 stream will be copied
+            * eac3             - Convert/copy E-AC3 to the output file. If -AudioBitrate is present, the stream will be transcoded. If not, any existing E-AC3 stream will be copied
+            * flac/f           - Convert the primary audio stream to FLAC lossless audio
+            * Stream #         - Copy an audio stream by its identifier in ffmpeg
+            * dee_ddp/dee_eac3 - Encode Dolby Digital Plus audio using Dolby Encoding Engine (requires external software, not included)
+            * dee_ddp_51       - Force encode Dolby Digital Plus 5.1 audio using Dolby Encoding Engine (requires external software, not included)
+            * dee_dd/dee_ac3   - Encode Dolby Digital audio using Dolby Encoding Engine (requires external software, not included)
+            * dee_thd          - Encode TrueHD audio using Dolby Encoding Engine (requires external software, not included)
     .PARAMETER AudioBitrate
-        Specifies the bitrate for the chosen codec (in kb/s). Values 1-5 are used to signal -vbr with libfdk_aac
+        Specifies the bitrate for the chosen codec (in kb/s). Values 1-5 are used to signal -vbr with libfdk_aac or special options with aac_at
     .PARAMETER Stereo
         Switch to downmix the paired audio stream to stereo
     .PARAMETER Subtitles
@@ -120,6 +124,7 @@
             - Thai              - "tha"
             - Slovenian         - "slv"
             - Hebrew            - "heb"
+        Prefixing a '!' before any language will return all subtitles EXCLUDING that language
     .PARAMETER Preset
         The x265 preset to be used. Ranges from "placebo" (slowest) to "ultrafast" (fastest). Slower presets improve quality by enabling additional, more expensive, x265 parameters at the expensive of encoding time.
         Recommended presets (depending on source and purpose) are slow, medium, or fast. 
@@ -197,12 +202,13 @@
     .PARAMETER EncoderExtra
         Pass additional settings to the encoders that are not supplied by the script. Settings must be passed as a hashtable in the form of <key = value>.
         WARNING: The script does not check for valid syntax, and assumes you know what you're doing
-    .PARAMETER Scale
-        Upscale/downscale input to a different resolution. Compatible arguments are scale (ffmpeg default) or zscale (requires libzimg library)
+    .PARAMETER ScaleKernel
+        Upscale/downscale input to a different resolution using the specified convolution kernel
     .PARAMETER ScaleFilter
         Filtering method used for rescaling input with the -Scale parameter. Compatible arguments:
             - scale: fast_bilinear, neighbor, area, gauss, sinc, spline, bilinear, bicubic, lanczos
             - zscale: point, spline16, spline36, bilinear, bicubic, lanczos
+        If an argument is chosen which exists in both sets, zscale will be used if available
     .PARAMETER Unsharp
         Enable the unsharp filter and specify the search range. Use one of the presets specified in the project wiki, in the form:
             <luma|chroma|yuv>_<small|medium|large>
@@ -239,6 +245,8 @@
         VMAF option. Enables Peak Signal to Noise Ratio (PSNR) evaluation
     .PARAMETER EnableSSIM
         VMAF option. Enables Structural Similarity Index Measurement (SSIM) evaluation
+    .PARAMETER VMAFResizeKernel
+        VMAF option. Specify which kernel to use for resizing the distorted stream (default is bicubic)
     .PARAMETER LogFormat
         Specify the log format for VMAF. Options:
             - json
@@ -248,12 +256,11 @@
     .PARAMETER VapourSynthScript
         Pass a VapourSynth script for filtering. Note that all filtering (including cropping) must be done in the VS script
     .lINK
-        Check out the full documentation on GitHub - https://github.com/patrickenfuego/FFEncoder
+        Check out the full documentation and script wiki on GitHub - https://github.com/patrickenfuego/FFEncoder
     .LINK
         FFMpeg documentation - https://ffmpeg.org
     .LINK
         x265 HEVC Documentation - https://x265.readthedocs.io/en/master/introduction.html
-
 #>
 
 using namespace System.IO
