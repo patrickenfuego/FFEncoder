@@ -137,8 +137,8 @@ ___________      .__  __  .__                 ______________________            
 
 '@
 
-# Current script release version
-[version]$release = '2.4.1'
+# Current script release version. Used for download prompt
+[version]$release = '2.4.2'
 
 
 #### End module variables ####
