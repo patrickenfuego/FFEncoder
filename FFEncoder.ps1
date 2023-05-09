@@ -637,8 +637,8 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('point', 'spline16', 'spline36', 'bilinear', 'bicubic', 'lanczos',
         'fast_bilinear', 'neighbor', 'area', 'gauss', 'sinc', 'spline', 'bicublin')]
-    [Alias('SF', 'ResizeType')]
-    [string]$Scale = 'bilinear',
+    [Alias('ResizeKernel')]
+    [string]$ScaleKernel = 'bilinear',
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
@@ -1130,10 +1130,10 @@ $sourceResolution = ffprobe -v error -select_streams v:0 -show_entries stream=wi
 # If VS is used, skip video filtering
 if (!$PSBoundParameters['VapoursynthScript']) {
     # If scale is used, verify arguments and handle errors
-    if ($PSBoundParameters['Scale']) {
+    if ($PSBoundParameters['ScaleKernel']) {
         $isScale = $true
         try {
-            $scaleType, $filter = Confirm-ScaleFilter -Filter $Scale -Verbose:$setVerbose
+            $scaleType, $filter = Confirm-ScaleFilter -Filter $ScaleKernel -Verbose:$setVerbose
         }
         catch {
             Write-Host "`u{203C} $($_.Exception.Message). The output will not be scaled`n" @errColors
@@ -1157,7 +1157,7 @@ if (!$PSBoundParameters['VapoursynthScript']) {
 
         # Collect the arguments into a hashtable
         $scaleHash = @{
-            Scale       = $scaleType
+            ScaleKernel = $scaleType
             ScaleFilter = $filter 
             Resolution  = $Resolution ??= $defaultResolution
         }
@@ -1355,7 +1355,6 @@ try {
     Invoke-FFMpeg @ffmpegParams
 }
 catch {
-    $_.Exception | Select-Object *
     $params = @{
         Message           = "An error occurred during ffmpeg invocation. Exception:`n$($_.Exception)"
         RecommendedAction = 'Correct the Error Message'
@@ -1470,7 +1469,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
     }
 
     # Remove the DEE audio file if switch is present
-    if ($PSBoundParameters['RemoveFiles']) { [File]::Delete($deePath) }
+    if ($RemoveFiles) { [File]::Delete($deePath) }
 }
 
 # If stream copy and stereo are used, mux the stream back into the container
@@ -1530,18 +1529,15 @@ elseif ([File]::Exists($output) -and
 }
 
 # Generate tag file if passed
-if ($PSBoundParameters['GenerateMKVTagFile']) {
+if ($GenerateMKVTagFile) {
     try {
-        # Verify MKVToolnix is installed before calling
-        if (!(Get-Command 'mkvmerge')) {
-            Write-Host "The MKVToolnix suite is required to use the -GenerateMKVTagFile parameter" @errColors
+        if (!$GenerateMKVTagFile['Path']) {
+            $GenerateMKVTagFile['Path'] = $paths.OutputFile.Replace(".$($paths.Extension)", '.xml')
         }
-        else {
-            & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).ToString() @GenerateMKVTagFile -Path $paths.OutputFile
-        }
+        & $([Path]::Join($ScriptsDirectory, 'MatroskaTagGenerator.ps1')).ToString() @GenerateMKVTagFile
     }
     catch {
-        Write-Host "An error occurred while generating the tag file: $($_.Exception.Message)" @errColors
+        Write-Host "An error occurred while generating the tag file: $($_.Exception.Message)`n" @errColors
     }
 }
 
@@ -1554,12 +1550,11 @@ $stopwatch.Stop()
 
 # Generate the report file if parameter is present
 if ($GenerateReport) {
-    $twoPass = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
     $params = @{
         DateTimes = @($startTime, $endTime)
         Duration  = $stopwatch
         Paths     = $paths
-        TwoPass   = $twoPass
+        TwoPass   = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
         Encoder   = $Encoder
         Verbose   = $setVerbose
     }
