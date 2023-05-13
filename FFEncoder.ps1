@@ -278,10 +278,10 @@ param (
     [Alias('Enc')]
     [string]$Encoder = 'x265',
 
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'CRF')]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'VMAF')]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'PASS')]
-    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'QP')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'CRF', HelpMessage='Enter full path to source file')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'VMAF', HelpMessage='Enter full path to source file')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'PASS', HelpMessage='Enter full path to source file')]
+    [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'QP', HelpMessage='Enter full path to source file')]
     [ValidateScript( { if (Test-Path $_) { $true } else { throw 'Input path does not exist' } } )]
     [Alias('I', 'Reference', 'Source')]
     [string]$InputPath,
@@ -330,7 +330,8 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('copy', 'c', 'copyall', 'ca', 'aac', 'none', 'n', 'ac3', 'dee_dd', 'dee_ac3', 'dd', 'dts', 'flac', 'f',
         'eac3', 'ddp', 'dee_ddp', 'dee_eac3', 'dee_ddp_51', 'dee_eac3_51', 'dee_thd', 'fdkaac', 'faac', 'aac_at', 
-        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)]
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+    )]
     [Alias('A2')]
     [string]$Audio2 = "none",
 
@@ -352,10 +353,11 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [ValidateSet('all', 'a', 'copyall', 'ca', 'none', 'default', 'd', 'n', 'eng', 'fre', 'ger', 'spa', 'dut', 'dan', 
         'fin', 'nor', 'cze', 'pol', 'chi', 'zho', 'kor', 'gre', 'rum', 'rus', 'swe', 'est', 'ind', 'slv', 'tur', 'vie',
-        'hin', 'heb', 'ell', 'bul', 'ara', 'por', 'nld',
+        'hin', 'heb', 'ell', 'bul', 'ara', 'por', 'nld', 'tha',
         '!eng', '!fre', '!ger', '!spa', '!dut', '!dan', '!fin', '!nor', '!cze', '!pol', '!chi', '!zho', '!kor', '!ara',
         '!rum', '!rus', '!swe', '!est', '!ind', '!slv', '!tur', '!vie', '!hin', '!heb', '!gre', '!ell', '!bul', '!por',
-        '!nld')]
+        '!nld', '!tha'
+    )]
     [Alias('S', 'Subs')]
     [string]$Subtitles = 'default',
 
@@ -366,7 +368,7 @@ param (
     [Alias('P')]
     [string]$Preset = 'slow',
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'CRF', HelpMessage = 'Enter CRF value (1-51)')]
     [ValidateRange(0.0, 51.0)]
     [Alias('C')]
     [double]$CRF,
@@ -376,7 +378,7 @@ param (
     [Alias('QP')]
     [int]$ConstantQP,
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'PASS', HelpMessage = 'Enter 2-pass Average Bitrate (Ex: 5M or 5000k)')]
     [Alias('VBitrate')]
     [ValidateScript(
         {
@@ -706,10 +708,10 @@ param (
     [Alias('CreateTagFile')]
     [hashtable]$GenerateMKVTagFile,
 
-    [Parameter(Mandatory = $true, ParameterSetName = 'CRF')]
-    [Parameter(Mandatory = $true, ParameterSetName = 'VMAF')]
-    [Parameter(Mandatory = $true, ParameterSetName = 'PASS')]
-    [Parameter(Mandatory = $true, ParameterSetName = 'QP')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'CRF', HelpMessage = 'Enter full path to encoded output file')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'VMAF', HelpMessage = 'Enter full path to encoded output file')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'PASS', HelpMessage = 'Enter full path to encoded output file')]
+    [Parameter(Mandatory = $true, ParameterSetName = 'QP', HelpMessage = 'Enter full path to encoded output file')]
     [ValidateNotNullOrEmpty()]
     [Alias('O', 'Encode', 'Distorted')]
     [string]$OutputPath,
@@ -1011,12 +1013,11 @@ if ($EncoderExtra) {
     }
     foreach ($item in $EncoderExtra.GetEnumerator()) {
         # If setting is in hash, get the key
-        if ($paramHash.Values.Contains($item.Name.ToLower())) {
-            $key = $paramHash.Keys.Where({ $paramHash[$_] -contains $item.Name })
-        }
-        else {
+        $hasValue = $paramHash.Values.Contains($item.Name)
+        if ($hasValue -notcontains $true) {
             continue
         }
+        $key = $paramHash.Keys.Where({ $paramHash[$_] -contains $item.Name })
         # Related setting param not passed via CLI
         if (!$PSBoundParameters[$key]) {
             if ($key -eq 'VBV') {
