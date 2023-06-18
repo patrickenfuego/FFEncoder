@@ -28,6 +28,7 @@ Dynamic Metadata such as Dolby Vision and/or HDR10+ is fully supported.
     - [Rate Control Options](#rate-control-options)
     - [VMAF Comparison](#vmaf-comparison)
     - [MKV Tag Generator](#mkv-tag-generator)
+    - [Encoding Reports](#encoding-reports)
   - [Usage](#usage)
     - [Configuration Files](#configuration-files)
     - [Parameters](#parameters)
@@ -215,6 +216,39 @@ Additionally, you may add `SSIM` and `PSNR` measurements as well during the same
 If the selected output format is Matroska (MKV), you can use the parameter `-GenerateMKVTagFile` (or its alias, `-CreateTagFile`) to dynamically pull down metadata from TMDB, create a valid XML file, and multiplex it into the output file. This allows you to add useful metadata to your container for things like Plex and Emby to detect, or add other cool properties like Directors, Writers, and Actors for your own reference; any parameter that is available via the TMDB API can be added to your container.
 
 To use this parameter, you will need a valid TMDB API key. See [the wiki](https://github.com/patrickenfuego/FFEncoder/wiki/MKV-Tag-Generator) for more information.
+
+---
+
+### Encoding Reports
+
+![image](https://github.com/patrickenfuego/FFEncoder/assets/47511320/ef75c064-0ff7-47dc-8335-a044402d21ef)
+
+If you're at all like me, you want to keep a record of each encode you perform for reference, comparison, or posterity. However, the ffmpeg/x265 logs are difficult to parse visually and take up a lot of disk space when saved.
+
+FFEncoder can generate a human-readable encoding report from these hefty logs with two different formatting options:
+
+- **HTML** - Responsive HTML report using data extracted from the log file. Some values are calculated by the script dynamically (see below).
+- **text** - Text-based report extracted from the log file, formatted, and saved with a `.rep` extension for easy identification and sorting.
+
+Reports include the following statistics:
+
+- The start and end date/time, formatted for your locality
+- Total encoding time in the form `days, hours, minutes, seconds`
+- Encoding statistics
+  - Encoder used
+  - Total frames (if used for a test encode, the number of test frames is used instead)
+  - Frames per second (FPS)
+  - Final bitrate (in Mb/s)
+  - Average QP
+    - <u>**x264 NOTE**</u>: *x264 does not provide this statistic by default, so the script performs a weighted average calculation based on the number and average QP of each frame type. While not perfect, it's very close when compared to how x265 calculates this value.*
+      - *x264's Average QP is only calculated in **HTML** reports*
+- Raw encoding summary (extracted from the log)
+
+Report formats are standardized across encoders to give a similar look and feel.
+
+Reports can be generated using the `-GenerateReport` switch flag and the format type can be specified using thr `-ReportFormat` parameter. If no format is specified, `html` is the default. Report files are saved within the input file's parent directory.
+
+If you always wish to generate a report, you can set `GenerateReport=True` in the `script.ini` configuration file.
 
 ---
 
