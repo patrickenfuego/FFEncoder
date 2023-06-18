@@ -1,0 +1,142 @@
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04">
+  <Obj RefId="0">
+    <TN RefId="0">
+      <T>Microsoft.PowerShell.Commands.PSRepositoryItemInfo</T>
+      <T>System.Management.Automation.PSCustomObject</T>
+      <T>System.Object</T>
+    </TN>
+    <MS>
+      <S N="Name">Get-MediaInfo</S>
+      <Version N="Version">3.7</Version>
+      <S N="Type">Module</S>
+      <S N="Description">PowerShell MediaInfo solution</S>
+      <S N="Author">Frank Skare (stax76)</S>
+      <S N="CompanyName">stax76</S>
+      <S N="Copyright">(C) 2020-2021 Frank Skare (stax76). All rights reserved.</S>
+      <DT N="PublishedDate">2021-03-31T10:28:48-04:00</DT>
+      <Obj N="InstalledDate" RefId="1">
+        <DT>2023-05-06T22:37:04.0934561-04:00</DT>
+        <MS>
+          <Obj N="DisplayHint" RefId="2">
+            <TN RefId="1">
+              <T>Microsoft.PowerShell.Commands.DisplayHintType</T>
+              <T>System.Enum</T>
+              <T>System.ValueType</T>
+              <T>System.Object</T>
+            </TN>
+            <ToString>DateTime</ToString>
+            <I32>2</I32>
+          </Obj>
+        </MS>
+      </Obj>
+      <Nil N="UpdatedDate" />
+      <Nil N="LicenseUri" />
+      <URI N="ProjectUri">https://github.com/stax76/Get-MediaInfo</URI>
+      <Nil N="IconUri" />
+      <Obj N="Tags" RefId="3">
+        <TN RefId="2">
+          <T>System.Object[]</T>
+          <T>System.Array</T>
+          <T>System.Object</T>
+        </TN>
+        <LST>
+          <S>mp3</S>
+          <S>media</S>
+          <S>video</S>
+          <S>audio</S>
+          <S>PSModule</S>
+        </LST>
+      </Obj>
+      <Obj N="Includes" RefId="4">
+        <TN RefId="3">
+          <T>System.Collections.Hashtable</T>
+          <T>System.Object</T>
+        </TN>
+        <DCT>
+          <En>
+            <S N="Key">Workflow</S>
+            <Obj N="Value" RefId="5">
+              <TNRef RefId="2" />
+              <LST />
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">Function</S>
+            <Obj N="Value" RefId="6">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Get-MediaInfo</S>
+                <S>Get-MediaInfoValue</S>
+                <S>Get-MediaInfoSummary</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">RoleCapability</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Command</S>
+            <Obj N="Value" RefId="7">
+              <TNRef RefId="2" />
+              <LST>
+                <S>Get-MediaInfo</S>
+                <S>Get-MediaInfoValue</S>
+                <S>Get-MediaInfoSummary</S>
+              </LST>
+            </Obj>
+          </En>
+          <En>
+            <S N="Key">DscResource</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+          <En>
+            <S N="Key">Cmdlet</S>
+            <Ref N="Value" RefId="5" />
+          </En>
+        </DCT>
+      </Obj>
+      <Nil N="PowerShellGetFormatVersion" />
+      <Nil N="ReleaseNotes" />
+      <Obj N="Dependencies" RefId="8">
+        <TNRef RefId="2" />
+        <LST />
+      </Obj>
+      <S N="RepositorySourceLocation">https://www.powershellgallery.com/api/v2</S>
+      <S N="Repository">PSGallery</S>
+      <S N="PackageManagementProvider">NuGet</S>
+      <Obj N="AdditionalMetadata" RefId="9">
+        <TN RefId="4">
+          <T>System.Management.Automation.PSCustomObject</T>
+          <T>System.Object</T>
+        </TN>
+        <MS>
+          <S N="copyright">(C) 2020-2021 Frank Skare (stax76). All rights reserved.</S>
+          <S N="description">PowerShell MediaInfo solution</S>
+          <S N="requireLicenseAcceptance">False</S>
+          <S N="isLatestVersion">True</S>
+          <S N="isAbsoluteLatestVersion">True</S>
+          <S N="versionDownloadCount">1650</S>
+          <S N="downloadCount">1950</S>
+          <S N="packageSize">2744479</S>
+          <S N="published">3/31/2021 10:28:48 AM -04:00</S>
+          <S N="created">3/31/2021 10:28:48 AM -04:00</S>
+          <S N="lastUpdated">5/7/2023 2:35:43 AM -04:00</S>
+          <S N="tags">mp3 media video audio PSModule PSFunction_Get-MediaInfo PSCommand_Get-MediaInfo PSFunction_Get-MediaInfoValue PSCommand_Get-MediaInfoValue PSFunction_Get-MediaInfoSummary PSCommand_Get-MediaInfoSummary PSIncludes_Function</S>
+          <S N="developmentDependency">False</S>
+          <S N="updated">2023-05-07T02:35:43Z</S>
+          <S N="NormalizedVersion">3.7.0</S>
+          <S N="Authors">Frank Skare (stax76)</S>
+          <S N="IsPrerelease">false</S>
+          <S N="ItemType">Module</S>
+          <S N="FileList">Get-MediaInfo.nuspec|Get-MediaInfo.psd1|Get-MediaInfo.psm1|MediaInfo.dll|MediaInfoSharp.dll|MediaInfoSharp.pdb</S>
+          <S N="GUID">86639e26-2698-42ec-b7f1-c66daca2eb78</S>
+          <S N="PowerShellVersion">5.1</S>
+          <S N="ProcessorArchitecture">Amd64</S>
+          <S N="CompanyName">Frank Skare (stax76)</S>
+        </MS>
+      </Obj>
+      <S N="InstalledLocation">C:\Users\Patrick Kelly\Documents\PowerShell\Modules\Get-MediaInfo\3.7</S>
+    </MS>
+  </Obj>
+</Objs>
