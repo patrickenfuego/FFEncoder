@@ -45,24 +45,6 @@ function Invoke-VMAF {
         [switch]$PSNR
     )
 
-    # Private internal function to parse dimensions from a string 
-    function Get-Resolution ([string]$FilePath, [string]$Type) {
-        $resolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $FilePath
-        Write-Verbose "VMAF Resolution is: $resolution"
-        $match = [regex]::Matches($resolution, "(?<w>\d+)x(?<h>\d+).*")
-        if ($match) {
-            [int]$width = $match.Groups[1].Value
-            [int]$height = $match.Groups[2].Value
-
-            Write-Verbose "VMAF Dimensions for $Type : $width`x$height"
-        }
-        else {
-            Write-Error "VMAF: Regular expression failed to match dimensions. ffprobe may have returned a bad result" -ErrorAction Stop
-        }
-
-        return $width, $height
-    }
-
     # Format and output assessment scores. Backward compatible with older pwsh versions
     function Write-Score {
         [CmdletBinding()]
@@ -210,9 +192,9 @@ function Invoke-VMAF {
         'zscale', 'f'
 
     # Get the resolution of the source (reference) file to verify if scaling was used
-    $sw, $sh = Get-Resolution -FilePath $Source -Type 'Source'
-    # # Get the resolution of the encode (distorted) for cropping
-    $w, $h = Get-Resolution -FilePath $Encode -Type 'Encode'
+    $sw, $sh = Get-MediaInfo $Source | Select-Object Width, Height | ForEach-Object { $_.Width, $_.Height }
+    # Get the resolution of the encode (distorted) for cropping
+    $w, $h = Get-MediaInfo $Encode | Select-Object Width, Height | ForEach-Object { $_.Width, $_.Height }
 
     # Check for downscale/upscale
     if ($sw -ne $w) {
@@ -226,11 +208,8 @@ function Invoke-VMAF {
     }
 
     # Get framerate of Encode
-    $fps = ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $Encode
-    $framerate = [math]::Round($(Invoke-Expression $fps), 3)
-    # Get framerate of source to ensure they match
-    $fpsSrc = ffprobe -v error -select_streams v -of default=noprint_wrappers=1:nokey=1 -show_entries stream=r_frame_rate $Source
-    $framerateSrc = [math]::Round($(Invoke-Expression $fpsSrc), 3)
+    $framerateSrc = (Get-MediaInfo $Source).FrameRate
+    $framerate = (Get-MediaInfo $Encode).FrameRate
     if ($framerate -ne $framerateSrc) {
         Write-Error "Source and encode have different frame rates. Ensure the proper files are being compared" -ErrorAction Stop
     }
@@ -252,20 +231,28 @@ function Invoke-VMAF {
     }
 
     if (![File]::Exists($jsonFile)) {
-        Write-Error "VMAF: Cannot locate json model file" -ErrorAction Stop
+        throw "Cannot locate json model file"
     }
 
     # Set paths and calculate system resources
     if ($IsWindows) {
         # Perform all the path fuckery required by VMAF & ffmpeg on Windows
         $modelDrive = (Split-Path $jsonFile -Qualifier) -replace ':', '\\:'
-        $modelPath = (Split-Path $jsonFile -NoQualifier) -replace '\\', '/'
-        $modelPath = "$modelDrive$modelPath"
+        $modelPath = [Path]::Join($modelDrive, ((Split-Path $jsonFile -NoQualifier) -replace '\\', '/'))
         
-        $logDrive = (Split-Path $Encode -Qualifier) -replace ':', '\\:'
-        $logPath = (Split-Path $Encode -Parent)
+        if (([System.Uri]$Encode).IsUnc) {
+            $basePath = [Path]::Join([Environment]::GetFolderPath('MyVideos'), "$title`_vmaf_log.json")
+            Write-Host "UNC Path detected. Setting output log path to '$basePath'`n" @warnColors
+        }
+        else {
+            $basePath = $Encode
+        }
+        
+        $logDrive = (Split-Path $basePath -Qualifier) -replace ':', '\\:'
+        $logPath = Split-Path $basePath -Parent
         $logPath = (Split-Path $logPath -NoQualifier) -replace '\\', '/'
-        $logPath = "$logDrive$logPath/$title`_vmaf_log.json"
+        $fileName = "$title`_vmaf_log.json"
+        $logPath = "$logDrive$logPath/$fileName"
 
         # Get CPU count. Use ~ 50% of system capability
         $coreCount = (Get-CimInstance Win32_Processor).NumberOfCores
@@ -280,7 +267,7 @@ function Invoke-VMAF {
             (grep 'cpu cores' /proc/cpuinfo | uniq) :
             (sysctl -a | grep machdep.cpu.core_count)
         
-        $countStr = [regex]::Match($cpuStr, '\d+')
+        $countStr = [Regex]::Match($cpuStr, '\d+')
         if ($countStr) {
             if (($coreCount.Value -as [int]) -is [int]) {
                 $coreCount = $countStr.Value
@@ -296,7 +283,7 @@ function Invoke-VMAF {
         }
     }
     else {
-        Write-Error "Unknown Operating System detected. Exiting script" -ErrorAction Stop
+        throw "Unknown Operating System detected. Exiting script"
     }
 
     Write-Verbose "VMAF Model Path: $modelPath"
@@ -332,30 +319,35 @@ function Invoke-VMAF {
 
         # Unfuck the log escaping to make it parsable
         if ($isWindows) {
-            $logPath = [Regex]::Unescape($logPath).Replace('\:', ':') | 
-                Resolve-Path | 
-                    Select-Object -ExpandProperty Path
+            $logPath = ($logPath.Replace('\\:', ':') | Resolve-Path).Path
         }
         else {
             $logPath = [Regex]::Unescape($logPath)
         }
 
-        [File]::Exists($logPath) ? 
-            (Write-Host "Scores:`n") : 
-            (Write-Host "Unfortunately, the log file doesn't exist and scores couldn't be extracted" @warnColors)
+        if ([File]::Exists($logPath)) {
+            Write-Host "Scores:`n"
+        }
+        else {
+            throw "The log file doesn't exist and scores couldn't be extracted"
+        }
 
         # Get score from log for processing
         $scoreData = [File]::ReadAllLines($logPath) | 
             ConvertFrom-Json | 
                 Select-Object -ExpandProperty pooled_metrics
 
+        if (!$scoreData) {
+            throw "Contents of log file are empty and scores couldn't be extracted"
+        }
+
         $scores = @(
-            @{ Type = 'vmaf'; Score = $scoreData.vmaf.harmonic_mean }
+            @{ Type = 'vmaf'; Score = $scoreData.vmaf.harmonic_mean ??= 'Empty' }
             if ($SSIM) {
-                @{ Type = 'ms-ssim'; Score = $scoreData.float_ms_ssim.harmonic_mean }
+                @{ Type = 'ms-ssim'; Score = $scoreData.float_ms_ssim.harmonic_mean ??= 'Empty' }
             }
             if ($PSNR) {
-                @{ Type = 'psnr'; Score = $scoreData.float_psnr.harmonic_mean }
+                @{ Type = 'psnr'; Score = $scoreData.float_psnr.harmonic_mean ??= 'Empty' }
             }
         )
         $scores | Write-Score
