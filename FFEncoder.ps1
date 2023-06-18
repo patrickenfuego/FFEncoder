@@ -222,6 +222,11 @@
         Upscale/downscale resolution used with the -Scale parameter. Default value is 1080p (1920 x 1080)
     .PARAMETER SkipDolbyVision
         Skip Dolby Vision encoding, even if metadata is present
+    .PARAMETER DolbyVisionMode
+        Specify the Dolby Vision mode used to generate the RPU file. Options:
+            - 8.1 - Profile 8.1 (Backward compatible with HDR10)
+            - 8.4 - Profile 8.4 (Backward compatible with HLG)
+            - 8.1m - Profile 8.1 with FEL mapping retained (requires VapourSynth to process)
     .PARAMETER SkipHDR10Plus
         Skip HDR10+ encoding, even if metadata is present
     .PARAMETER HDR10PlusSkipReorder
@@ -237,6 +242,10 @@
         Deinterlacing filter using yadif. Currently only works with CRF encoding
     .PARAMETER GenerateReport
         Generates a user friendly report file with important encoding metrics pulled from the log file. File is saved with a .rep extension
+    .PARAMETER ReportType
+        Specifies the type of report to generate. Options:
+            - text
+            - html (default)
     .PARAMETER GenerateMKVTagFile
         Generate an XML tag file for MKV containers using the TMDB API. Requires a valid TMDB API key
     .PARAMETER CompareVMAF
@@ -282,7 +291,10 @@ param (
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'VMAF', HelpMessage='Enter full path to source file')]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'PASS', HelpMessage='Enter full path to source file')]
     [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'QP', HelpMessage='Enter full path to source file')]
-    [ValidateScript( { if (Test-Path $_) { $true } else { throw 'Input path does not exist' } } )]
+    [ValidateScript(
+        { Test-Path $_ },
+        ErrorMessage = "Path '{0}' does not exist."
+    )]
     [Alias('I', 'Reference', 'Source')]
     [string]$InputPath,
 
@@ -333,7 +345,7 @@ param (
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
     )]
     [Alias('A2')]
-    [string]$Audio2 = "none",
+    [string]$Audio2 = 'none',
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
@@ -393,14 +405,14 @@ param (
                     }
                     'M' {
                         if ($Matches.num -gt 99 -or $Matches.num -le 1) {
-                            throw "Bitrate out of range. Must be between 1-99 mb/s"
+                            throw "Bitrate out of range. Must be between 1-99 Mb/s"
                         }
                         else { $true }
                     }
-                    default { throw "Invalid Suffix. Suffix must be 'K/k' (kb/s) or 'M' (mb/s)" }
+                    default { throw "Invalid Suffix. Suffix must be 'K/k' (kb/s) or 'M' (Mb/s)" }
                 }
             }
-            else { throw "Invalid bitrate input. Example formats: 10000k (10,000 kb/s) | 10M (10 mb/s)" }
+            else { throw "Invalid bitrate input. Example formats: 10000k (10,000 kb/s) | 10M (10 Mb/s)" }
         }
     )]
     [string]$VideoBitrate,
@@ -653,14 +665,28 @@ param (
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
-    [alias('Report', 'GR')]
+    [Alias('Report', 'GR')]
     [switch]$GenerateReport,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
+    [ValidateSet('text', 'html')]
+    [Alias('ReportFormat')]
+    [string]$ReportType = 'html',
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
     [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
     [Alias('NoDV', 'SDV')]
     [switch]$SkipDolbyVision,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
+    [Parameter(Mandatory = $false, ParameterSetName = 'QP')]
+    [ValidateSet('8.1', '8.4', '8.1m')]
+    [Alias('DoViMode')]
+    [string]$DolbyVisionMode = '8.1',
 
     [Parameter(Mandatory = $false, ParameterSetName = 'CRF')]
     [Parameter(Mandatory = $false, ParameterSetName = 'PASS')]
@@ -693,7 +719,7 @@ param (
         {
             $flag = $false
             if ($null -eq $_['APIKey']) {
-                throw "MKV Tag Hashtable must include an APIKey"
+                throw 'MKV Tag Hashtable must include an APIKey entry'
             }
             foreach ($k in $_.Keys) {
                 if ($k -notin 'APIKey', 'Path', 'Title', 'Year', 'Properties', 'SkipProperties', 'NoMux', 'AllowClobber') {
@@ -747,45 +773,24 @@ param (
 
 # Returns an object containing the paths needed throughout the script
 function Set-ScriptPaths ([hashtable]$OS) {
-    if ($InputPath -match "(?<root>.*(?:\\|\/)+)(?<title>.*)\.(?<ext>[a-z 2 4]+)") {
-        $root = $Matches.root
-        $title = $Matches.title
-        $ext = $Matches.ext
-        if ($OutputPath -match "(?<oRoot>.*(?:\\|\/)+)(?<oTitle>.*)\.(?<oExt>[a-z 2 4]+)") {
-            $oRoot = $Matches.oRoot
-            $oTitle = $Matches.oTitle
-            $oExt = $Matches.oExt
-        }
-        # If regex match can't be made on the output path, use input matches instead
-        else {
-            $oRoot = $root
-            $oTitle = $title
-            $oExt = $ext
-        }
-        # Creating path strings used throughout the script
-        $cropPath = [Path]::Join($root, "$title`_crop.txt")
-        $logPath = [Path]::Join($root, "$title`_encode.log")
-        $x265Log = [Path]::Join($root, "x265_2pass.log")
-        $stereoPath = [Path]::Join($root, "$oTitle`_stereo.$oExt")
-        $reportPath = [Path]::Join($root, "$oTitle.rep")
-        $hdr10PlusPath = [Path]::Join($root, "metadata.json")
-        $dvPath = [Path]::Join($root, "rpu.bin")
-        $hevcPath = [Path]::Join($oRoot, "$oTitle.hevc")
-    }
-    # Regex match could not be made on the folder pattern
-    else {
-        Write-Host "Could not match root folder pattern. Using OS default path instead..." @warnColors
-        Write-Host $os.OperatingSystem "detected. Using path: <$($os.DefaultPath)>"
-        # Creating path strings if regex match fails - use OS default
-        $cropPath = [Path]::Join($os.DefaultPath, "crop.txt")
-        $logPath = [Path]::Join($os.DefaultPath, "encode.log")
-        $x265Log = [Path]::Join($os.DefaultPath, "x265_2pass.log")
-        $stereoPath = [Path]::Join($os.DefaultPath, "stereo.mkv")
-        $reportPath = [Path]::Join($os.DefaultPath, "$InputPath.rep")
-        $hdr10PlusPath = [Path]::Join($os.DefaultPath, "metadata.json")
-        $dvPath = [Path]::Join($os.DefaultPath, "rpu.bin")
-        $hevcPath = [Path]::Join($os.DefaultPath, "$InputPath.hevc")
-    }
+    # Split file paths into their components
+    $root = Split-Path $InputPath -Parent
+    $oRoot = Split-Path $OutputPath -Parent
+    $title = Split-Path $InputPath -LeafBase
+    $oTitle = Split-Path $OutputPath -LeafBase
+    $oExt = Split-Path $OutputPath -Extension
+
+    # Creating path strings used throughout the script
+    $cropPath = [Path]::Join($root, "$title`_crop.txt")
+    $logPath = [Path]::Join($root, "$title`_encode.log")
+    $x265Log = [Path]::Join($root, "x265_2pass.log")
+    $stereoPath = [Path]::Join($root, "$oTitle`_stereo.$oExt")
+    $hdr10PlusPath = [Path]::Join($root, "metadata.json")
+    $dvPath = [Path]::Join($root, "rpu.bin")
+    $hevcPath = [Path]::Join($oRoot, "$oTitle.hevc")
+
+    $repExt = ($ReportType -eq 'html') ? 'html' : 'rep'
+    $reportPath = [Path]::Join($root, "$oTitle.$repExt")
 
     if ($psReq) {
         Write-Host "Crop file path is: $($PSStyle.Foreground.Cyan+$PSStyle.Underline)$cropPath"
@@ -803,9 +808,9 @@ function Set-ScriptPaths ([hashtable]$OS) {
         (Get-Process 'x265*' -ErrorAction SilentlyContinue))) {
         
         # Check if a process is writing to the current log file
-        $length1 = (Get-Content $logPath).Length
+        $length1 = ([FileInfo]$logPath).Length
         Start-Sleep -Seconds 1.2
-        $length2 = (Get-Content $logPath).Length
+        $length2 = ([FileInfo]$logPath).Length
 
         if ($length2 -gt $length1) {
             $logCount = (Get-ChildItem $root -Filter '*encode*.log' | Measure-Object).Count
@@ -819,6 +824,7 @@ function Set-ScriptPaths ([hashtable]$OS) {
     $pathObject = @{
         InputFile  = $InputPath
         Root       = $root
+        OutRoot    = $oRoot
         Extension  = $oExt
         RemuxPath  = $remuxPath
         StereoPath = $stereoPath
@@ -826,6 +832,7 @@ function Set-ScriptPaths ([hashtable]$OS) {
         LogPath    = $logPath
         X265Log    = $x265Log
         Title      = $oTitle
+        InTitle    = $title
         ReportPath = $reportPath
         HDR10Plus  = $hdr10PlusPath
         DvPath     = $dvPath
@@ -1051,7 +1058,7 @@ if ($EncoderExtra) {
                 }
             }
             elseif ($key -eq 'Deblock') {
-                if (([regex]::Match($item.Value, '\d,\d')).Success) {
+                if (([regex]::Match($item.Value, '-?\d,-?\d')).Success) {
                     [int[]]$val = $item.Value -split ','
                     Set-Variable -Name $key -Value $val
                 }
@@ -1079,7 +1086,7 @@ $paths = Set-ScriptPaths -OS $osInfo
 
 # if the output path already exists, prompt to delete the existing file or exit script. Otherwise, try to create it
 if ([File]::Exists($paths.OutputFile)) { 
-    Remove-FilePrompt -Path $paths.OutputFile -Type "Primary"
+    Remove-FilePrompt -Path $paths.OutputFile -Type 'Primary'
 }
 else { 
     if (![Directory]::Exists(([FileInfo]$paths.OutputFile).DirectoryName)) {
@@ -1125,8 +1132,8 @@ if ($PSBoundParameters['TestStart'] -and !$PSBoundParameters['TestFrames']) {
 }
 
 # Check the source resolution
-$sourceResolution = ffprobe -v error -select_streams v:0 -show_entries stream=width,height `
-    -of csv=s=x:p=0 $InputPath
+$sourceResolution = Get-MediaInfo $InputPath | Select-Object Width, Height | 
+    ForEach-Object { "$($_.Width)x$($_.Height)" }
 
 # If VS is used, skip video filtering
 if (!$PSBoundParameters['VapoursynthScript']) {
@@ -1147,10 +1154,10 @@ if (!$PSBoundParameters['VapoursynthScript']) {
     if ($isScale) {
         # Warn if no resolution was passed, and set to a default
         if (!$PSBoundParameters['Resolution']) {
-            $defaultResolution = switch -Wildcard ($sourceResolution) {
-                '*3840x2160*' { '1080p' }
-                '*1920x1080*' { '2160p' }
-                '*1280x720*'  { '1080p' }
+            $defaultResolution = switch ($sourceResolution) {
+                '3840x2160' { '1080p' }
+                '1920x1080' { '2160p' }
+                '1280x720'  { '1080p' }
             }
             Write-Warning "No resolution specified for scaling. Using a default based on source: $defaultResolution"
             Write-Host ""
@@ -1221,7 +1228,7 @@ if (!$PSBoundParameters['VapoursynthScript']) {
     else {
         New-CropFile -InputPath $paths.InputFile -CropFilePath $paths.CropPath -Count 1 -Verbose:$setVerbose
         # Calculating the crop values. Re-throw terminating error if one occurs
-        $cropDim = Measure-CropDimensions -CropFilePath $paths.CropPath -Resolution $Resolution -Verbose:$setVerbose
+        $cropDim = Measure-CropDimensions -FilePath $paths.CropPath -Resolution $Resolution -Verbose:$setVerbose
     }
 }
 # Vapoursynth is used
@@ -1235,27 +1242,20 @@ else {
 }
 
 # Validate audio in the input file
-$res = ffprobe -hide_banner -loglevel error -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 `
-    -show_entries "stream=codec_name,profile" `
-    -i $Paths.InputFile
-    
-# If audio streams were found
-if ($res) {
-    $lossless = (($res[0] -like 'truehd') -xor ($res -contains 'DTS-HD MA') -xor ($res[0] -like 'flac')) ?
-        $true : $false
+$isLossless = Confirm-Audio -InputPath $paths.InputFile -Verbose:$setVerbose
+if ($isLossless -eq $false) {
     $test1 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio -notmatch $_ }, 'SkipUntil', 1)
     $test2 = @('^c[opy]*$', 'c[opy]*a[ll]*', '^n[one]?').Where({ $Audio2 -notmatch $_ }, 'SkipUntil', 1)
     $test3 = @('^aac$', '^dts$', 'eac3', 'ddp', 'ac3', 'dd').Where({ $Audio -match $_ }, 'SkipUntil', 1)
     $test4 = @('^aac$', '^dts$', 'eac3', 'ddp', 'ac3', 'dd').Where({ $Audio2 -match $_ }, 'SkipUntil', 1)
     $allChecks = $test1, $test2, $test3, $test4 -contains $true
-    if (!$lossless -and !$allChecks) {
+    if (!$allChecks) {
         Write-Warning "Audio stream 0 is not lossless. Transcoding to another lossy codec is NOT recommended"
     }
 }
-elseif (!$res) {
+elseif ($null -eq $isLossless) {
     Write-Warning "No audio streams were found in the source file. Audio parameters will be ignored"
-    $Audio = 'none'
-    $Audio2 = 'none'
+    $Audio = $Audio2 = 'none'
 }
 
 <#
@@ -1269,8 +1269,8 @@ if ($PSBoundParameters['CRF']) {
 }
 elseif ($PSBoundParameters['VideoBitrate']) {
     $rateControl = switch ($Pass) {
-        1 { @('-b:v', $VideoBitrate, $false, $false) }
-        Default { @('-b:v', $VideoBitrate, $true, $FirstPassType) }
+        1       { @('-b:v', $VideoBitrate, $false, $false) }
+        default { @('-b:v', $VideoBitrate, $true, $FirstPassType) }
     }
 }
 elseif ($PSBoundParameters['ConstantQP']) {
@@ -1347,6 +1347,7 @@ $ffmpegParams = @{
     TestFrames           = $TestFrames
     TestStart            = $TestStart
     SkipDolbyVision      = $SkipDolbyVision
+    DolbyVisionMode      = $DolbyVisionMode
     SkipHDR10Plus        = $SkipHDR10Plus
     HDR10PlusSkipReorder = $HDR10PlusSkipReorder
     DisableProgress      = $DisableProgress
@@ -1403,6 +1404,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
         } until ((Get-Job 'Audio Encoder').State -eq 'Completed')
         Write-Host "Multiplexing audio track back into the output file..." @progressColors
         Get-Job -State Completed -ErrorAction SilentlyContinue | Remove-Job
+        $skipBackgroundAudioMux = $true
     }
     
     # Mux in the dee encoded file if job isn't running
@@ -1418,8 +1420,8 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
 
     if ((Get-Command 'mkvmerge') -and $OutputPath.EndsWith('mkv')) {
         #Find the dee encoded output file
-        $deePath = Get-ChildItem ([FileInfo]$Paths.OutputFile).DirectoryName |
-            Where-Object { $_.Name -like "$($paths.Title)_audio.*3" -or $_.Name -like "$($paths.Title)_audio.thd" } |
+        $deePath = Get-ChildItem $paths.OutRoot |
+            Where-Object { $_.Name -like "$($paths.InTitle).*3" -or $_.Name -like "$($paths.InTitle).thd" } |
                 Select-Object -First 1 -ExpandProperty FullName
 
         $muxPaths = @{
@@ -1474,7 +1476,7 @@ if ($Audio -like '*dee*' -or $Audio2 -like '*dee*') {
 }
 
 # If stream copy and stereo are used, mux the stream back into the container
-if (([File]::Exists($Paths.StereoPath) -or (Get-Process -Name '*mkvmerge*')) -and !$skipBackgroundAudioMux) {
+if ([File]::Exists($Paths.StereoPath) -and !$skipBackgroundAudioMux) {
     if ($audioRunning) {
         Write-Host "Audio encoder background job is still running. Pausing..." @warnColors
         do {
@@ -1543,7 +1545,15 @@ if ($GenerateMKVTagFile) {
 }
 
 # Display a quick view of the finished log file, the end time and total encoding time
-($Encoder -eq 'x265') ? (Get-Content -Path $Paths.LogPath -Tail 8) : (Get-Content -Path $Paths.LogPath -Tail 19)
+switch ($Encoder) {
+    'x265' {
+             [File]::Exists($paths.DvPath) ? 
+                 (Get-Content -Path $Paths.LogPath -Tail 10) : 
+                 (Get-Content -Path $Paths.LogPath -Tail 8)
+    }
+    'x264'  { Get-Content -Path $Paths.LogPath -Tail 19 }
+    default { Write-Warning "Unknown encoder. Summary will not be displayed" }
+}
 $endTime = (Get-Date).ToLocalTime()
 Write-Host "`nEnd time: $endTime"
 $stopwatch.Stop()
@@ -1552,12 +1562,13 @@ $stopwatch.Stop()
 # Generate the report file if parameter is present
 if ($GenerateReport) {
     $params = @{
-        DateTimes = @($startTime, $endTime)
-        Duration  = $stopwatch
-        Paths     = $paths
-        TwoPass   = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
-        Encoder   = $Encoder
-        Verbose   = $setVerbose
+        DateTimes  = @($startTime, $endTime)
+        Duration   = $stopwatch
+        Paths      = $paths
+        TwoPass    = ($PSBoundParameters['VideoBitrate'] -and $Pass -eq 2) ? $true : $false
+        Encoder    = $Encoder
+        ReportType = $ReportType
+        Verbose    = $setVerbose
     }
     Write-Report @params
 }
@@ -1566,10 +1577,10 @@ if ($GenerateReport) {
 if ($RemoveFiles) {
     Write-Host "Removing extra files..." -NoNewline
     Write-Host "The input, output, and report files will not be deleted" @warnColors
-    $delArray = @("*.txt", "*.log", "muxed.mkv", "*.cutree", "*_stereo.mkv", "*.json", "*.bin", "*_audio.*")
-    Get-ChildItem -Path $paths.Root | ForEach-Object { 
-        Remove-Item -LiteralPath $_.FullName -Include $delArray -Force
-    }
+    $delArray = @(
+        '*.txt', '*.log', 'muxed.mkv', '*.cutree', '*_stereo.mkv', '*.json', '*.bin', '*.ec3'
+        )
+    Remove-Item "$($paths.Root)\*" -Include $delArray -Recurse -Force
 }
 
 # If deew log exists, copy content to main log and delete
