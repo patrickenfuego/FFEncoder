@@ -5,13 +5,22 @@
         Path to source file. This is the file to be encoded
     .PARAMETER HDR10PlusPath
         Output path of the json file containing HDR10+ metadata
+    .PARAMETER DolbyVisionPath
+        Output path of the RPU binary file containing Dolby Vision metadata
+    .PARAMETER SkipDolbyVision
+        Skip Dolby Vision metadata extraction
+    .PARAMETER SkipHDR10Plus
+        Skip HDR10+ metadata extraction
+    .PARAMETER HDR10PlusSkipReorder
+        Skip reordering of HDR10+ metadata. Use this when metadata ordering is incorrect.
+        Determining whether this is necessary must be confirmed manually.
     .Outputs
-        PowerShell object containing relevant HDR metadata
+        PowerShell hashtable containing relevant HDR metadata
     .NOTES
-        Calls utility function to check for and generate HDR10+/DoVi metadata
+        Calls utility function(s) to check for and generate HDR10+/DoVi metadata
     
         If the HDR10+/DoVi parser cannot be found, this function will ignore it and only grab
-        the base layer metadata
+        the base layer metadata.
 #>
 
 function Get-HDRMetadata {
@@ -19,12 +28,8 @@ function Get-HDRMetadata {
     param (
         [Parameter(Mandatory = $true, Position = 0)]
         [ValidateScript(
-            {
-                if (Test-Path $_) { $true }
-                else {
-                    Write-Error "Get-HDRMetadata: Input path does not exist" -ErrorAction Stop
-                }
-            }
+            { Test-Path $_ },
+            ErrorMessage = "Input file '{0}' does not exist"
         )]
         [string]$InputFile,
 
@@ -34,18 +39,18 @@ function Get-HDRMetadata {
         [Parameter(Mandatory = $true, Position = 2)]
         [string]$DolbyVisionPath,
 
-        [Parameter(Mandatory = $false, Position = 3)]
+        [Parameter(Mandatory = $false)]
         [bool]$SkipDolbyVision,
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false)]
         [bool]$SkipHDR10Plus,
 
-        [Parameter(Mandatory = $false, Position = 4)]
+        [Parameter(Mandatory = $false)]
         [switch]$HDR10PlusSkipReorder
     )
 
     # Constants for mastering display color primaries
-    Set-Variable -Name Display_P3 -Value "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
+    Set-Variable -Name DCI_P3 -Value "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)" -Option Constant
     Set-Variable -Name BT_2020 -Value "G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)" -Option Constant
 
     Write-Host "Retrieving HDR Metadata..."
@@ -77,9 +82,11 @@ function Get-HDRMetadata {
     }
     elseif ($metadata.side_data_list[0].red_x -match "34000/\d+" -and
         $metadata.side_data_list[0].red_y -match "16000/\d+") {
-        $masterDisplayStr = $Display_P3
+        $masterDisplayStr = $DCI_P3
     }
-    else { throw "Unknown mastering display colors found. Only BT.2020 and Display P3 are supported." }
+    else { 
+        Write-Error "Unknown mastering display colors found. Only BT.2020 and DCI-P3 are supported." -ErrorAction Stop
+    }
     # HDR min and max luminance values
     [int]$minLuma = $metadata.side_data_list[0].min_luminance -replace "/.*", ""
     [int]$maxLuma = $metadata.side_data_list[0].max_luminance -replace "/.*", ""
@@ -113,7 +120,7 @@ function Get-HDRMetadata {
     }
     else {
         # Check if input has HDR10+ metadata and generate json if skip not present
-        if (!$SkipHDR10Plus) {
+        if (!$SkipHDR10Plus -and (Test-Path $HDR10PlusPath)) {
             $params = @{
                 InputFile            = $InputFile
                 HDR10PlusPath        = $HDR10PlusPath
