@@ -18,6 +18,7 @@ $ScriptPath = Split-Path $MyInvocation.MyCommand.Path
 $PSModule = $ExecutionContext.SessionState.Module
 $PSModuleRoot = $PSModule.ModuleBase
 $ScriptsDirectory = [System.IO.Path]::Join($(Get-Item $ScriptPath).Parent.Parent, 'scripts')
+$BinRoot = [System.IO.Path]::Join((Get-Item $ScriptPath).Parent.Parent, 'bin')
 
 $progressColors = @{ForegroundColor = 'Green'; BackgroundColor = 'Black' }
 $warnColors = @{ForegroundColor = 'Yellow'; BackgroundColor = 'Black' }
@@ -69,31 +70,41 @@ $Script:dee = @{
 # Keep track of frame count for 2-pass encodes
 $Script:frame = @{
     FrameCount = 0
-    TestStart = 0
+    TestStart  = 0
 }
 
 # Detect operating system info
+$osInfo =
+
 if ($isMacOs) {
-    $osInfo = @{
-        OperatingSystem = "Mac"
+    @{
+        OperatingSystem = 'Mac'
         DefaultPath     = "$HOME/Movies"
+        DeePath         = [System.IO.Path]::Join($BinRoot, 'mac/dee_wrapper/deew')
+        BinRoot         = [System.IO.Path]::Join($BinRoot, 'mac')
     } 
 }
 elseif ($isLinux) {
-    $osInfo = @{
-        OperatingSystem = "Linux"
+    @{
+        OperatingSystem = 'Linux'
         DefaultPath     = "$HOME/Videos"
+        DeePath         = [System.IO.Path]::Join($BinRoot, 'linux/dee_wrapper/deew')
+        BinRoot         = [System.IO.Path]::Join($BinRoot, 'linux')
     }
 }
-elseif ($env:OS -like "*Windows*") {
-    $osInfo = @{
-        OperatingSystem = "Windows"
+elseif ($env:OS -like '*Windows*') {
+    @{
+        OperatingSystem = 'Windows'
         DefaultPath     = [Environment]::GetFolderPath('MyVideos')
+        DeePath         = [System.IO.Path]::Join($BinRoot, 'windows\dee_wrapper\deew.exe')
+        BinRoot         = [System.IO.Path]::Join($BinRoot, 'windows')
     }
 }
 else { 
-    Write-Error "Failed to load module. Could not detect operating system." -ErrorAction Stop 
+    Write-Error 'Failed to load module. Could not detect Operating System.' -ErrorAction Stop 
 }
+
+Write-Verbose "OS Info: $($osInfo | Out-String)"
 
 ## Define Banners ##
 
@@ -138,7 +149,7 @@ ___________      .__  __  .__                 ______________________            
 '@
 
 # Current script release version. Used for download prompt
-[version]$release = '2.4.3'
+[version]$release = '2.5.0'
 
 
 #### End module variables ####
@@ -155,7 +166,7 @@ try {
     }
 } 
 catch {
-    Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
+    Write-Warning ('{0}: {1}' -f $function, $_.Exception.Message)
     continue
 }
 ## region Load Private Functions ##
@@ -166,7 +177,7 @@ try {
     }
 } 
 catch {
-    Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
+    Write-Warning ('{0}: {1}' -f $function, $_.Exception.Message)
     continue
 }
 ## Region Load Util Functions ##
@@ -177,7 +188,7 @@ try {
     }
 }
 catch {
-    Write-Warning ("{0}: {1}" -f $function, $_.Exception.Message)
+    Write-Warning ('{0}: {1}' -f $function, $_.Exception.Message)
     continue
 }
 
@@ -185,12 +196,15 @@ catch {
 New-Alias -Name iffmpeg -Value Invoke-FFMpeg -Force
 New-Alias -Name cropfile -Value New-CropFile -Force
 New-Alias -Name cropdim -Value Measure-CropDimensions -Force
+New-Alias -Name editrpu -Value Edit-RPU -Force
+New-Alias -Name hdrmetadata -Value Get-HDRMetadata -Force
 
 # Export module functions, aliases, and variables
 $ExportModule = @{
-    Alias    = @('iffmpeg', 'cropfile', 'cropdim')
+    Alias    = @('iffmpeg', 'cropfile', 'cropdim', 'editrpu', 'hdrmetadata')
     Function = @('Invoke-FFmpeg', 'Invoke-TwoPassFFmpeg', 'New-CropFile', 'Measure-CropDimensions', 'Remove-FilePrompt', 'Write-Report', 'Confirm-HDR10Plus',
-                 'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge', 'Invoke-DeeEncoder', 'Read-TimedInput', 'Invoke-VMAF', 'Import-Config')
+                 'Confirm-DolbyVision', 'Confirm-ScaleFilter', 'Invoke-MkvMerge', 'Invoke-DeeEncoder', 'Read-TimedInput', 'Invoke-VMAF', 'Import-Config',
+                 'Get-MediaInfo', 'Confirm-Audio', 'Get-HDRMetadata', 'Edit-RPU')
     Variable = @('progressColors', 'warnColors', 'emphasisColors', 'errColors', 'osInfo', 'banner1', 'banner2', 'exitBanner', 'ScriptsDirectory',
                  'release' )
 }
