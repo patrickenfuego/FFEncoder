@@ -243,6 +243,7 @@ Reports include the following statistics:
     - <u>**x264 NOTE**</u>: *x264 does not provide this statistic by default, so the script performs a weighted average calculation based on the number and average QP of each frame type. While not perfect, it's very close when compared to how x265 calculates this value.*
       - *x264's Average QP is only calculated in **HTML** reports*
 - Raw encoding summary (extracted from the log)
+  - If a 2-pass encode is used, statistics for both passes will be included in the summary  
 
 Report formats are standardized across encoders to give a similar look and feel.
 

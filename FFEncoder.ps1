@@ -226,7 +226,7 @@
         Specify the Dolby Vision mode used to generate the RPU file. Options:
             - 8.1 - Profile 8.1 (Backward compatible with HDR10)
             - 8.4 - Profile 8.4 (Backward compatible with HLG)
-            - 8.1m - Profile 8.1 with FEL mapping retained (requires VapourSynth to process)
+            - 8.1m - Profile 8.1 with FEL mapping retained (requires VapourSynth/Avisynth+ to process)
     .PARAMETER SkipHDR10Plus
         Skip HDR10+ encoding, even if metadata is present
     .PARAMETER HDR10PlusSkipReorder
@@ -1579,7 +1579,7 @@ if ($RemoveFiles) {
     Write-Host "The input, output, and report files will not be deleted" @warnColors
     $delArray = @(
         '*.txt', '*.log', 'muxed.mkv', '*.cutree', '*_stereo.mkv', '*.json', '*.bin', '*.ec3'
-        )
+    )
     Remove-Item "$($paths.Root)\*" -Include $delArray -Recurse -Force
 }
 

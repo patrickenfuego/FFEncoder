@@ -8,22 +8,22 @@
         storing. Shows the following info:
 
         1. Start & end date and time
-        2. All output produced by x264/x265 throughout the encode (NOT ffmpeg)
         2. Total encoding time in a more human readable format
+        3. All output produced by x264/x265 throughout the encode (NOT ffmpeg) with key items sanitized and formatted
     .NOTES
         The report name is the same as the output file name
     .PARAMETER DateTimes
-        Array containing the startTime, endTime objects
+        <Datetime[]> Array containing the start time, end time objects.
     .PARAMETER Duration
-        Stopwatch object which contains the duration of the encode
+        <Diagnostics.Stopwatch> Stopwatch object which contains the duration of the encode.
     .PARAMETER Paths
-        Object containing various paths used throughout the script
+        <Hashtable> Object containing various paths used throughout the script.
     .PARAMETER TwoPass
-        Object containing various paths used throughout the script
+        <Switch> Switch specifying whether 2-pass encoding was used.
     .PARAMETER Encoder
-        Encoding codec used. Output is altered depending on which one is used
+        <String> Encoding codec used. Output is altered depending on which one is used.
     .PARAMETER ReportType
-        Type of report to write. Default is html
+        <String> Type of report to write. Default is html.
 #>
 
 function Write-Report {
@@ -140,8 +140,10 @@ function Write-Report {
         })
 
         if ($TwoPass) {
+            # Set file split point for 2-pass encoding based on encoder used
             $break = $encoder -eq 'x264' ? 'using SAR=1/1' : 'HEVC encoder version'
             $line = $filterLog.Where({ $_ -like "*$break*" }, 'Last', 1)
+            # Splitting on first occurrence does not work with x264
             $break = [array]::LastIndexOf($filterLog, $line.Trim())
             $firstPass, $filterLog = $filterLog[0..($break - 1)], $filterLog[$break..($filterLog.Length - 1)]
             $firstPass = @('<------------------ PASS 1 ------------------>', '') + $firstPass
@@ -267,7 +269,8 @@ function Write-Report {
     }
 }
 
-$Script:rawStyle = @'
+# Scope restricted CSS style for report. Saved down here to keep stupid here string formatting clean
+$Local:rawStyle = @'
 <style>
   body {
       background: linear-gradient(to bottom, #d7d2cc, #304352);
