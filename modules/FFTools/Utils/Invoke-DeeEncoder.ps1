@@ -7,11 +7,11 @@ Using namespace System.IO
         Provides an alternative option for encoding audio with Dolby codecs. Wrapper executable is invoked
         as a background job parallel to the primary script
     .PARAMETER Paths
-        Paths and titles for input and output files
+        Paths and titles for input and output files. Expected Path items are InputFile, OutputFile, and Title
     .PARAMETER Codec
         Codec used for audio encoding
     .PARAMETER ChannelCount
-        The number of channels in the output file (i.e. 8 for 7.1 audio)
+        The number of channels in the output file (e.g. 8 for 7.1 audio)
     .PARAMETER Bitrate
         Output audio bitrate in kb/s
     .NOTES
@@ -37,6 +37,14 @@ function Invoke-DeeEncoder {
     )
 
     $logPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, 'dee.log')
+
+    # Ensure first audio track is lossless
+    $isLossless = Confirm-Audio -InputPath $Paths.InputFile
+    if (!$isLossless) {
+        Write-Warning "First audio track is not lossless. Returning" 3>&1 >>$logPath
+        return
+    }
+
     $outputPath = ([FileInfo]$Paths.OutputFile).DirectoryName
 
     Write-Output "Preparing DEE encoder..." >$logPath
@@ -47,7 +55,7 @@ function Invoke-DeeEncoder {
         return
     }
     # Set verbose for Invoke-mkvMerge because of scope change
-    if ($PSBoundParameters['Verbose']) { $setVerbose = $true }
+    # if ($PSBoundParameters['Verbose']) { $setVerbose = $true }
 
     $codecStr, $downmix = switch ($Codec) {
         { $_ -in 'dee_dd', 'dee_ac3' -and !$Stereo }    { 'dd', $null  }
@@ -58,34 +66,34 @@ function Invoke-DeeEncoder {
         'dee_thd'                                       { 'thd' }
     }
 
-    $audioBase = ($Paths.InputFile.EndsWith('mkv')) ? ("$($Paths.Title)_audio.mka") : ("$($Paths.Title)_audio.m4a")
-    $Paths.AudioPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, $audioBase)
+    # $audioBase = ($Paths.InputFile.EndsWith('mkv')) ? ("$($Paths.Title)_audio.mka") : ("$($Paths.Title)_audio.m4a")
+    # $Paths.AudioPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, $audioBase)
 
-    if (![File]::Exists($Paths.AudioPath)) {
-        Write-Verbose "ThreadJob: Multiplexing audio for DEE...`n" 4>>$logPath
+    # if (![File]::Exists($Paths.AudioPath)) {
+    #     Write-Verbose "ThreadJob: Multiplexing audio for DEE...`n" 4>>$logPath
 
-        $remuxPaths = @{
-            Input    = $Paths.InputFile
-            Output   = $Paths.AudioPath
-            Title    = $Paths.Title
-            Language = $Paths.Language
-            LogPath  = $Paths.LogPath
-        }
-        if ((Get-Command 'mkvmerge')) {
-            Write-Output "mkvmerge detected. Multiplexing audio stream..." >>$logPath
-            Invoke-MkvMerge -Paths $remuxPaths -Mode 'extract' -Verbose:$setVerbose
-        }
-        else {
-            Write-Output "Multiplexing audio stream with ffmpeg..." >>$logPath
-            ffmpeg -i $Paths.InputFile -map 0:a:0 -c:a:0 copy -map -0:t? -map_chapters -1 $Paths.AudioPath
-        }
+    #     $remuxPaths = @{
+    #         Input    = $Paths.InputFile
+    #         Output   = $Paths.AudioPath
+    #         Title    = $Paths.Title
+    #         Language = $Paths.Language
+    #         LogPath  = $Paths.LogPath
+    #     }
+    #     if ((Get-Command 'mkvmerge')) {
+    #         Write-Output "mkvmerge detected. Multiplexing audio stream..." >>$logPath
+    #         Invoke-MkvMerge -Paths $remuxPaths -Mode 'extract' -Verbose:$setVerbose
+    #     }
+    #     else {
+    #         Write-Output "Multiplexing audio stream with ffmpeg..." >>$logPath
+    #         ffmpeg -i $Paths.InputFile -map 0:a:0 -c:a:0 copy -map -0:t? -map_chapters -1 $Paths.AudioPath
+    #     }
 
-        if ([File]::Exists($Paths.AudioPath) -and ([FileInfo]($Paths.AudioPath)).Length -lt 10) {
-            Write-Output "There was an issue extracting the audio track for dee" >>$logPath
-            return
-        }
-        Start-Sleep -Milliseconds 500
-    }
+    #     if ([File]::Exists($Paths.AudioPath) -and ([FileInfo]($Paths.AudioPath)).Length -lt 10) {
+    #         Write-Output "There was an issue extracting the audio track for dee" >>$logPath
+    #         return
+    #     }
+    #     Start-Sleep -Milliseconds 500
+    # }
 
     # Create the directory structure
     $tmpPath = [Path]::Join(([FileInfo]$Paths.InputFile).DirectoryName, 'dee_tmp')
@@ -94,12 +102,13 @@ function Invoke-DeeEncoder {
     }
 
     # Modify toml file with temporary path set to the input file directory
-    $binRoot = [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'bin')
-    $deePath = switch ($osInfo.OperatingSystem) {
-        'Windows' { [Path]::Join($binRoot, 'windows\dee_wrapper\deew.exe') }
-        'Linux'   { [Path]::Join($binRoot, 'linux/dee_wrapper/deew') }
-        'Mac'     { [Path]::Join($binRoot, 'mac/dee_wrapper/deew')  }
-    }
+    # $binRoot = [Path]::Join((Get-Item $PSScriptRoot).Parent.Parent.Parent, 'bin')
+    # $deePath = switch ($osInfo.OperatingSystem) {
+    #     'Windows' { [Path]::Join($binRoot, 'windows\dee_wrapper\deew.exe') }
+    #     'Linux'   { [Path]::Join($binRoot, 'linux/dee_wrapper/deew') }
+    #     'Mac'     { [Path]::Join($binRoot, 'mac/dee_wrapper/deew')  }
+    # }
+    $deePath = $osInfo.DeePath
     
     if (!$deePath) {
         Write-Output "No compatible OS found. Exiting..." >>$logPath
@@ -114,18 +123,18 @@ function Invoke-DeeEncoder {
     (Get-Content $deeToml -Raw) -replace 'temp_path.*', "temp_path = '$tmpPath'" | 
         Set-Content $deeToml
 
-    Write-Verbose "Deew TOML contents:`n" 4>>$logPath
-    Write-Verbose "$((Get-Content $deeToml).ForEach({"$_`n"}))`n" 4>>$logPath
+    Write-Verbose "Deew TOML contents:`n" 4>&1 >>$logPath
+    Write-Verbose "$((Get-Content $deeToml).ForEach({"$_`n"}))`n" 4>&1 >>$logPath
 
     # Setup encoder array
     $deeArgs = @(
         '-i'
-        $Paths.AudioPath
+        $Paths.InputFile
         '-o'
         $outputPath
         '-f'
         $codecStr
-        if ($Bitrate) { 
+        if ($Bitrate) {
             '-b'
             $Bitrate
         }
@@ -135,7 +144,7 @@ function Invoke-DeeEncoder {
         }
     )
 
-    Write-Verbose "Dee Arguments:`n$($deeArgs | Out-String)" 4>>$logPath
+    Write-Verbose "Dee Arguments:`n$($deeArgs | Out-String)" 4>&1 >>$logPath
     
     # Run the encoder
     try {
@@ -156,10 +165,5 @@ function Invoke-DeeEncoder {
     if ($LASTEXITCODE) {
         Start-Sleep -Seconds 3
         Remove-Item $tmpPath -Recurse -Force
-        # sometimes the dee_tmp folder just won't die
-        if ([Directory]::Exists($tmpPath)) {
-            [Directory]::Delete($tmpPath)
-        }
     }
 }
-
