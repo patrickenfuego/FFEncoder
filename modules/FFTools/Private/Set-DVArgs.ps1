@@ -101,6 +101,10 @@ function Set-DVArgs {
         [Parameter(Mandatory = $false)]
         [hashtable]$EncoderExtra,
 
+        # Which DV profile to use (8.1, 8.4). Default is 8.1
+        [Parameter(Mandatory = $false)]
+        [string]$DoviProfile,
+
         # HDR properties
         [Parameter(Mandatory = $false)]
         [hashtable]$HDR,
@@ -353,7 +357,7 @@ function Set-DVArgs {
         '--dolby-vision-rpu'
         $dvPath
         '--dolby-vision-profile'
-        '8.1'
+        $DoviProfile
         '--aud'
         '--hrd'
         '--repeat-headers'
@@ -589,4 +593,3 @@ function Set-DVArgs {
 
     return $dvHash
 }
-

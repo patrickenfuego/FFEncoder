@@ -202,6 +202,11 @@ function Invoke-FFMpeg {
         [Alias('NoDV', 'SkipDV')]
         [switch]$SkipDolbyVision,
 
+        # Which DoVi profile to use
+        [Parameter(Mandatory = $false)]
+        [Alias('DoViMode')]
+        [string]$DolbyVisionMode,
+
         # Skip HDR10+ even if present
         [Parameter(Mandatory = $false)]
         [Alias('No10P', 'Skip10P')]
@@ -296,9 +301,10 @@ function Invoke-FFMpeg {
         Write a warning if HDR object is null, but proceed with execution
     #>
 
-    if ($CropDimensions[2]) {
-        $skipDv = ($SkipDolbyVision) ? $true : $false
-        $skip10P = ($SkipHDR10Plus) ? $true : $false
+    $isHDR = Get-MediaInfoValue $Paths.InputFile -Kind Video -Parameter 'HDR_Format/String'
+    if ($isHDR) {
+        $skipDv = $SkipDolbyVision ? $true : $false
+        $skip10P = $SkipHDR10Plus ? $true : $false
         # Get HDR metadata. Edit DoVi RPU if present
         try {
             $params = @{
@@ -317,8 +323,8 @@ function Invoke-FFMpeg {
         }
         catch [System.ArgumentNullException] {
             $err = $_.Exception.Message
-            Write-Host "`u{203C} Failed to get HDR metadata: $err. Metadata will not be copied" @errColors
-            $_.Exception
+            Write-Host "`u{203C} Failed to get HDR metadata: '$err'. Metadata will not be copied" @errColors
+            Write-Verbose $_.Exception
             $HDR = $null
         }
     }
@@ -492,6 +498,10 @@ function Invoke-FFMpeg {
     if ($HDR.DV -eq $true) {
         $dovi = $true
         $baseArgs.Remove('Encoder')
+        if ($DolbyVisionMode -like '*_*') {
+            $DolbyVisionMode = '8.1'
+        }
+        $baseArgs.DoviProfile = $DolbyVisionMode
         $dvArgs = Set-DVArgs @baseArgs
     } 
     else {
@@ -914,4 +924,3 @@ function Invoke-FFMpeg {
         }
     }
 }
-
