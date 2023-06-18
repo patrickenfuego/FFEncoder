@@ -343,7 +343,7 @@ function Set-AudioPreference {
             param ($DeeParams, $Module, $Verbose)
 
             # Source functions & variable
-            Import-Module $Module -Function Invoke-DeeEncoder, Invoke-MkvMerge -Variable osInfo
+            Import-Module $Module -Function Invoke-DeeEncoder, Confirm-Audio -Variable osInfo
 
             $Global:osInfo = $osInfo
             Invoke-DeeEncoder @DeeParams -Verbose:$Verbose
